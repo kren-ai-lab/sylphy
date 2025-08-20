@@ -1,9 +1,9 @@
 import pandas as pd
 from typing import Optional, List, Literal
 import logging
-from bioclust.misc.constants import Constant
+from protein_representation.misc.constants import Constant
 from .logging_config import setup_logger
-from bioclust.misc.utils_lib import UtilsLib
+from protein_representation.misc.utils_lib import UtilsLib
 
 class Encoders:
     """

@@ -3,7 +3,7 @@ from typing import Optional, List, Literal
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 
 from .embedding_based import EmbeddingBased
-from bioclust.core.config import ToolConfig
+from protein_representation.core.config import ToolConfig
 
 class Ankh2BasedEmbedding(EmbeddingBased):
 

@@ -4,7 +4,6 @@ embedding_factory.py
 Factory to instantiate the appropriate embedding class based on model name.
 """
 
-from typing import Optional, List, Callable, Type
 import logging
 
 from .esm_based import ESMBasedEmbedding

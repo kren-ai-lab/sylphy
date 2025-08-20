@@ -1,112 +1,71 @@
 # core/config.py
 from __future__ import annotations
-import os
-import platform
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional
+
 from contextlib import contextmanager
-import threading
-import logging
+from pathlib import Path
+from threading import RLock
+from typing import Generator
 
-_LOCK = threading.RLock()
+from protein_representation.constants.config_constants import _LOCK as _EXTERNAL_LOCK, CachePaths
+from protein_representation.constants.tool_configs import ToolConfig, _GLOBAL_CONFIG
 
-def _default_cache_root() -> Path:
+# Local lock to guard lazy initialization in this module.
+_LOCK = _EXTERNAL_LOCK or RLock()
 
-    # OS-specific defaults
-    system = platform.system().lower()
-    if system == "darwin":      # macOS
-        base = Path.home() / "Library" / "Caches"
-    elif system == "windows":
-        base = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    else:                       # linux/unix
-        base = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
-
-    return base
-
-@dataclass
-class CachePaths:
-    cache_root: Path
-    tool_name: str = "bioclust"
-
-    def base(self) -> Path:
-        return self.cache_root / self.tool_name
-
-    # Subtrees
-    def models(self) -> Path:
-        return self.base() / "models"
-
-    def hf_model_dir(self, org: str, model: str) -> Path:
-        return self.models() / "huggingface" / org / model
-
-    def other_model_dir(self, provider: str, name: str) -> Path:
-        return self.models() / "other" / provider / name
-
-    def structures(self) -> Path:
-        return self.base() / "structures"
-
-    def structures_pdb(self) -> Path:
-        return self.structures() / "pdb"
-
-    def structures_afdb(self) -> Path:
-        return self.structures() / "alphafold"
-
-    def structures_predictions(self, predictor: str = "esmfold") -> Path:
-        return self.structures() / "predictions" / predictor
-
-    def data(self) -> Path:
-        return self.base() / "data"
-
-    def datasets(self) -> Path:
-        return self.base() / "datasets"
-    
-    def tmp(self) -> Path:
-        return self.base() / "tmp"
-
-    def logs(self) -> Path:
-        return self.base() / "logs"
-
-    def ensure_all(self) -> None:
-        with _LOCK:
-            for p in [
-                self.base(), self.models(), self.structures(),
-                self.structures_pdb(), self.structures_afdb(),
-                self.structures_predictions(), self.data(), self.tmp(), self.logs()
-            ]:
-                p.mkdir(parents=True, exist_ok=True)
-
-@dataclass
-class ToolConfig:
-    cache_paths: CachePaths = field(default_factory=lambda: CachePaths(_default_cache_root()))
-    debug : bool = False
-    default_device : str = "cuda"
-    log_level : int = logging.INFO
-    seed : int = 42
-
-# --- Global config singleton (simple & testable) ---
-_GLOBAL_CONFIG: Optional[ToolConfig] = None
 
 def get_config() -> ToolConfig:
-    global _GLOBAL_CONFIG
-    if _GLOBAL_CONFIG is None:
-        _GLOBAL_CONFIG = ToolConfig()
-        _GLOBAL_CONFIG.cache_paths.ensure_all()
-    return _GLOBAL_CONFIG
+    """
+    Return the global ToolConfig (lazy-initialized).
 
-def set_cache_root(new_root: Path | str) -> None:
-    """Programmatic override of the cache root."""
+    The first call initializes a default ``ToolConfig`` and ensures the cache
+    directories exist.
+    """
     global _GLOBAL_CONFIG
     with _LOCK:
-        root = Path(new_root).expanduser().resolve()
+        if _GLOBAL_CONFIG is None:
+            _GLOBAL_CONFIG = ToolConfig()
+            _GLOBAL_CONFIG.cache_paths.ensure_all()
+        return _GLOBAL_CONFIG
+
+
+def set_cache_root(new_root: Path | str) -> None:
+    """
+    Programmatically override the cache root directory.
+
+    Parameters
+    ----------
+    new_root : Path or str
+        New root path. Will be expanded and resolved.
+
+    Notes
+    -----
+    - Updates the global configuration and ensures directories exist.
+    """
+    global _GLOBAL_CONFIG
+    root = Path(new_root).expanduser().resolve()
+    with _LOCK:
         _GLOBAL_CONFIG = ToolConfig(cache_paths=CachePaths(root))
         _GLOBAL_CONFIG.cache_paths.ensure_all()
 
+
 @contextmanager
-def temporary_cache_root(temp_root: Path | str):
-    """Context manager for tests: use a temporary cache and revert back."""
+def temporary_cache_root(temp_root: Path | str) -> Generator[None, None, None]:
+    """
+    Context manager to temporarily override the cache root (useful for tests).
+
+    Example
+    -------
+    >>> from pathlib import Path
+    >>> with temporary_cache_root(Path("./.tmp_cache")):
+    ...     # resolve models into ./.tmp_cache
+    ...     pass
+    """
     old = get_config().cache_paths.cache_root
     set_cache_root(temp_root)
     try:
         yield
     finally:
         set_cache_root(old)
+
+
+__all__ = ["get_config", "set_cache_root", "temporary_cache_root", "ToolConfig", "CachePaths"]

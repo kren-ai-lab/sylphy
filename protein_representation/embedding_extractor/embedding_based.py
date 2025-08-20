@@ -5,10 +5,10 @@ from abc import ABC
 from typing import List, Optional, Literal
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 
-from .logging_config import setup_logger
-from bioclust.core.model_register import ModelSpec, resolve_model, register_model
-from bioclust.core.config import ToolConfig
-from bioclust.misc.utils_lib import UtilsLib
+from protein_representation.logging.logging_config import setup_logger
+from protein_representation.core.model_registry import ModelSpec, resolve_model, register_model
+from protein_representation.core.config import ToolConfig
+from protein_representation.misc.utils_lib import UtilsLib
 
 class EmbeddingBased(ABC):
     """

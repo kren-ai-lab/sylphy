@@ -1,0 +1,176 @@
+# tests/test_core_registry.py
+from __future__ import annotations
+
+import io
+import json
+import zipfile
+from pathlib import Path
+
+import pytest
+
+from protein_representation.core.model_spec import ModelSpec
+from protein_representation.core.model_registry import (
+    register_model,
+    register_alias,
+    unregister,
+    clear_registry,
+    list_registered_models,
+    get_model_spec,
+    resolve_model,
+    ModelNotFoundError,
+    ModelDownloadError,
+)
+from protein_representation.core.config import get_config, temporary_cache_root
+
+
+def test_register_and_get_spec_roundtrip():
+    spec = ModelSpec(name="dummy", provider="huggingface", ref="org/model")
+    register_model(spec)
+    got = get_model_spec("dummy")
+    assert got.name == "dummy"
+    assert got.provider == "huggingface"
+    assert got.ref == "org/model"
+
+    # Unknown model error
+    with pytest.raises(ModelNotFoundError):
+        get_model_spec("nope")
+
+
+def test_alias_registration_and_listing():
+    register_model(ModelSpec(name="esm2_small", provider="huggingface", ref="facebook/esm2_t6_8M_UR50D"))
+    register_alias("esm2", "esm2_small")
+
+    # Alias resolves to spec (with alias_of on the stored alias entry)
+    spec_alias = get_model_spec("esm2")
+    assert spec_alias.alias_of == "esm2_small"
+    assert spec_alias.name == "esm2"
+
+    # Listing
+    names_no_alias = list_registered_models(include_aliases=False)
+    names_with_alias = list_registered_models(include_aliases=True)
+    assert "esm2_small" in names_no_alias and "esm2" not in names_no_alias
+    assert set(names_with_alias) >= {"esm2_small", "esm2"}
+
+
+def test_unregister_and_clear():
+    register_model(ModelSpec(name="to_drop", provider="huggingface", ref="org/model"))
+    unregister("to_drop")
+    with pytest.raises(ModelNotFoundError):
+        get_model_spec("to_drop")
+
+    register_model(ModelSpec(name="a", provider="huggingface", ref="x/y"))
+    register_model(ModelSpec(name="b", provider="huggingface", ref="x/z"))
+    clear_registry()
+    assert list_registered_models(True) == []
+
+
+def test_env_override_path(monkeypatch, tmp_path):
+    # Force the prefix used inside the module
+    import protein_representation.core.model_registry as regmod
+    monkeypatch.setattr(regmod, "_ENV_PREFIX", "PR_MODEL_", raising=True)
+
+    # Prepare env override directory
+    override_dir = tmp_path / "pre_downloaded" / "esm2_small"
+    override_dir.mkdir(parents=True)
+    (override_dir / "weights.bin").write_text("ok")
+
+    register_model(ModelSpec(name="esm2_small", provider="huggingface", ref="facebook/esm2_t6_8M_UR50D"))
+    # Set env var PR_MODEL_ESM2_SMALL -> override_dir
+    monkeypatch.setenv("PR_MODEL_ESM2_SMALL", str(override_dir))
+
+    resolved = resolve_model("esm2_small")
+    assert resolved == override_dir
+    assert (resolved / "weights.bin").exists()
+
+
+def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path):
+    # Mock huggingface_hub.snapshot_download to create a marker file
+    calls = {"n": 0}
+
+    class DummyHF:
+        @staticmethod
+        def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None):
+            calls["n"] += 1
+            Path(local_dir).mkdir(parents=True, exist_ok=True)
+            (Path(local_dir) / "config.json").write_text(json.dumps({"ref": ref}))
+
+    monkeypatch.setitem(sys.modules := __import__("sys").modules, "huggingface_hub", DummyHF)
+
+    register_model(ModelSpec(name="hf_model", provider="huggingface", ref="org/hf_model"))
+    p1 = resolve_model("hf_model")
+    assert (p1 / "config.json").exists()
+    # Second resolve should reuse (no extra download)
+    p2 = resolve_model("hf_model")
+    assert p1 == p2
+    assert calls["n"] == 1  # downloaded once
+
+
+def test_resolve_other_local_copy(tmp_path):
+    # Create local "source" model dir
+    src = tmp_path / "src_model"
+    src.mkdir()
+    (src / "file.txt").write_text("payload")
+
+    register_model(ModelSpec(name="other_local", provider="other", ref=str(src)))
+    local_dir = resolve_model("other_local")
+    # Should be under cache_root/provider/name
+    assert (local_dir / "file.txt").exists()
+
+
+def _make_zip_bytes() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, mode="w") as z:
+        z.writestr("inner/ok.txt", "ok")
+    return buf.getvalue()
+
+
+def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path):
+    # Mock requests.get to stream a small zip
+    class DummyResp:
+        def __init__(self, data: bytes):
+            self._data = data
+            self.status_code = 200
+            self.ok = True
+        def raise_for_status(self): pass
+        def iter_content(self, chunk_size=65536):
+            yield self._data
+        def __enter__(self): return self
+        def __exit__(self, *exc): return False
+
+    def fake_get(url, stream=True, timeout=60):
+        return DummyResp(_make_zip_bytes())
+
+    import sys
+    import types
+    req = types.ModuleType("requests")
+    req.get = fake_get
+    monkeypatch.setitem(sys.modules, "requests", req)
+
+    register_model(ModelSpec(name="other_url", provider="other", ref="https://example.com/model.zip"))
+    dst = resolve_model("other_url")
+    # Extracted file should exist
+    assert (dst / "inner" / "ok.txt").exists()
+
+
+def test_download_error_is_wrapped(monkeypatch):
+    # Force HF download path to raise
+    register_model(ModelSpec(name="will_fail", provider="huggingface", ref="org/fail"))
+    import protein_representation.core.model_registry as regmod
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(regmod, "_download_huggingface", boom, raising=True)
+
+    with pytest.raises(ModelDownloadError) as ei:
+        resolve_model("will_fail")
+    assert "Failed to resolve model 'will_fail'" in str(ei.value)
+
+
+def test_config_temporary_cache_root(tmp_path):
+    cfg = get_config()
+    original = cfg.cache_paths.cache_root
+    with temporary_cache_root(tmp_path / "alt"):
+        assert get_config().cache_paths.cache_root != original
+    # Restored after context
+    assert get_config().cache_paths.cache_root == original

@@ -11,9 +11,9 @@ from .config import get_config
 from .model_spec import ModelSpec
 
 from protein_representation.constants.tool_constants import _ENV_PREFIX
-from protein_representation.logging.logging_config import setup_logger
+from protein_representation.logging import get_logger
 
-logger = setup_logger(name=__name__)
+logger = get_logger(__name__)
 
 _LOCK = RLock()
 
@@ -45,11 +45,6 @@ def register_model(spec: ModelSpec) -> None:
     Register (or overwrite) a model spec by name.
 
     This function is thread-safe and idempotent for the same `name`.
-
-    Parameters
-    ----------
-    spec : ModelSpec
-        The model specification to register.
     """
     with _LOCK:
         _REGISTRY[spec.name] = spec
@@ -59,18 +54,6 @@ def register_model(spec: ModelSpec) -> None:
 def register_alias(alias: str, canonical: str) -> None:
     """
     Register an alias that resolves to an existing canonical name.
-
-    Parameters
-    ----------
-    alias : str
-        The new alias name.
-    canonical : str
-        The name of the already-registered canonical model.
-
-    Raises
-    ------
-    ModelNotFoundError
-        If `canonical` is not found in the registry.
     """
     with _LOCK:
         if canonical not in _REGISTRY:
@@ -81,11 +64,7 @@ def register_alias(alias: str, canonical: str) -> None:
 
 
 def unregister(name: str) -> None:
-    """
-    Remove a model or alias from the registry. Intended for tests.
-
-    Does nothing if the name does not exist.
-    """
+    """Remove a model or alias from the registry. Intended for tests."""
     with _LOCK:
         if _REGISTRY.pop(name, None) is not None:
             logger.info("Unregistered '%s'", name)
@@ -106,11 +85,6 @@ def list_registered_models(include_aliases: bool = False) -> List[str]:
     ----------
     include_aliases : bool, default=False
         If False, return only canonical names.
-
-    Returns
-    -------
-    list of str
-        Sorted list of names.
     """
     with _LOCK:
         names = [
@@ -123,16 +97,6 @@ def list_registered_models(include_aliases: bool = False) -> List[str]:
 def get_model_spec(name: str) -> ModelSpec:
     """
     Get the spec for a model or alias.
-
-    Parameters
-    ----------
-    name : str
-        Model name or alias.
-
-    Returns
-    -------
-    ModelSpec
-        The registered specification.
 
     Raises
     ------
@@ -155,17 +119,7 @@ def _env_override_path(name: str) -> Optional[Path]:
     """
     Environment variable override for local model path.
 
-    The variable name is computed as ``f\"{_ENV_PREFIX}{name.upper().replace('-', '_')}\"``.
-
-    Returns
-    -------
-    Optional[Path]
-        Resolved path if the variable is set and exists; otherwise None.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the override is set but points to a non-existent path.
+    The variable name is ``f"{_ENV_PREFIX}{name.upper().replace('-', '_')}"``.
     """
     key = _ENV_PREFIX + name.upper().replace("-", "_")
     val = os.getenv(key)
@@ -186,29 +140,9 @@ def resolve_model(name: str) -> Path:
     Resolve a model name to a local directory path, downloading if needed.
 
     Resolution priority:
-    1) Environment variable override (see :func:`_env_override_path`).
+    1) Environment override (see :func:`_env_override_path`).
     2) Provider-specific logic using the configured cache directory.
-
-    Parameters
-    ----------
-    name : str
-        Registered model name or alias.
-
-    Returns
-    -------
-    pathlib.Path
-        Local directory containing the model files (weights/config/etc).
-
-    Raises
-    ------
-    ModelNotFoundError
-        If the name is not registered.
-    ValueError
-        For unsupported providers or malformed references.
-    ModelDownloadError
-        If the provider logic fails to fetch the model.
     """
-    # 1) env override wins
     env_path = _env_override_path(name)
     if env_path is not None:
         return env_path
@@ -225,7 +159,6 @@ def resolve_model(name: str) -> Path:
                 local_dir = local_dir / spec.subdir
             local_dir.mkdir(parents=True, exist_ok=True)
 
-            # Fast path: directory already populated
             if any(local_dir.iterdir()):
                 return local_dir
 
@@ -233,7 +166,6 @@ def resolve_model(name: str) -> Path:
             return local_dir
 
         if provider == "other":
-            # 'other' can be a local path or an URL
             local_dir = cfg.cache_paths.other_model_dir("custom", spec.name)
             local_dir.mkdir(parents=True, exist_ok=True)
             if any(local_dir.iterdir()):
@@ -243,7 +175,7 @@ def resolve_model(name: str) -> Path:
 
         raise ValueError(f"Unsupported provider '{spec.provider}' for model '{name}'")
 
-    except Exception as e:  # wrap in domain-specific error
+    except Exception as e:
         raise ModelDownloadError(f"Failed to resolve model '{name}': {e}") from e
 
 
@@ -255,16 +187,8 @@ def _split_org_model(ref: str) -> Tuple[str, str]:
 
 
 def _download_huggingface(ref: str, revision: Optional[str], dst: Path) -> None:
-    """
-    Download a model snapshot into `dst` using huggingface_hub with a *local* cache.
-
-    Notes
-    -----
-    - We intentionally set ``local_dir_use_symlinks=False`` so that files are
-      physically present under our own cache directory (avoids global cache pollution).
-    """
+    """Download a model snapshot into `dst` using huggingface_hub with a local cache."""
     try:
-        # Lazy import to keep the dependency optional.
         from huggingface_hub import snapshot_download
     except Exception as e:  # pragma: no cover
         raise RuntimeError(
@@ -278,7 +202,7 @@ def _download_huggingface(ref: str, revision: Optional[str], dst: Path) -> None:
         revision=revision,
         local_dir=str(dst),
         local_dir_use_symlinks=False,
-        # token=os.getenv("HF_TOKEN")  # enable if you need gated models
+        # token=os.getenv("HF_TOKEN")
     )
 
 
@@ -286,21 +210,14 @@ def _download_other(ref: str, dst: Path) -> None:
     """
     Download or copy a non-HF model into `dst`.
 
-    Behavior
-    --------
-    - If `ref` is a local file/directory, copy its contents into `dst`.
-    - Otherwise, treat `ref` as a URL:
-        * download to a temp file
-        * if archive (tar/zip), extract; else leave as-is.
-
-    Notes
-    -----
-    - This is a pragmatic helper meant to be extended as your needs grow.
+    - If `ref` is a local path, copy its contents into `dst`.
+    - Else treat `ref` as a URL and download; if archive, extract.
     """
     import shutil
     import tarfile
     import zipfile
     from urllib.parse import urlparse
+    import requests
 
     p = Path(ref).expanduser()
     if p.exists():
@@ -320,9 +237,6 @@ def _download_other(ref: str, dst: Path) -> None:
     if not parsed.scheme:
         raise ValueError(f"'other' provider ref is neither local path nor URL: {ref}")
 
-    # --- naive URL download with basic error handling ---
-    import requests
-
     tmp = dst / "download.tmp"
     logger.info("Downloading model from %s", ref)
     with requests.get(ref, stream=True, timeout=60) as r:
@@ -332,7 +246,6 @@ def _download_other(ref: str, dst: Path) -> None:
                 if chunk:
                     f.write(chunk)
 
-    # Extract if archive
     try:
         if tarfile.is_tarfile(tmp):
             with tarfile.open(tmp) as tf:
@@ -345,7 +258,6 @@ def _download_other(ref: str, dst: Path) -> None:
         else:
             logger.debug("Downloaded file is not an archive; leaving as-is: %s", tmp)
     except Exception:
-        # keep the temp for debugging and re-raise
         logger.exception("Failed to extract downloaded archive: %s", tmp)
         raise
 

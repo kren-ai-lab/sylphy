@@ -1,15 +1,15 @@
-"""bioclust/cli/cache.py
+"""protein_representation/cli/cache.py
 
-CLI utilities to inspect and manage the bioclust cache directory.
+CLI utilities to inspect and manage the protein_representation cache directory.
 
 Usage examples
 --------------
-$ bioclust cache ls
-$ bioclust cache ls --recursive --sort size --human-readable
-$ bioclust cache ls --pattern "**/*.pt" --json
-$ bioclust cache stats
-$ bioclust cache rm --older-than 30d --dry-run
-$ bioclust cache prune --max-size 10GB
+$ protein_representation cache ls
+$ protein_representation cache ls --recursive --sort size --human-readable
+$ protein_representation cache ls --pattern "**/*.pt" --json
+$ protein_representation cache stats
+$ protein_representation cache rm --older-than 30d --dry-run
+$ protein_representation cache prune --max-size 10GB
 
 """
 from __future__ import annotations
@@ -43,7 +43,7 @@ except Exception:  # pragma: no cover - optional dependency
 # ----------------------------
 app = typer.Typer(
     name="cache",
-    help="Inspect and manage the bioclust cache directory (list, stats, prune, rm).",
+    help="Inspect and manage the protein_representation cache directory (list, stats, prune, rm).",
     no_args_is_help=True,
 )
 
@@ -100,12 +100,12 @@ def _parse_timedelta(text: str) -> timedelta:
 # Cache Discovery
 # ----------------------------
 DEFAULT_VENDOR = "KREN AI LAB"
-DEFAULT_APP = "bioclust"
-ENV_CACHE = "BIOCLUST_CACHE_DIR"
+DEFAULT_APP = "protein_representation"
+ENV_CACHE = "protein_representation_CACHE_DIR"
 
 
 def _default_cache_dir() -> Path:
-    # Priority: env var -> appdirs -> ~/.cache/bioclust
+    # Priority: env var -> appdirs -> ~/.cache/protein_representation
     env = os.getenv(ENV_CACHE)
     if env:
         return Path(env).expanduser().resolve()

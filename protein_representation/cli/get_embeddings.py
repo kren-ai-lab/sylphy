@@ -1,9 +1,9 @@
-# bioclust/cli/get_embeddings.py
+# protein_representation/cli/get_embeddings.py
 from pathlib import Path
 import pandas as pd
 import typer
 
-from bioclust.embedding_extraction import embedding_factory
+from protein_representation.embedding_extractor import embedding_factory
 
 app = typer.Typer(
     name="get-embedding",
@@ -74,7 +74,7 @@ def run(
 ):
     """
     Example:
-      bioclust get-embedding run \\
+      protein_representation get-embedding run \\
         --model facebook/esm2_t6_8M_UR50D \\
         --input_data datasets/demo_amp.csv \\
         --output results/emb_esm2.csv \\

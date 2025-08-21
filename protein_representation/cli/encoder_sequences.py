@@ -1,4 +1,4 @@
-# bioclust/cli/encode_sequences.py
+# protein_representation/cli/encode_sequences.py
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import typer
 
-from bioclust.sequence_encoder import (
+from protein_representation.sequence_encoder import (
     OneHotEncoder,
     OrdinalEncoder,
     FFTEncoder,
@@ -160,7 +160,7 @@ def run(
     Example
     -------
     \b
-    bioclust encode-sequences run \\
+    protein_representation encode-sequences run \\
       --encoder kmers \\
       --input-data data/sequences.csv \\
       --output results/kmers_k3.csv \\

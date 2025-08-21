@@ -14,7 +14,7 @@ from .frequency_encoder import FrequencyEncoder
 from .kmers_encoder import KMersEncoders
 from .physicochemical_encoder import PhysicochemicalEncoder
 from .fft_encoder import FFTEncoder
-from .factory import create_encoder, EncoderName
+from .factory import create_encoder
 
 __all__ = [
     "Encoders",
@@ -25,5 +25,4 @@ __all__ = [
     "PhysicochemicalEncoder",
     "FFTEncoder",
     "create_encoder",
-    "EncoderName",
 ]

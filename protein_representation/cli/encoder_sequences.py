@@ -124,7 +124,7 @@ def run(
     try:
         df = _load_csv(input_data, sequence_identifier)
 
-        if encoder.lower() == "fft":
+        if encoder.lower() == EncoderType.fft:
             # 1) Physicochemical encoding
             phys = create_encoder(
                 "physicochemical",
@@ -132,8 +132,8 @@ def run(
                 sequence_column=sequence_identifier,
                 max_length=max_length,
                 debug=debug,
-                debug_mode=_level_from_str(log_level),
-                type_descriptor=type_descriptor,
+                debug_mode=_level_from_str(log_level.value),
+                type_descriptor=type_descriptor.value,
                 name_property=name_property,
             )
             phys.run_process()
@@ -143,31 +143,31 @@ def run(
                 dataset=phys.coded_dataset,
                 sequence_column=sequence_identifier,
                 debug=debug,
-                debug_mode=_level_from_str(log_level),
+                debug_mode=_level_from_str(log_level.value),
             )
             fft_encoder.run_process()
             fft_encoder.export_encoder(
                 df_encoder=fft_encoder.coded_dataset,
                 path=str(output),
-                file_format=format_output.lower(),
+                file_format=format_output.value.lower(),
             )
             typer.echo(f"Encoded features (physchem+FFT) saved to: {output}")
             return
 
         # Other encoders via factory
         enc = create_encoder(
-            encoder,
+            encoder.value,
             dataset=df,
             sequence_column=sequence_identifier,
             max_length=max_length,
             debug=debug,
-            debug_mode=_level_from_str(log_level),
+            debug_mode=_level_from_str(log_level.value),
             size_kmer=size_kmer,
-            type_descriptor=type_descriptor,
+            type_descriptor=type_descriptor.value,
             name_property=name_property,
         )
         enc.run_process()
-        enc.export_encoder(path=str(output), file_format=format_output.lower())
+        enc.export_encoder(path=str(output), file_format=format_output.value.lower())
         typer.echo(f"Encoded features saved to: {output}")
 
     except typer.BadParameter as e:

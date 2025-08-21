@@ -1,0 +1,7 @@
+- Failing tests:
+    - test_physicochemical_encoder.py
+    - test_factory_and_exports.py
+    - test_logging_setup.py
+    - test_base_loading_and_pooling.py
+    - test_init_and_lazy_exports.py
+    - test_oom_backoff.py

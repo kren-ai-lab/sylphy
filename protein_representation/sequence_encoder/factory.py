@@ -1,8 +1,12 @@
-# protein_representation/sequence_encoder/factory.py
+# protein_representation/sequence_encoder/__init__.py
 from __future__ import annotations
 
-from typing import Literal, Mapping, Type
+import logging
+from typing import Any, Dict, Set
 
+from protein_representation.logging import get_logger, add_context
+
+from .base_encoder import Encoders
 from .ordinal_encoder import OrdinalEncoder
 from .one_hot_encoder import OneHotEncoder
 from .frequency_encoder import FrequencyEncoder
@@ -10,47 +14,101 @@ from .kmers_encoder import KMersEncoders
 from .physicochemical_encoder import PhysicochemicalEncoder
 from .fft_encoder import FFTEncoder
 
-EncoderName = Literal[
-    "ordinal", "one_hot", "onehot", "frequency", "kmers", "kmer", "tfidf",
-    "physicochemical", "physchem", "aaindex", "fft",
+__all__ = [
+    "Encoders",
+    "OrdinalEncoder",
+    "OneHotEncoder",
+    "FrequencyEncoder",
+    "KMersEncoders",
+    "PhysicochemicalEncoder",
+    "FFTEncoder",
+    "create_encoder",
 ]
 
-_REGISTRY: Mapping[str, Type] = {
-    # canonical
-    "ordinal": OrdinalEncoder,
+# ensure package logger once, then child for the factory
+_ = get_logger("protein_representation")
+_logger = logging.getLogger("protein_representation.sequence_encoder.factory")
+add_context(_logger, component="sequence_encoder", facility="factory")
+
+# Canonical names for encoders
+_ALIASES: Dict[str, str] = {
+    # one-hot
+    "onehot": "one_hot", "one_hot": "one_hot",
+    # ordinal
+    "ordinal": "ordinal",
+    # frequency
+    "frequency": "frequency",
+    # k-mers
+    "kmers": "kmers", "kmer": "kmers", "tfidf": "kmers",
+    # physicochemical
+    "physicochemical": "physicochemical", "physchem": "physicochemical", "aaindex": "physicochemical",
+    # fft
+    "fft": "fft",
+}
+
+# Class map
+_CLASSES = {
     "one_hot": OneHotEncoder,
+    "ordinal": OrdinalEncoder,
     "frequency": FrequencyEncoder,
     "kmers": KMersEncoders,
     "physicochemical": PhysicochemicalEncoder,
     "fft": FFTEncoder,
-    # aliases
-    "onehot": OneHotEncoder,
-    "kmer": KMersEncoders,
-    "tfidf": KMersEncoders,
-    "physchem": PhysicochemicalEncoder,
-    "aaindex": PhysicochemicalEncoder,
 }
 
+# Whitelisted kwargs per encoder (only these are forwarded)
+_ALLOWED: Dict[str, Set[str]] = {
+    "one_hot": {"dataset", "sequence_column", "max_length", "debug", "debug_mode"},
+    "ordinal": {"dataset", "sequence_column", "max_length", "debug", "debug_mode"},
+    "frequency": {"dataset", "sequence_column", "max_length", "debug", "debug_mode"},
+    "kmers": {"dataset", "sequence_column", "size_kmer", "debug", "debug_mode"},
+    "physicochemical": {
+        "dataset", "sequence_column", "max_length",
+        "type_descriptor", "name_property",
+        "debug", "debug_mode",
+    },
+    "fft": {"dataset", "sequence_column", "debug", "debug_mode"},
+}
 
-def create_encoder(name: EncoderName, **kwargs):
+def _canonical(name: str) -> str:
+    key = (name or "").strip().lower()
+    if key in _ALIASES:
+        return _ALIASES[key]
+    raise ValueError(
+        f"Unknown encoder '{name}'. "
+        f"Available: {sorted(set(_ALIASES.values()))} (aliases supported: {sorted(_ALIASES.keys())})"
+    )
+
+def _filter_kwargs(kind: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    allowed = _ALLOWED[kind]
+    filtered = {k: v for k, v in kwargs.items() if k in allowed}
+    ignored = sorted(set(kwargs.keys()) - allowed)
+    if ignored:
+        _logger.debug("Ignoring unsupported arguments for %s: %s", kind, ignored)
+    return filtered
+
+def create_encoder(name: str, **kwargs: Any) -> Encoders:
     """
-    Factory for sequence encoders.
+    Factory for sequence encoders with per-backend parameter filtering.
 
     Parameters
     ----------
-    name : {'ordinal','one_hot','onehot','frequency','kmers','kmer','tfidf',
-            'physicochemical','physchem','aaindex','fft'}
-        Encoder key or alias.
-    **kwargs :
-        Passed through to the encoder class constructor.
+    name : str
+        Encoder name or alias. Supported canonical names:
+        {'one_hot','ordinal','frequency','kmers','physicochemical','fft'}.
+        Aliases: onehot, kmer, tfidf, physchem, aaindex.
+    **kwargs : Any
+        Backend-specific constructor parameters. Extra keys are ignored safely
+        (and logged at DEBUG level).
 
     Returns
     -------
-    Encoders | FFTEncoder
-        An initialized encoder instance.
+    Encoders
+        An instance of the requested encoder.
     """
-    key = str(name).lower()
-    if key not in _REGISTRY:
-        raise ValueError(f"Unknown encoder '{name}'. Available: {sorted(set(_REGISTRY))}")
-    cls = _REGISTRY[key]
-    return cls(**kwargs)
+    kind = _canonical(name)
+    cls = _CLASSES[kind]
+    params = _filter_kwargs(kind, kwargs)
+    _logger.info("Creating encoder kind=%s class=%s kwargs=%s", kind, cls.__name__, params)
+    add_context(_logger, encoder=cls.__name__)  # enrich context once we know it
+    return cls(**params)

@@ -7,7 +7,7 @@ _LOCK = threading.RLock()
 @dataclass
 class CachePaths:
     cache_root: Path
-    tool_name: str = "bioclust"
+    tool_name: str = "protein_representations"
 
     def base(self) -> Path:
         return self.cache_root / self.tool_name

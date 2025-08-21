@@ -44,7 +44,8 @@ install_requires = [
     "h11>=0.16.0",
     "httpcore>=1.0.9",
     "httpx>=0.28.1",
-    "sniffio>=1.3.1"
+    "sniffio>=1.3.1",
+    "pytest>=8.4.1"
 ]
 
 setup(

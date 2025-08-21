@@ -48,7 +48,7 @@ pip install protein-representation
 ```bash
 git clone https://github.com/ProteinEngineering-PESB2/protein_representations.git
 cd protein-representation
-pip install -e ".[embeddings,reductions,cli]"
+pip install -e .
 ```
 
 > The package name on PyPI is `protein-representation` (import is `protein_representation`).

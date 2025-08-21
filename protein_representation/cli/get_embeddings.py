@@ -1,13 +1,17 @@
 # protein_representation/cli/get_embeddings.py
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Literal
+
 import pandas as pd
 import typer
 
-from protein_representation.embedding_extractor import embedding_factory
+from protein_representation.embedding_extractor import create_embedding  # lazy alias to EmbeddingFactory
 
 app = typer.Typer(
     name="get-embedding",
-    help="Extract protein sequence embeddings using a selected pretrained model."
+    help="Extract protein sequence embeddings using a selected pretrained model.",
 )
 
 def _load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
@@ -23,88 +27,93 @@ def _load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
     df[seq_col] = df[seq_col].astype(str).fillna("")
     return df
 
+def _level_from_str(name: str) -> int:
+    import logging
+    mapping = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+    }
+    return mapping.get((name or "").strip().upper(), logging.INFO)
+
 @app.command()
 def run(
+    # Model & backend
     model: str = typer.Option(
         "facebook/esm2_t6_8M_UR50D", "--model", "-m",
-        help="Model identifier (HF ref or registry key)."
+        help="Model identifier (HF ref or registry key), e.g. 'facebook/esm2_t6_8M_UR50D'."
     ),
-    input_data: Path = typer.Option(
-        ..., "--input_data", "-i",
-        help="Input CSV path with sequences."
-    ),
-    output: Path = typer.Option(
-        ..., "--output", "-o",
-        help="Output file path for embeddings (CSV or NPY)."
-    ),
-    format_output: str = typer.Option(
-        "csv", "--format_output", "-f",
-        help="Export format.",
-        case_sensitive=False,
-        show_choices=True,
-    ),
-    sequence_identifier: str = typer.Option(
-        "sequence", "--sequence_identifier", "-s",
-        help="Column in CSV that contains amino acid sequences."
-    ),
-    device: str = typer.Option(
+    device: Literal["cuda", "cpu"] = typer.Option(
         "cuda", "--device", "-d",
         help="Inference device.",
         case_sensitive=False,
-        show_choices=True,
     ),
-    precision: str = typer.Option(
+    precision: Literal["fp32", "fp16", "bf16"] = typer.Option(
         "fp32", "--precision", "-p",
-        help="Mixed-precision for inference (saves VRAM on CUDA).",
+        help="Mixed precision for CUDA (ignored on CPU).",
         case_sensitive=False,
-        show_choices=True,
     ),
-    oom_backoff: int = typer.Option(
-        1, "--oom_backoff",
-        help="Auto-reduce batch size on CUDA OOM. (e.g, 1=Activate, 0=Deactivate)"
+    batch_size: int = typer.Option(
+        8, "--batch-size", "-b", min=1,
+        help="Batch size for inference.",
     ),
-    debug: int = typer.Option(
-        0, "--debug",
-        help="Enable verbose logs in the library. (e.g, 1=Activate, 0=Deactivate)"
+    max_length: int = typer.Option(
+        1024, "--max-length", "-L", min=1,
+        help="Max tokens per sequence (truncation).",
     ),
-    debug_mode: int = typer.Option(
-        20, "--debug_mode",
-        help="Library log level as int (e.g., 10=DEBUG, 20=INFO, 30=WARNING)."
+    pool: Literal["mean", "cls", "eos"] = typer.Option(
+        "mean", "--pool",
+        help="Pooling strategy for last hidden states.",
+        case_sensitive=False,
+    ),
+    oom_backoff: bool = typer.Option(
+        True, "--oom-backoff/--no-oom-backoff",
+        help="Auto-reduce batch size on CUDA OOM and retry.",
+    ),
+    # IO
+    input_data: Path = typer.Option(
+        ..., "--input-data", "-i",
+        help="Input CSV with sequences.",
+    ),
+    sequence_identifier: str = typer.Option(
+        "sequence", "--sequence-identifier", "-s",
+        help="Column in CSV that contains amino acid sequences.",
+    ),
+    output: Path = typer.Option(
+        ..., "--output", "-o",
+        help="Output file for embeddings.",
+    ),
+    format_output: Literal["csv", "npy"] = typer.Option(
+        "csv", "--format-output", "-f",
+        help="Export format.",
+        case_sensitive=False,
+    ),
+    # Logging
+    debug: bool = typer.Option(
+        False, "--debug/--no-debug",
+        help="Enable verbose logs for this command.",
+    ),
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = typer.Option(
+        "INFO", "--log-level",
+        help="Library log level.",
+        case_sensitive=False,
     ),
 ):
     """
     Example:
       protein_representation get-embedding run \\
         --model facebook/esm2_t6_8M_UR50D \\
-        --input_data datasets/demo_amp.csv \\
+        --input-data datasets/demo_amp.csv \\
         --output results/emb_esm2.csv \\
-        --sequence_identifier sequence \\
-        --device cuda --precision fp16
+        --sequence-identifier sequence \\
+        --device cuda --precision fp16 --batch-size 16 --pool mean
     """
-    
-    allowed_formats = {"csv", "npy"}
-    allowed_devices = {"cuda", "cpu"}
-    allowed_precisions = {"fp32", "fp16", "bf16"}
-    allowed_debug_options = {0, 1}
-    allowed_debug_mode = {10, 20, 30}
-    allowed_oom_options = {0, 1}
-
-    if format_output.lower() not in allowed_formats:
-        raise typer.BadParameter(f"--format-output must be one of {sorted(allowed_formats)}")
-    if device.lower() not in allowed_devices:
-        raise typer.BadParameter(f"--device must be one of {sorted(allowed_devices)}")
-    if precision.lower() not in allowed_precisions:
-        raise typer.BadParameter(f"--precision must be one of {sorted(allowed_precisions)}")
-    if int(debug) not in allowed_debug_options:
-        raise typer.BadParameter(f"--debug must be one of {sorted(allowed_debug_options)}")
-    if int(debug_mode) not in allowed_debug_mode:
-        raise typer.BadParameter(f"--debug_mode must be one of {sorted(allowed_debug_mode)}")
-    if int(oom_backoff) not in allowed_oom_options:
-        raise typer.BadParameter(f"--oom_backoff must be one of {sorted(allowed_oom_options)}")
     try:
         df = _load_csv(input_data, sequence_identifier)
 
-        embedder = embedding_factory.EmbeddingFactory(
+        embedder = create_embedding(
             model_name=model,
             dataset=df,
             column_seq=sequence_identifier,
@@ -112,18 +121,13 @@ def run(
             precision=precision.lower(),
             oom_backoff=oom_backoff,
             debug=debug,
-            debug_mode=debug_mode,
+            debug_mode=_level_from_str(log_level),
         )
 
-        embedder.load_model_tokenizer()
-        df_emb = embedder.embedding_process()
-        embedder.cleaning_memory()
-
-        embedder.export_embeddings(
-            df_embedding=df_emb,
-            path=str(output),
-            file_format=format_output.lower(),
-        )
+        # New unified API from EmbeddingBased
+        embedder.load_hf_tokenizer_and_model()
+        embedder.run_process(max_length=max_length, batch_size=batch_size, pool=pool.lower())
+        embedder.export_encoder(path=str(output), file_format=format_output.lower())
 
         typer.echo(f"Embeddings saved to: {output}")
 

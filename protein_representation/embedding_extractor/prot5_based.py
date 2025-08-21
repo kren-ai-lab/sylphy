@@ -2,7 +2,7 @@ import re
 import torch
 import pandas as pd
 from typing import Optional, List
-import logging
+from protein_representation.core.config import ToolConfig
 from transformers import T5Tokenizer, T5EncoderModel, AutoConfig
 
 from .embedding_based import EmbeddingBased
@@ -17,7 +17,7 @@ class Prot5Based(EmbeddingBased):
         dataset: Optional[pd.DataFrame] = None,
         column_seq: Optional[str] = "sequence",
         debug: bool = True,
-        debug_mode: int = logging.INFO,
+        debug_mode: int = ToolConfig.log_level,
         precision: str = "fp32",
         oom_backoff: bool = True,
     ) -> None:

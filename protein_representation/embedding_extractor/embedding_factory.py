@@ -1,10 +1,18 @@
+# protein_representation/embedding_extraction/embedding_factory.py
 """
 embedding_factory.py
 
 Factory to instantiate the appropriate embedding class based on model name.
+Uses unified package logging and emits informative selection messages.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
+
+from protein_representation.constants.tool_configs import ToolConfig
+from protein_representation.logging import get_logger, add_context
 
 from .esm_based import ESMBasedEmbedding
 from .ankh2_based import Ankh2BasedEmbedding
@@ -13,12 +21,21 @@ from .bert_based import BertBasedEmbedding
 from .mistral_based import MistralBasedEmbedding
 from .esmc_based import ESMCBasedEmbedding
 
+if TYPE_CHECKING:
+    from .embedding_based import EmbeddingBased  # for type hints only
+
 
 def _norm(s: str) -> str:
     return (s or "").strip().lower()
 
 
-def EmbeddingFactory(
+# --- logging: ensure parent once, use a child logger for the factory ----
+_ = get_logger("protein_representation")  # idempotent, config done once
+logger = logging.getLogger("protein_representation.embedding_extraction.factory")
+add_context(logger, component="embedding_extraction", backend="factory")
+
+
+def EmbeddingFactory(  # noqa: N802 (factory name kept for public API)
     model_name: str,
     dataset,
     column_seq: str,
@@ -26,8 +43,8 @@ def EmbeddingFactory(
     precision: str = "fp32",
     oom_backoff: bool = True,
     debug: bool = True,
-    debug_mode: int = logging.INFO,
-):
+    debug_mode: int = ToolConfig.log_level,
+) -> "EmbeddingBased":
     """
     Factory function to return the appropriate embedding class instance.
 
@@ -52,7 +69,7 @@ def EmbeddingFactory(
 
     Returns
     -------
-    object
+    EmbeddingBased
         Instance of a subclass of EmbeddingBased.
 
     Raises
@@ -60,12 +77,11 @@ def EmbeddingFactory(
     ValueError
         If no matching backend is found.
     """
-
     name = _norm(model_name)
 
     # Order matters (more specific first)
     if "esm2" in name or name.startswith("facebook/esm2"):
-        # ESM (HF)
+        logger.info("Selecting ESM2 backend", extra={"model": model_name, "family": "esm2"})
         return ESMBasedEmbedding(
             name_device=name_device,
             name_model=model_name,
@@ -79,7 +95,7 @@ def EmbeddingFactory(
         )
 
     if "ankh2" in name or name.startswith("elnaggarlab/ankh2"):
-        # Ankh2 (HF, trust_remote_code=True in class)
+        logger.info("Selecting Ankh2 backend", extra={"model": model_name, "family": "ankh2"})
         return Ankh2BasedEmbedding(
             dataset=dataset,
             name_device=name_device,
@@ -92,7 +108,7 @@ def EmbeddingFactory(
         )
 
     if "t5" in name or "prot_t5" in name or name.startswith("rostlab/prot_t5"):
-        # ProtT5 (HF)
+        logger.info("Selecting ProtT5 backend", extra={"model": model_name, "family": "prot_t5"})
         return Prot5Based(
             name_device=name_device,
             name_model=model_name,
@@ -106,7 +122,7 @@ def EmbeddingFactory(
         )
 
     if "bert" in name or "prot_bert" in name or name.startswith("rostlab/prot_bert"):
-        # ProtBERT (HF)
+        logger.info("Selecting ProtBERT backend", extra={"model": model_name, "family": "prot_bert"})
         return BertBasedEmbedding(
             name_device=name_device,
             name_model=model_name,
@@ -120,7 +136,7 @@ def EmbeddingFactory(
         )
 
     if "mistral" in name or "mistral-prot" in name:
-        # Mistral-Prot (HF)
+        logger.info("Selecting Mistral-Prot backend", extra={"model": model_name, "family": "mistral_prot"})
         return MistralBasedEmbedding(
             name_device=name_device,
             name_model=model_name,
@@ -134,10 +150,10 @@ def EmbeddingFactory(
         )
 
     if "esmc" in name:
-        # ESM-C (Meta SDK; optional registry via provider="other")
+        logger.info("Selecting ESM-C backend", extra={"model": model_name, "family": "esmc"})
         return ESMCBasedEmbedding(
             name_device=name_device,
-            name_model=model_name,   # e.g., "esmc_300m" or a registry key for local path/URL
+            name_model=model_name,  # e.g., "esmc_300m" or a registry key for local path/URL
             dataset=dataset,
             column_seq=column_seq,
             debug=debug,

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import logging
-from typing import List, Optional, Literal, Union, Dict, Any
+from typing import List, Optional, Literal, Any
 from sklearn.utils import shuffle
 from sklearn.metrics import pairwise_distances
 import uuid
@@ -131,39 +131,6 @@ class UtilsLib:
 
         __logger__.info(f"Computing pairwise distances using metric '{metric}'")
         return pairwise_distances(matrix_data, metric=metric)
-
-    @classmethod
-    def get_statistical_descriptor_distribution(
-        cls,
-        data_distribution: Union[List[float], np.ndarray]
-    ) -> Dict[str, float]:
-        """
-        Compute a summary of statistics for a numeric distribution.
-
-        Parameters
-        ----------
-        data_distribution : list or np.ndarray
-            List or array of numeric values.
-
-        Returns
-        -------
-        dict
-            Dictionary with statistical descriptors: mean, min, max, std, 25th percentile, 75th percentile.
-        """
-        array = np.array(data_distribution)
-        __logger__.info(f"Computing statistical descriptors for distribution of length {len(array)}")
-
-        stats = {
-            "average": float(np.mean(array)),
-            "min": float(np.min(array)),
-            "max": float(np.max(array)),
-            "std": float(np.std(array)),
-            "25%": float(np.quantile(array, 0.25)),
-            "75%": float(np.quantile(array, 0.75))
-        }
-
-        __logger__.debug(f"Computed stats: {stats}")
-        return stats
 
     @classmethod
     def create_jobid(cls) -> str:

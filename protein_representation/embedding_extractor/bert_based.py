@@ -1,9 +1,9 @@
 from typing import Optional, List
-import logging
 import torch
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 
 from .embedding_based import EmbeddingBased
+from protein_representation.core.config import ToolConfig
 
 class BertBasedEmbedding(EmbeddingBased):
 
@@ -15,7 +15,7 @@ class BertBasedEmbedding(EmbeddingBased):
         dataset: Optional[object] = None,
         column_seq: Optional[str] = "sequence",
         debug: bool = True,
-        debug_mode: int = logging.INFO,
+        debug_mode: int = ToolConfig.log_level,
         precision: str = "fp32",      
         oom_backoff: bool = True,
     ) -> None:

@@ -1,10 +1,9 @@
-import os
 import pandas as pd
 import numpy as np
 import torch
 from typing import Optional, List
 from tqdm import tqdm
-import logging
+from protein_representation.core.config import ToolConfig
 
 from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
@@ -21,7 +20,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         dataset: Optional[pd.DataFrame] = None,
         column_seq: Optional[str] = "sequence",
         debug: bool = True,
-        debug_mode: int = logging.INFO,
+        debug_mode: int = ToolConfig.log_level,
         precision: str = "fp32",         
         oom_backoff: bool = True,        
     ) -> None:

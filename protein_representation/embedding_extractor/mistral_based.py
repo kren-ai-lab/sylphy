@@ -1,7 +1,7 @@
 from typing import Optional, List
-import logging
 import torch
 from transformers import AutoModel, AutoTokenizer, AutoConfig
+from protein_representation.core.config import ToolConfig
 
 from .embedding_based import EmbeddingBased
 
@@ -15,7 +15,7 @@ class MistralBasedEmbedding(EmbeddingBased):
         dataset: Optional[object] = None,
         column_seq: Optional[str] = "sequence",
         debug: bool = True,
-        debug_mode: int = logging.INFO,
+        debug_mode: int = ToolConfig.log_level,
         precision: str = "fp32",      # "fp32" | "fp16" | "bf16"
         oom_backoff: bool = True,
     ) -> None:

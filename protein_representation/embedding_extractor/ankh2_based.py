@@ -1,5 +1,5 @@
 import torch
-from typing import Optional, List, Literal
+from typing import List
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 
 from .embedding_based import EmbeddingBased

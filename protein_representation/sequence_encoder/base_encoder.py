@@ -1,83 +1,105 @@
-import pandas as pd
-from typing import Optional, List, Literal
+# protein_representation/sequence_encoder/base_encoder.py
+from __future__ import annotations
+
+from typing import Optional, Literal
 import logging
-from protein_representation.misc.constants import Constant
-from .logging_config import setup_logger
+import pandas as pd
+
+from protein_representation.logging import get_logger, add_context
+from protein_representation.constants.tool_constants import (get_residue, get_index, LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC,
+                                                             LIST_DESCRIPTORS_SEQUENCE, POSITION_RESIDUES, LIST_RESIDUES, BASE_URL_AAINDEX,
+                                                             BASE_URL_CLUSTERS_DESCRIPTORS)
+
 from protein_representation.misc.utils_lib import UtilsLib
+
 
 class Encoders:
     """
-    A class for preprocessing and validating protein or peptide sequences
-    within a pandas DataFrame.
+    Common pre-processing and validation for protein/peptide sequence encoders.
 
-    The class performs checks for canonical amino acid residues and filters out
-    sequences that exceed a specified maximum length. It retains specific columns
-    from the original dataset and creates a processed dataset for downstream analysis.
+    This class validates canonical amino acids and maximum length constraints,
+    preserving selected columns for downstream encoders.
 
     Parameters
     ----------
-    dataset : pd.DataFrame
-        The input dataset containing biological sequences.
+    dataset : pd.DataFrame, optional
+        Input dataset containing sequences in `sequence_column`. If None, the
+        instance is created with `status=False` and a message is logged.
     sequence_column : str, default="sequence"
-        Name of the column that holds the protein/peptide sequences.
-    ignore_columns : list, optional
-        Columns to preserve in the encoded dataset without processing.
+        Column that holds the sequence strings.
     max_length : int, default=1024
-        Maximum allowed sequence length.
+        Maximum allowed sequence length; longer sequences are filtered out.
+    debug : bool, default=False
+        If True, the *child* logger is set to `debug_mode`.
+    debug_mode : int, default=logging.INFO
+        Logging level for this encoder's child logger (e.g., logging.DEBUG).
+    name_logging : str, default="sequence_encoder.encoder"
+        Child logger suffix; emitted as
+        ``protein_representation.sequence_encoder.<name_logging>``.
 
     Attributes
     ----------
     dataset : pd.DataFrame
-        Cleaned and validated dataset.
+        Cleaned & validated dataset. Unchanged if validation fails.
     coded_dataset : pd.DataFrame
-        Resulting dataset with preserved metadata columns.
+        Output feature matrix (to be filled by concrete encoders).
     status : bool
-        Indicates whether the encoding process was successful.
+        Validation status.
     message : str
-        Status message explaining validation failure, if any.
+        Last status/error message.
     max_length : int
-        Maximum sequence length allowed.
+        Maximum permitted sequence length.
+    __logger__ : logging.Logger
+        Child logger for this encoder.
     """
 
     def __init__(
         self,
-        dataset: pd.DataFrame,
+        dataset: Optional[pd.DataFrame] = None,
         sequence_column: str = "sequence",
         max_length: int = 1024,
-        debug:bool=False,
-        debug_mode:int=logging.INFO,
-        name_logging:str="sequence_encoder.encoder",
+        debug: bool = False,
+        debug_mode: int = logging.INFO,
+        name_logging: str = "sequence_encoder.encoder",
     ) -> None:
-        
-        self.dataset: pd.DataFrame = dataset
-        self.sequence_column: str = sequence_column
-        self.max_length: int = max_length
-        
-        self.status: bool = True
-        self.message: str = ""
-        self.coded_dataset: pd.DataFrame = pd.DataFrame()
 
-        self.__logger__ = setup_logger(
-            name=name_logging,
-            level=debug_mode,
-            enable=debug)
+        # Ensure the top-level library logger is configured once,
+        # and use a child logger for this encoder.
+        _ = get_logger("protein_representation")
+        self.__logger__ = logging.getLogger(
+            f"protein_representation.sequence_encoder.{name_logging}"
+        )
+        self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
+        add_context(self.__logger__, component="sequence_encoder", encoder=name_logging)
 
-        try:            
+        self.dataset = dataset if dataset is not None else pd.DataFrame()
+        self.sequence_column = sequence_column
+        self.max_length = max_length
+
+        self.status = True
+        self.message = ""
+        self.coded_dataset = pd.DataFrame()
+
+        # Fast-exit if dataset was not provided
+        if dataset is None:
+            self.status = False
+            self.message = "[ERROR] No dataset provided to encoder."
+            self.__logger__.error(self.message)
+            return
+
+        try:
             self.make_revisions()
         except Exception as e:
             self.status = False
-            self.message = f"[ERROR] Initialization failed: {str(e)}"
+            self.message = f"[ERROR] Initialization failed: {e}"
             self.__logger__.exception(self.message)
 
-    def make_revisions(self) -> None:
-        """
-        Perform sequence column validation and preprocessing.
+    # ----------------------------
+    # Validation steps
+    # ----------------------------
 
-        Raises
-        ------
-        ValueError
-            If sequence column is not present in the dataset.
-        """
+    def make_revisions(self) -> None:
+        """Run residue-canonicity and length validations."""
         if self.sequence_column not in self.dataset.columns:
             self.status = False
             self.message = f"[ERROR] Column '{self.sequence_column}' not found in dataset."
@@ -91,57 +113,49 @@ class Encoders:
             self.process_length_sequences()
         except Exception as e:
             self.status = False
-            self.message = f"[ERROR] Failed during revision steps: {str(e)}"
+            self.message = f"[ERROR] Failed during revision steps: {e}"
             self.__logger__.exception(self.message)
             raise RuntimeError(self.message)
 
     def check_canonical_residues(self) -> None:
-        """
-        Filters the dataset to retain only those sequences that contain
-        valid canonical residues as defined in Constant.LIST_RESIDUES.
-        """
+        """Keep only sequences composed of canonical residues."""
         try:
-            canon_sequences = [
-                all(residue in Constant.LIST_RESIDUES for residue in seq)
+            canon_mask = [
+                all(res in LIST_RESIDUES for res in seq)
                 for seq in self.dataset[self.sequence_column]
             ]
-            self.dataset["is_canon"] = canon_sequences
-            before_filter = len(self.dataset)
+            self.dataset["is_canon"] = canon_mask
+            before = len(self.dataset)
             self.dataset = self.dataset[self.dataset["is_canon"]].copy()
-            after_filter = len(self.dataset)
-            self.__logger__.info(f"Filtered non-canonical sequences: {before_filter - after_filter} removed.")
-        except Exception as e:
+            removed = before - len(self.dataset)
+            self.__logger__.info("Filtered non-canonical sequences: %d removed.", removed)
+        except Exception:
             self.__logger__.exception("[ERROR] Failed during canonical residue check.")
-            raise RuntimeError(f"Failed during canonical residue check: {str(e)}")
+            raise RuntimeError("Failed during canonical residue check.")
 
     def process_length_sequences(self) -> None:
-        """
-        Filters out sequences longer than the specified maximum length.
-        Adds a 'length_sequence' column and keeps only valid sequences.
-        """
+        """Filter out sequences longer than `max_length`."""
         try:
             self.dataset["length_sequence"] = self.dataset[self.sequence_column].str.len()
             self.dataset["is_valid_length"] = (self.dataset["length_sequence"] <= self.max_length).astype(int)
-            before_filter = len(self.dataset)
+            before = len(self.dataset)
             self.dataset = self.dataset[self.dataset["is_valid_length"] == 1].copy()
-            after_filter = len(self.dataset)
-            self.__logger__.info(f"Filtered long sequences: {before_filter - after_filter} removed.")
-        except Exception as e:
+            removed = before - len(self.dataset)
+            self.__logger__.info("Filtered long sequences: %d removed.", removed)
+        except Exception:
             self.__logger__.exception("[ERROR] Failed during length validation.")
-            raise RuntimeError(f"Failed during length validation: {str(e)}")
+            raise RuntimeError("Failed during length validation.")
 
-    def export_encoder(
-        self,
-        path: str,
-        file_format: Literal["csv", "npy"] = "csv"
-    ) -> None:
-        """
-        Save the coded matrix to disk.
-        """
+    # ----------------------------
+    # IO
+    # ----------------------------
+
+    def export_encoder(self, path: str, file_format: Literal["csv", "npy"] = "csv") -> None:
+        """Persist the encoded matrix to disk."""
         UtilsLib.export_data(
             df_encoded=self.coded_dataset,
             path=path,
-            __logger__= self.__logger__,
-            base_message= "Encoded generated",
-            file_format= file_format
+            __logger__=self.__logger__,
+            base_message="Encoded generated",
+            file_format=file_format,
         )

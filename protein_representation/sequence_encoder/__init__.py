@@ -1,29 +1,11 @@
+# protein_representation/sequence_encoder/__init__.py
 """
 Sequence Encoding Toolkit
 =========================
 
-This package provides a unified interface for encoding protein or peptide sequences
-into numerical formats using various strategies, including one-hot encoding, ordinal
-mapping, physicochemical properties, k-mer frequencies, and FFT-based transformation.
-
-Modules
--------
-- base_encoder               : Abstract base class with validation and preprocessing.
-- ordinal_encoder            : Encodes residues by their ordinal position.
-- one_hot_encoder            : Encodes residues using binary vectors (one-hot).
-- frequency_encoder          : Encodes residues by normalized frequency per position.
-- kmers_encoder              : Applies TF-IDF vectorization on k-mer subsequences.
-- physicochemical_encoder    : Uses physicochemical properties from AAIndex.
-- fft_encoder                : Applies Fast Fourier Transform to numeric vectors.
-
-Author: KREN AI LAB
-License: GNU GENERAL PUBLIC LICENSE
+Encoders to transform protein/peptide sequences into numerical representations:
+one-hot, ordinal, frequency, k-mer TF-IDF, physicochemical (AAIndex), and FFT.
 """
-
-__version__ = "1.0.0"
-__author__ = "KREN AI LAB"
-__email__ = "krenai@umag.cl"
-__license__ = "GNU GENERAL PUBLIC LICENSE"
 
 from .base_encoder import Encoders
 from .ordinal_encoder import OrdinalEncoder
@@ -32,6 +14,7 @@ from .frequency_encoder import FrequencyEncoder
 from .kmers_encoder import KMersEncoders
 from .physicochemical_encoder import PhysicochemicalEncoder
 from .fft_encoder import FFTEncoder
+from .factory import create_encoder, EncoderName
 
 __all__ = [
     "Encoders",
@@ -40,5 +23,7 @@ __all__ = [
     "FrequencyEncoder",
     "KMersEncoders",
     "PhysicochemicalEncoder",
-    "FFTEncoder"
+    "FFTEncoder",
+    "create_encoder",
+    "EncoderName",
 ]

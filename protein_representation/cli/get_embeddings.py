@@ -118,8 +118,8 @@ def run(
             model_name=model,
             dataset=df,
             column_seq=sequence_identifier,
-            name_device=device.lower(),
-            precision=precision.lower(),
+            name_device=device.value.lower(),
+            precision=precision.value.lower(),
             oom_backoff=oom_backoff,
             debug=debug,
             debug_mode=_level_from_str(log_level),
@@ -127,8 +127,8 @@ def run(
 
         # New unified API from EmbeddingBased
         embedder.load_hf_tokenizer_and_model()
-        embedder.run_process(max_length=max_length, batch_size=batch_size, pool=pool.lower())
-        embedder.export_encoder(path=str(output), file_format=format_output.lower())
+        embedder.run_process(max_length=max_length, batch_size=batch_size, pool=pool.value.lower())
+        embedder.export_encoder(path=str(output), file_format=format_output.value.lower())
 
         typer.echo(f"Embeddings saved to: {output}")
 

@@ -1,0 +1,5 @@
+{
+    "n_components":2,
+    "svd_solver": "auto",
+    "random_state":42
+}

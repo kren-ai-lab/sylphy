@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
 
 import pandas as pd
 import typer
 
 from protein_representation.embedding_extractor import create_embedding  # lazy alias to EmbeddingFactory
+from protein_representation.constants.cli_constants import (DebugMode, ExportOption, Device, Precision,
+                                                            PoolOption)
 
 app = typer.Typer(
     name="get-embedding",
@@ -45,12 +46,12 @@ def run(
         "facebook/esm2_t6_8M_UR50D", "--model", "-m",
         help="Model identifier (HF ref or registry key), e.g. 'facebook/esm2_t6_8M_UR50D'."
     ),
-    device: Literal["cuda", "cpu"] = typer.Option(
+    device: Device = typer.Option(
         "cuda", "--device", "-d",
         help="Inference device.",
         case_sensitive=False,
     ),
-    precision: Literal["fp32", "fp16", "bf16"] = typer.Option(
+    precision: Precision = typer.Option(
         "fp32", "--precision", "-p",
         help="Mixed precision for CUDA (ignored on CPU).",
         case_sensitive=False,
@@ -63,7 +64,7 @@ def run(
         1024, "--max-length", "-L", min=1,
         help="Max tokens per sequence (truncation).",
     ),
-    pool: Literal["mean", "cls", "eos"] = typer.Option(
+    pool: PoolOption = typer.Option(
         "mean", "--pool",
         help="Pooling strategy for last hidden states.",
         case_sensitive=False,
@@ -85,7 +86,7 @@ def run(
         ..., "--output", "-o",
         help="Output file for embeddings.",
     ),
-    format_output: Literal["csv", "npy"] = typer.Option(
+    format_output: ExportOption = typer.Option(
         "csv", "--format-output", "-f",
         help="Export format.",
         case_sensitive=False,
@@ -95,7 +96,7 @@ def run(
         False, "--debug/--no-debug",
         help="Enable verbose logs for this command.",
     ),
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = typer.Option(
+    log_level: DebugMode = typer.Option(
         "INFO", "--log-level",
         help="Library log level.",
         case_sensitive=False,

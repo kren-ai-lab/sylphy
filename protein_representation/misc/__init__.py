@@ -20,10 +20,8 @@ __author__ = "KREN AI LAB"
 __email__ = "krenai@umag.cl"
 __license__ = "GNU GENERAL PUBLIC LICENSE"
 
-from .constants import Constant
 from .utils_lib import UtilsLib
 
 __all__ = [
-    "Constant",
     "UtilsLib"
 ]

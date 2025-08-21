@@ -38,6 +38,13 @@ install_requires = [
     "biopython>=1.80",
     "biotite>=0.38.0",
     "igraph>=0.11.0",
+
+    # others
+    "anyio>=4.10.0",
+    "h11>=0.16.0",
+    "httpcore>=1.0.9",
+    "httpx>=0.28.1",
+    "sniffio>=1.3.1"
 ]
 
 setup(

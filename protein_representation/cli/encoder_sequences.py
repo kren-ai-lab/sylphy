@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Any, Literal
-
-import numpy as np
 import pandas as pd
 import typer
+
+from protein_representation.constants.cli_constants import (EncoderType, ExportOption, PhysicochemicalOption,
+                                                            DebugMode)
 
 from protein_representation.sequence_encoder import (
     create_encoder,
@@ -45,7 +45,7 @@ def _level_from_str(name: str) -> int:
 @app.command()
 def run(
     # Strategy
-    encoder: Literal["onehot", "ordinal", "fft", "physicochemical", "frequency", "kmers", "kmer", "physchem"] = typer.Option(
+    encoder: EncoderType = typer.Option(
         "onehot", "--encoder", "-e",
         help="Encoding strategy.",
         case_sensitive=False,
@@ -59,7 +59,7 @@ def run(
         ..., "--output", "-o",
         help="Output file path (CSV or NPY).",
     ),
-    format_output: Literal["csv", "npy"] = typer.Option(
+    format_output: ExportOption = typer.Option(
         "csv", "--format-output", "-f",
         help="Export format.",
         case_sensitive=False,
@@ -77,7 +77,7 @@ def run(
         3, "--size-kmer", "-k", min=2,
         help="K-mer length for k-mers encoder.",
     ),
-    type_descriptor: Literal["aaindex", "group_based"] = typer.Option(
+    type_descriptor: PhysicochemicalOption = typer.Option(
         "aaindex", "--type-descriptor", "-t",
         help="Descriptor type for physicochemical encoder.",
         case_sensitive=False,
@@ -91,7 +91,7 @@ def run(
         False, "--debug/--no-debug",
         help="Enable verbose logs for this command.",
     ),
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = typer.Option(
+    log_level: DebugMode = typer.Option(
         "INFO", "--log-level",
         help="Library log level.",
         case_sensitive=False,

@@ -1,0 +1,77 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+env/
+venv/
+.venv/
+
+# Poetry virtualenv metadata
+poetry.lock
+# .python-version  
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+coverage.xml
+*.cover
+.cache
+pytest_cache/
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+*.ipynb~
+
+# VSCode / PyCharm / editor configs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS & Linux artifacts
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.swp
+*.bak
+*~
+
+# Logs and debug
+*.log
+
+# Generated data
+data/
+__tmp/
+outputs/
+plots/
+*.h5
+*.csv
+*.tsv
+*.pkl
+*.npy
+*.npz
+*.pdb
+
+# Secrets / keys / local config
+.env
+.env.*
+*.secret
+*.key
+
+# Others
+other/

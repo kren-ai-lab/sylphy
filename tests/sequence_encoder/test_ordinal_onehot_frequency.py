@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from protein_representation.sequence_encoder import OrdinalEncoder, OneHotEncoder, FrequencyEncoder
+from sylphy.sequence_encoder import OrdinalEncoder, OneHotEncoder, FrequencyEncoder
 
 
 def test_ordinal_shapes_and_padding(toy_df):

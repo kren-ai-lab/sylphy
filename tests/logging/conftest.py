@@ -6,7 +6,7 @@ from typing import Iterator
 
 import pytest
 
-from protein_representation.logging import reset_logging
+from sylphy.logging import reset_logging
 
 PKG_LOGGER_NAME = "protein_representation"
 

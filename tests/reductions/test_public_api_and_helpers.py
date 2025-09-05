@@ -1,7 +1,7 @@
 # tests/reductions/test_public_api_and_helpers.py
 from __future__ import annotations
 
-import protein_representation.reductions as r
+import sylphy.reductions as r
 
 
 def test_public_surface():

@@ -2,7 +2,7 @@ import re
 import torch
 import pandas as pd
 from typing import Optional, List
-from protein_representation.core.config import ToolConfig
+from sylphy.core.config import ToolConfig
 from transformers import T5Tokenizer, T5EncoderModel, AutoConfig
 
 from .embedding_based import EmbeddingBased

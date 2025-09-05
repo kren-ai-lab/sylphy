@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 def test_lazy_exports_and_alias_available():
-    import protein_representation.embedding_extractor as ee
+    import sylphy.embedding_extractor as ee
 
     # Symbols exposed
     assert "EmbeddingBased" in dir(ee)

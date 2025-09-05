@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 from typer.testing import CliRunner
 
-from protein_representation.cli.get_embeddings import app
+from sylphy.cli.get_embeddings import app
 from transformers import AutoModel as _FakeModel
 
 

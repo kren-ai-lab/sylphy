@@ -43,7 +43,7 @@ def _resolve_log_file(default_name: str = "protein_representation.log") -> Optio
 
     # 2) Try core.config lazily (break cycles: no top-level import!)
     try:
-        from protein_representation.core import config as _cfg  # local import
+        from sylphy.core import config as _cfg  # local import
         root = Path(_cfg.get_config().cache_paths.logs())
         root.mkdir(parents=True, exist_ok=True)
         return root / default_name

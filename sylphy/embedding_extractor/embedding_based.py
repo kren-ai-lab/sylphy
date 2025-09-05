@@ -8,10 +8,10 @@ from abc import ABC
 from typing import List, Optional, Literal
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 
-from protein_representation.logging import get_logger, add_context
-from protein_representation.core.model_registry import ModelSpec, resolve_model, register_model
-from protein_representation.core.config import ToolConfig
-from protein_representation.misc.utils_lib import UtilsLib
+from sylphy.logging import get_logger, add_context
+from sylphy.core.model_registry import ModelSpec, resolve_model, register_model
+from sylphy.core.config import ToolConfig
+from sylphy.misc.utils_lib import UtilsLib
 
 
 class EmbeddingBased(ABC):

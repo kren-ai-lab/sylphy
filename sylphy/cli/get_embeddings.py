@@ -6,8 +6,8 @@ from pathlib import Path
 import pandas as pd
 import typer
 
-from protein_representation.embedding_extractor import create_embedding  # lazy alias to EmbeddingFactory
-from protein_representation.constants.cli_constants import (DebugMode, ExportOption, Device, Precision,
+from sylphy.embedding_extractor import create_embedding  # lazy alias to EmbeddingFactory
+from sylphy.constants.cli_constants import (DebugMode, ExportOption, Device, Precision,
                                                             PoolOption)
 
 app = typer.Typer(

@@ -1,7 +1,7 @@
 from typing import Optional, List
 import torch
 from transformers import AutoModel, AutoTokenizer, AutoConfig
-from protein_representation.core.config import ToolConfig
+from sylphy.core.config import ToolConfig
 
 from .embedding_based import EmbeddingBased
 

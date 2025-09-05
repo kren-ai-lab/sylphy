@@ -120,7 +120,7 @@ def _stub_model_registry(tmp_path, monkeypatch):
     model_dir.mkdir(parents=True, exist_ok=True)
     (model_dir / "config.json").write_text("{}", encoding="utf-8")
 
-    from protein_representation.core import model_registry as reg
+    from sylphy.core import model_registry as reg
     monkeypatch.setattr(reg, "resolve_model", lambda name: model_dir, raising=True)
     yield
 

@@ -4,13 +4,13 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from protein_representation.embedding_extractor import EmbeddingFactory
-from protein_representation.embedding_extractor.esm_based import ESMBasedEmbedding
-from protein_representation.embedding_extractor.ankh2_based import Ankh2BasedEmbedding
-from protein_representation.embedding_extractor.prot5_based import Prot5Based
-from protein_representation.embedding_extractor.bert_based import BertBasedEmbedding
-from protein_representation.embedding_extractor.mistral_based import MistralBasedEmbedding
-from protein_representation.embedding_extractor.esmc_based import ESMCBasedEmbedding
+from sylphy.embedding_extractor import EmbeddingFactory
+from sylphy.embedding_extractor.esm_based import ESMBasedEmbedding
+from sylphy.embedding_extractor.ankh2_based import Ankh2BasedEmbedding
+from sylphy.embedding_extractor.prot5_based import Prot5Based
+from sylphy.embedding_extractor.bert_based import BertBasedEmbedding
+from sylphy.embedding_extractor.mistral_based import MistralBasedEmbedding
+from sylphy.embedding_extractor.esmc_based import ESMCBasedEmbedding
 
 
 @pytest.mark.parametrize(

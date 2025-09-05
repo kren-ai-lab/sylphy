@@ -10,8 +10,8 @@ from typing import Dict, List, Optional, Tuple
 from .config import get_config
 from .model_spec import ModelSpec
 
-from protein_representation.constants.tool_constants import _ENV_PREFIX
-from protein_representation.logging import get_logger
+from sylphy.constants.tool_constants import _ENV_PREFIX
+from sylphy.logging import get_logger
 
 logger = get_logger(__name__)
 

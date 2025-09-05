@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from protein_representation.reductions import LinearReduction
+from sylphy.reductions import LinearReduction
 
 
 def test_pca_numpy_return(X_small):

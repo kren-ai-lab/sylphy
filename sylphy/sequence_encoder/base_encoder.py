@@ -5,12 +5,12 @@ from typing import Optional, Literal
 import logging
 import pandas as pd
 
-from protein_representation.logging import get_logger, add_context
-from protein_representation.constants.tool_constants import (get_residue, get_index, LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC,
+from sylphy.logging import get_logger, add_context
+from sylphy.constants.tool_constants import (get_residue, get_index, LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC,
                                                              LIST_DESCRIPTORS_SEQUENCE, POSITION_RESIDUES, LIST_RESIDUES, BASE_URL_AAINDEX,
                                                              BASE_URL_CLUSTERS_DESCRIPTORS)
 
-from protein_representation.misc.utils_lib import UtilsLib
+from sylphy.misc.utils_lib import UtilsLib
 
 
 class Encoders:

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from protein_representation.reductions import reduce_dimensionality
+from sylphy.reductions import reduce_dimensionality
 
 
 def test_factory_linear_pandas(df_small, caplog):

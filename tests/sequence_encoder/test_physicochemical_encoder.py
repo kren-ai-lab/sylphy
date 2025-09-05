@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from protein_representation.sequence_encoder import PhysicochemicalEncoder
+from sylphy.sequence_encoder import PhysicochemicalEncoder
 
 
 def test_physicochemical_reads_cached_file(monkeypatch, tmp_path):
@@ -23,7 +23,7 @@ def test_physicochemical_reads_cached_file(monkeypatch, tmp_path):
     class _Cfg:
         cache_paths = _CachePaths()
 
-    from protein_representation.core import config as cfg_mod
+    from sylphy.core import config as cfg_mod
     monkeypatch.setattr(cfg_mod, "get_config", lambda: _Cfg(), raising=True)
 
     # Build the expected filepath: <data>/<type_descriptor>/<filename>
@@ -66,7 +66,7 @@ def test_physicochemical_raises_on_unknown_property(monkeypatch, tmp_path):
     class _Cfg:
         cache_paths = _CachePaths()
 
-    from protein_representation.core import config as cfg_mod
+    from sylphy.core import config as cfg_mod
     monkeypatch.setattr(cfg_mod, "get_config", lambda: _Cfg(), raising=True)
 
     # prepare a valid aaindex.csv

@@ -5,8 +5,8 @@ import os
 import typing as t
 import pytest
 
-from protein_representation.core.config import set_cache_root
-from protein_representation.core.model_registry import clear_registry
+from sylphy.core.config import set_cache_root
+from sylphy.core.model_registry import clear_registry
 
 PKG_LOG_ENV_PREFIX = "PR_LOG_"
 PKG_MODEL_ENV_PREFIX = "PR_MODEL_"

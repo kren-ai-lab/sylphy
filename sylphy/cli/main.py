@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import typer
 
-from protein_representation.cli.cache import app as cache_app
-from protein_representation.cli.encoder_sequences import app as encoder_app
-from protein_representation.cli.get_embeddings import app as embedding_app
-from protein_representation.cli.reduce import app as reduce_app
+from sylphy.cli.cache import app as cache_app
+from sylphy.cli.encoder_sequences import app as encoder_app
+from sylphy.cli.get_embeddings import app as embedding_app
+from sylphy.cli.reduce import app as reduce_app
 
 app = typer.Typer(
     name="protein_representation",

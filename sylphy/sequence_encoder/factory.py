@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Set
 
-from protein_representation.logging import get_logger, add_context
+from sylphy.logging import get_logger, add_context
 
 from .base_encoder import Encoders
 from .ordinal_encoder import OrdinalEncoder

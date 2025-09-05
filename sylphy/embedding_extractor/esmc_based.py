@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from typing import Optional, List
 from tqdm import tqdm
-from protein_representation.core.config import ToolConfig
+from sylphy.core.config import ToolConfig
 
 from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig

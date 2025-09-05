@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from protein_representation.core.model_spec import ModelSpec
-from protein_representation.core.model_registry import (
+from sylphy.core.model_spec import ModelSpec
+from sylphy.core.model_registry import (
     register_model,
     register_alias,
     unregister,
@@ -20,7 +20,7 @@ from protein_representation.core.model_registry import (
     ModelNotFoundError,
     ModelDownloadError,
 )
-from protein_representation.core.config import get_config, temporary_cache_root
+from sylphy.core.config import get_config, temporary_cache_root
 
 
 def test_register_and_get_spec_roundtrip():
@@ -66,7 +66,7 @@ def test_unregister_and_clear():
 
 def test_env_override_path(monkeypatch, tmp_path):
     # Force the prefix used inside the module
-    import protein_representation.core.model_registry as regmod
+    import sylphy.core.model_registry as regmod
     monkeypatch.setattr(regmod, "_ENV_PREFIX", "PR_MODEL_", raising=True)
 
     # Prepare env override directory
@@ -155,7 +155,7 @@ def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path):
 def test_download_error_is_wrapped(monkeypatch):
     # Force HF download path to raise
     register_model(ModelSpec(name="will_fail", provider="huggingface", ref="org/fail"))
-    import protein_representation.core.model_registry as regmod
+    import sylphy.core.model_registry as regmod
 
     def boom(*args, **kwargs):
         raise RuntimeError("network down")

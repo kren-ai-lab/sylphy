@@ -6,8 +6,8 @@ from pathlib import Path
 from threading import RLock
 from typing import Generator
 
-from protein_representation.constants.config_constants import _LOCK as _EXTERNAL_LOCK, CachePaths
-from protein_representation.constants.tool_configs import ToolConfig, _GLOBAL_CONFIG
+from sylphy.constants.config_constants import _LOCK as _EXTERNAL_LOCK, CachePaths
+from sylphy.constants.tool_configs import ToolConfig, _GLOBAL_CONFIG
 
 # Local lock to guard lazy initialization in this module.
 _LOCK = _EXTERNAL_LOCK or RLock()

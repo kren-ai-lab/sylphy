@@ -5,7 +5,7 @@ import json
 import logging
 from pathlib import Path
 
-from protein_representation.logging import (
+from sylphy.logging import (
     setup_logger,
     get_logger,
     add_context,

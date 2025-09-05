@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from protein_representation.sequence_encoder import OrdinalEncoder
+from sylphy.sequence_encoder import OrdinalEncoder
 
 
 def test_missing_sequence_column_sets_status_false():

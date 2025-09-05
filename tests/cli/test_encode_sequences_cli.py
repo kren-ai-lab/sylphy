@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 from typer.testing import CliRunner
 
-from protein_representation.cli.encoder_sequences import app
+from sylphy.cli.encoder_sequences import app
 
 
 def test_encode_onehot_saves_expected_shape(tmp_path):

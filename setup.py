@@ -49,7 +49,7 @@ install_requires = [
 ]
 
 setup(
-    name="protein-representation",
+    name="sylphy",
     version="0.1.0",
     author="Kren AI Lab",
     author_email="krenai@umag.cl",
@@ -84,7 +84,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "protein-representation=protein_representation.cli.main:app",
+            "sylphy=sylphy.cli.main:app",
         ],
     },
     zip_safe=False,

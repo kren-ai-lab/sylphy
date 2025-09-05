@@ -5,7 +5,7 @@ import numpy as np
 
 import pytest
 
-from protein_representation.reductions import NonLinearReductions
+from sylphy.reductions import NonLinearReductions
 
 
 def test_isomap_and_spectral(X_small):

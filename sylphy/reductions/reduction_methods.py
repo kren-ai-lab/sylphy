@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from protein_representation.logging import get_logger, add_context
+from sylphy.logging import get_logger, add_context
 
 ReturnType = Literal["numpy", "pandas"]
 

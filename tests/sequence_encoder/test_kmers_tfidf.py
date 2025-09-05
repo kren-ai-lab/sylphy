@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from protein_representation.sequence_encoder import KMersEncoders
+from sylphy.sequence_encoder import KMersEncoders
 
 
 def test_kmers_tfidf_basic():

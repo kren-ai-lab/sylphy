@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from typer.testing import CliRunner
 
-from protein_representation.cli.reduce import app
+from sylphy.cli.reduce import app
 
 
 def test_reduce_pca_numpy_roundtrip(tmp_path):

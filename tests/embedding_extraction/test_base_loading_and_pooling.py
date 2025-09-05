@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from protein_representation.embedding_extractor import EmbeddingFactory
+from sylphy.embedding_extractor import EmbeddingFactory
 
 
 def _make_inst(df: pd.DataFrame):

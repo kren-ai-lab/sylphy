@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 def test_public_surface_imports():
-    import protein_representation as pr
+    import sylphy as pr
 
     # version string
     assert isinstance(pr.__version__, str)

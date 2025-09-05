@@ -1,4 +1,4 @@
-# protein_representation/sequence_encoder/ordinal_encoder.py
+# protein_representation/sequence_encoder/one_hot_encoder.py
 from __future__ import annotations
 
 import logging
@@ -7,13 +7,12 @@ from typing import Optional, List
 import pandas as pd
 
 from .base_encoder import Encoders
+from sylphy.constants.tool_constants import POSITION_RESIDUES
 
-from protein_representation.constants.tool_constants import POSITION_RESIDUES
 
-class OrdinalEncoder(Encoders):
+class OneHotEncoder(Encoders):
     """
-    Ordinally encodes residues as their index in the amino-acid alphabet,
-    zero-padding up to `max_length`.
+    One-hot encodes sequences; 20-dim per residue, zero-padded to `max_length`.
     """
 
     def __init__(
@@ -30,20 +29,25 @@ class OrdinalEncoder(Encoders):
             max_length=max_length,
             debug=debug,
             debug_mode=debug_mode,
-            name_logging=OrdinalEncoder.__name__,
+            name_logging=OneHotEncoder.__name__,
         )
 
+    def __generate_vector_by_residue(self, residue: str) -> List[int]:
+        vector = [0] * 20
+        try:
+            position = POSITION_RESIDUES[residue]
+            vector[position] = 1
+        except KeyError:
+            self.__logger__.warning("Residue '%s' not found in mapping.", residue)
+        return vector
+
     def __zero_padding(self, current_length: int) -> List[int]:
-        return [0] * (self.max_length - current_length)
+        return [0] * (self.max_length * 20 - current_length)
 
     def __coding_sequence(self, sequence: str) -> List[int]:
         coded = []
         for residue in sequence:
-            try:
-                coded.append(POSITION_RESIDUES[residue])
-            except KeyError:
-                self.__logger__.warning("Residue '%s' not recognized. Using 0.", residue)
-                coded.append(0)
+            coded.extend(self.__generate_vector_by_residue(residue))
         if len(sequence) < self.max_length:
             coded += self.__zero_padding(len(coded))
         return coded
@@ -54,14 +58,14 @@ class OrdinalEncoder(Encoders):
             return
 
         try:
-            self.__logger__.info("Starting ordinal encoding for %d sequences.", len(self.dataset))
+            self.__logger__.info("Starting one-hot encoding for %d sequences.", len(self.dataset))
             matrix = [self.__coding_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index]
             header = [f"p_{i}" for i in range(len(matrix[0]))]
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
-            self.__logger__.info("Ordinal encoding completed with %d features.", self.coded_dataset.shape[1])
+            self.__logger__.info("One-hot encoding completed with %d features.", self.coded_dataset.shape[1])
         except Exception as e:
             self.status = False
-            self.message = f"[ERROR] Ordinal encoding failed: {e}"
+            self.message = f"[ERROR] One-hot encoding failed: {e}"
             self.__logger__.exception(self.message)
             raise RuntimeError(self.message)

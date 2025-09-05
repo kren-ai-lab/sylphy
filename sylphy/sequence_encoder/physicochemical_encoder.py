@@ -10,8 +10,8 @@ import pandas as pd
 import requests
 
 from .base_encoder import Encoders
-from protein_representation.constants.tool_constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
-from protein_representation.core.config import get_config
+from sylphy.constants.tool_constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
+from sylphy.core.config import get_config
 
 
 class PhysicochemicalEncoder(Encoders):

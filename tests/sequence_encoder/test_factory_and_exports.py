@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from protein_representation.sequence_encoder import (
+from sylphy.sequence_encoder import (
     create_encoder,
     EncoderName,
     OrdinalEncoder,

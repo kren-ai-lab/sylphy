@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import typer
 
-from protein_representation.reductions import (
+from sylphy.reductions import (
     reduce_dimensionality,
     get_available_methods,
     is_linear_method,

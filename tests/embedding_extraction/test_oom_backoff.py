@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from protein_representation.embedding_extractor import EmbeddingFactory
+from sylphy.embedding_extractor import EmbeddingFactory
 
 # Access the fake model to set its OOM behavior
 from transformers import AutoModel as _FakeModel  # our conftest-installed stub

@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 from scipy.fft import fft
 
-from protein_representation.logging import get_logger, add_context
-from protein_representation.misc.utils_lib import UtilsLib
+from sylphy.logging import get_logger, add_context
+from sylphy.misc.utils_lib import UtilsLib
 
 
 class FFTEncoder:

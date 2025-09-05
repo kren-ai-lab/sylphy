@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from protein_representation.reductions import LinearReduction
+from sylphy.reductions import LinearReduction
 
 
 def test_non_numeric_raises_type_error():

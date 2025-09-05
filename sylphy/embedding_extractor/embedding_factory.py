@@ -11,8 +11,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from protein_representation.constants.tool_configs import ToolConfig
-from protein_representation.logging import get_logger, add_context
+from sylphy.constants.tool_configs import ToolConfig
+from sylphy.logging import get_logger, add_context
 
 from .esm_based import ESMBasedEmbedding
 from .ankh2_based import Ankh2BasedEmbedding

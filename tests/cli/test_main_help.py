@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from protein_representation.cli.main import app
+from sylphy.cli.main import app
 
 
 def test_main_help_lists_subcommands():

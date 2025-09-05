@@ -6,7 +6,7 @@ import math
 import numpy as np
 import pandas as pd
 
-from protein_representation.sequence_encoder import FFTEncoder
+from sylphy.sequence_encoder import FFTEncoder
 
 
 def test_fft_encoder_half_spectrum_and_padding():

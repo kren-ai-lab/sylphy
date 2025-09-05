@@ -5,10 +5,10 @@ from pathlib import Path
 import pandas as pd
 import typer
 
-from protein_representation.constants.cli_constants import (EncoderType, ExportOption, PhysicochemicalOption,
+from sylphy.constants.cli_constants import (EncoderType, ExportOption, PhysicochemicalOption,
                                                             DebugMode)
 
-from protein_representation.sequence_encoder import (
+from sylphy.sequence_encoder import (
     create_encoder,
     FFTEncoder,
 )

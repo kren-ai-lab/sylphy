@@ -7,7 +7,7 @@ _LOCK = threading.RLock()
 @dataclass
 class CachePaths:
     cache_root: Path
-    tool_name: str = "protein_representations"
+    tool_name: str = "sylphy"
 
     def base(self) -> Path:
         return self.cache_root / self.tool_name
@@ -16,8 +16,9 @@ class CachePaths:
     def models(self) -> Path:
         return self.base() / "models"
 
-    def hf_model_dir(self, org: str, model: str) -> Path:
-        return self.models() / "huggingface" / org / model
+    def hf_model_dir(self, org: str, model: str, revision: str | None = None) -> Path:
+        p = self.models() / "huggingface" / org / model
+        return p if not revision else p / revision
 
     def other_model_dir(self, provider: str, name: str) -> Path:
         return self.models() / "other" / provider / name

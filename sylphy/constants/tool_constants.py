@@ -1,52 +1,28 @@
-from typing import List, Dict
 
-_ENV_PREFIX : str = "PROTEIN_REPRESENTATION_"
+_ENV_PREFIX : str = "SYLPHY_"
 
 # constant for download data for encoding
 BASE_URL_AAINDEX: str = "https://raw.githubusercontent.com/ProteinEngineering-PESB2/data_and_info/refs/heads/main/aaindex_processed/aaindex_encoders.csv"
 BASE_URL_CLUSTERS_DESCRIPTORS: str = "https://raw.githubusercontent.com/ProteinEngineering-PESB2/data_and_info/refs/heads/main/cluster_based_encoder/cluster_encoders.csv"
 
 # residue constants
-LIST_RESIDUES: List[str] = [
-    "A",  # Alanine
-    "C",  # Cysteine
-    "D",  # Aspartic acid
-    "E",  # Glutamic acid
-    "F",  # Phenylalanine
-    "G",  # Glycine
-    "H",  # Histidine
-    "I",  # Isoleucine
-    "N",  # Asparagine
-    "K",  # Lysine
-    "L",  # Leucine
-    "M",  # Methionine
-    "P",  # Proline
-    "Q",  # Glutamine
-    "R",  # Arginine
-    "S",  # Serine
-    "T",  # Threonine
-    "V",  # Valine
-    "W",  # Tryptophan
-    "Y",  # Tyrosine
-]
+LIST_RESIDUES: tuple[str, ...] = (
+    "A","C","D","E","F","G","H","I","N","K","L","M","P","Q","R","S","T","V","W","Y"
+)
 
-POSITION_RESIDUES: Dict[str, int] = {
-    residue: index for index, residue in enumerate(LIST_RESIDUES)
-}
+POSITION_RESIDUES: dict[str, int] = {res: i for i, res in enumerate(LIST_RESIDUES)}
 
 # === Sequence Descriptors ===
-LIST_DESCRIPTORS_SEQUENCE: List[str] = [
-    "length", "molecular_weight", "aliphatic_index", "aromaticity", "boman_index",
-    "hydrophobic_ratio", "charge", "charge_density", "instability_index",
-    "isoelectric_point",
-    "freq_A", "freq_C", "freq_D", "freq_E", "freq_F", "freq_G", "freq_H",
-    "freq_I", "freq_N", "freq_K", "freq_L", "freq_M", "freq_P", "freq_Q",
-    "freq_R", "freq_S", "freq_T", "freq_V", "freq_W", "freq_Y"
-]
+LIST_DESCRIPTORS_SEQUENCE: tuple[str, ...] = (
+    "length","molecular_weight","aliphatic_index","aromaticity","boman_index",
+    "hydrophobic_ratio","charge","charge_density","instability_index","isoelectric_point",
+    "freq_A","freq_C","freq_D","freq_E","freq_F","freq_G","freq_H","freq_I","freq_N",
+    "freq_K","freq_L","freq_M","freq_P","freq_Q","freq_R","freq_S","freq_T","freq_V",
+    "freq_W","freq_Y"
+)
 
-LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC: List[str] = [
-    "sequence", "is_canon"
-]
+
+LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC: tuple[str, ...] = ("sequence","is_canon")
 
 def get_index(residue: str) -> int:
     """

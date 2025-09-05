@@ -1,21 +1,21 @@
-from .tool_configs import ToolConfig
 import logging
+import os
 
 # ----------------------------
 # Defaults & Env Overrides
 # ----------------------------
 
-_ENV_PREFIX = "PR_LOG_"  # e.g., PR_LOG_LEVEL, PR_LOG_JSON
+LOG_ENV_PREFIX = "SYLPHY_LOG_"
 
-_DEF_NAME = "protein_representation"
-_DEF_LEVEL = ToolConfig.log_level
-_DEF_JSON = False
-_DEF_STDERR = False  # default to stdout unless overridden
-_DEF_MAX_BYTES = 10 * 1024 * 1024  # 10 MiB per file
-_DEF_BACKUPS = 3
+LOG_DEFAULT_NAME = "sylphy"
+LOG_DEFAULT_LEVEL = logging.INFO
+LOG_DEFAULT_JSON = False
+LOG_DEFAULT_STDERR = False
+LOG_DEFAULT_MAX_BYTES = 10 * 1024 * 1024
+LOG_DEFAULT_BACKUPS = 3
 
 # Accept common textual levels
-_LEVEL_MAP = {
+LOG_LEVEL_MAP = {
     "CRITICAL": logging.CRITICAL,
     "ERROR": logging.ERROR,
     "WARNING": logging.WARNING,
@@ -23,3 +23,15 @@ _LEVEL_MAP = {
     "DEBUG": logging.DEBUG,
     "NOTSET": logging.NOTSET,
 }
+
+def env_log_level() -> int:
+    lvl = os.getenv(f"{LOG_ENV_PREFIX}LEVEL", "").upper()
+    return LOG_LEVEL_MAP.get(lvl, LOG_DEFAULT_LEVEL)
+
+def env_log_json() -> bool:
+    v = os.getenv(f"{LOG_ENV_PREFIX}JSON", "")
+    return v.strip().lower() in {"1", "true", "yes", "on"}
+
+def env_log_stderr() -> bool:
+    v = os.getenv(f"{LOG_ENV_PREFIX}STDERR", "")
+    return v.strip().lower() in {"1", "true", "yes", "on"}

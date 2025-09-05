@@ -11,7 +11,8 @@ class EncoderType(str, Enum):
 class ExportOption(str, Enum):
     csv = "csv"
     npy = "npy"
-
+    parquet = "parquet"
+    
 class PhysicochemicalOption(str, Enum):
     aaindex = "aaindex"
     group_based = "group_based"

@@ -1,31 +1,45 @@
 from dataclasses import dataclass, field
-from .config_constants import CachePaths
 from pathlib import Path
-import platform
-import os
-import logging
+import os, platform
 from typing import Optional
+from .config_constants import CachePaths
+from .logging_constants import env_log_level
 
 def _default_cache_root() -> Path:
-
-    # OS-specific defaults
     system = platform.system().lower()
-    if system == "darwin":      # macOS
+    if system == "darwin":
         base = Path.home() / "Library" / "Caches"
     elif system == "windows":
         base = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    else:                       # linux/unix
+    else:
         base = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
+    env = os.getenv("SYLPHY_CACHE_ROOT")
+    return Path(env) if env else base
 
-    return base
+def _default_device() -> str:
+    return os.getenv("SYLPHY_DEVICE", "cuda")
+
 
 @dataclass
 class ToolConfig:
     cache_paths: CachePaths = field(default_factory=lambda: CachePaths(_default_cache_root()))
-    debug : bool = False
-    default_device : str = "cuda"
-    log_level : int = logging.INFO
-    seed : int = 42
+    debug: bool = False
+    default_device: str = field(default_factory=_default_device)
+    log_level: int = field(default_factory=env_log_level)
+    seed: int = int(os.getenv("SYLPHY_SEED", "42"))
+
 
 # --- Global config singleton (simple & testable) ---
-_GLOBAL_CONFIG: Optional[ToolConfig] = None
+_GLOBAL: Optional[ToolConfig] = None
+
+def get_config() -> ToolConfig:
+    global _GLOBAL
+    if _GLOBAL is None:
+        _GLOBAL = ToolConfig()
+        _GLOBAL.cache_paths.ensure_all()
+    return _GLOBAL
+
+def set_config(cfg: ToolConfig) -> None:
+    global _GLOBAL
+    _GLOBAL = cfg
+    _GLOBAL.cache_paths.ensure_all()

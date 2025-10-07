@@ -1,27 +1,23 @@
 """
-Miscellaneous Utilities for Clustering Sequence Analysis
+Miscellaneous Utilities for Sequence/Embedding Workflows
 ========================================================
 
-This package contains shared constants and utility functions used across
-bioinformatics pipelines for clustering amino acid sequence characterization, 
-preprocessing, and sampling strategies.
+This package contains utility abstractions shared across the project such as:
+random/stratified sampling, distance computations, filesystem helpers, and export
+functions.
 
 Modules
 -------
-- constants   : Defines the canonical amino acid alphabet and related descriptors.
-- utils_lib   : Utility functions for random selection and stratified sampling.
+- utils_lib : High-level utilities for sampling, distances, job IDs, safe deletion, and export.
 
 Author: KREN AI LAB
 License: GNU GENERAL PUBLIC LICENSE
 """
 
+from .utils_lib import UtilsLib
+
+__all__ = ["UtilsLib"]
 __version__ = "1.0.0"
 __author__ = "KREN AI LAB"
 __email__ = "krenai@umag.cl"
 __license__ = "GNU GENERAL PUBLIC LICENSE"
-
-from .utils_lib import UtilsLib
-
-__all__ = [
-    "UtilsLib"
-]

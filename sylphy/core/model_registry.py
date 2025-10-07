@@ -14,7 +14,6 @@ from sylphy.constants.tool_constants import _ENV_PREFIX
 from sylphy.logging import get_logger
 
 logger = get_logger(__name__)
-
 _LOCK = RLock()
 
 # ----------------------------
@@ -44,7 +43,7 @@ def register_model(spec: ModelSpec) -> None:
     """
     Register (or overwrite) a model spec by name.
 
-    This function is thread-safe and idempotent for the same `name`.
+    Thread-safe and idempotent per `name`.
     """
     with _LOCK:
         _REGISTRY[spec.name] = spec
@@ -154,12 +153,15 @@ def resolve_model(name: str) -> Path:
     try:
         if provider == "huggingface":
             org, model = _split_org_model(spec.ref)
-            local_dir = cfg.cache_paths.hf_model_dir(org, model)
+            # Use revision-aware path layout to isolate snapshots
+            local_dir = cfg.cache_paths.hf_model_dir(org, model, revision=spec.revision)
             if spec.subdir:
                 local_dir = local_dir / spec.subdir
             local_dir.mkdir(parents=True, exist_ok=True)
 
+            # If directory is non-empty, assume already present
             if any(local_dir.iterdir()):
+                logger.info("Resolved HF model (cached): %s", local_dir)
                 return local_dir
 
             _download_huggingface(ref=spec.ref, revision=spec.revision, dst=local_dir)
@@ -167,9 +169,14 @@ def resolve_model(name: str) -> Path:
 
         if provider == "other":
             local_dir = cfg.cache_paths.other_model_dir("custom", spec.name)
+            if spec.subdir:
+                local_dir = local_dir / spec.subdir
             local_dir.mkdir(parents=True, exist_ok=True)
+
             if any(local_dir.iterdir()):
+                logger.info("Resolved OTHER model (cached): %s", local_dir)
                 return local_dir
+
             _download_other(spec.ref, local_dir)
             return local_dir
 
@@ -187,7 +194,9 @@ def _split_org_model(ref: str) -> Tuple[str, str]:
 
 
 def _download_huggingface(ref: str, revision: Optional[str], dst: Path) -> None:
-    """Download a model snapshot into `dst` using huggingface_hub with a local cache."""
+    """
+    Download a model snapshot into `dst` using huggingface_hub with a local cache.
+    """
     try:
         from huggingface_hub import snapshot_download
     except Exception as e:  # pragma: no cover
@@ -202,7 +211,7 @@ def _download_huggingface(ref: str, revision: Optional[str], dst: Path) -> None:
         revision=revision,
         local_dir=str(dst),
         local_dir_use_symlinks=False,
-        # token=os.getenv("HF_TOKEN")
+        # token=os.getenv("HF_TOKEN")  # Uncomment if you want to force auth via env
     )
 
 
@@ -260,6 +269,7 @@ def _download_other(ref: str, dst: Path) -> None:
     except Exception:
         logger.exception("Failed to extract downloaded archive: %s", tmp)
         raise
+
 
 def _init_default_registry() -> None:
     # --- ESM2 family ---

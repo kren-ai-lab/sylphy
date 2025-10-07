@@ -1,4 +1,4 @@
-# protein_representation/__init__.py
+# core/__init__.py
 from __future__ import annotations
 
 from importlib import metadata as _metadata
@@ -41,6 +41,6 @@ __all__ = [
 ]
 
 try:  # prefer package metadata; fallback during local dev without installed dist
-    __version__ = _metadata.version("protein_representation")
+    __version__ = _metadata.version("sylphy")
 except _metadata.PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0-dev"

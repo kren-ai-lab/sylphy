@@ -1,4 +1,3 @@
-# protein_representation/logging/__init__.py
 from __future__ import annotations
 
 from .logging_config import (
@@ -18,4 +17,3 @@ __all__ = [
     "silence_external",
     "reset_logging",
 ]
-

@@ -28,10 +28,14 @@ def env_log_level() -> int:
     lvl = os.getenv(f"{LOG_ENV_PREFIX}LEVEL", "").upper()
     return LOG_LEVEL_MAP.get(lvl, LOG_DEFAULT_LEVEL)
 
-def env_log_json() -> bool:
-    v = os.getenv(f"{LOG_ENV_PREFIX}JSON", "")
+def env_log_json(default: bool = LOG_DEFAULT_JSON) -> bool:
+    v = os.getenv(f"{LOG_ENV_PREFIX}JSON")
+    if v is None:
+        return default
     return v.strip().lower() in {"1", "true", "yes", "on"}
 
-def env_log_stderr() -> bool:
-    v = os.getenv(f"{LOG_ENV_PREFIX}STDERR", "")
+def env_log_stderr(default: bool = LOG_DEFAULT_STDERR) -> bool:
+    v = os.getenv(f"{LOG_ENV_PREFIX}STDERR")
+    if v is None:
+        return default
     return v.strip().lower() in {"1", "true", "yes", "on"}

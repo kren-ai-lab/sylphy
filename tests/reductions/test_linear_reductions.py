@@ -1,4 +1,3 @@
-# tests/reductions/test_linear_reductions.py
 from __future__ import annotations
 
 import numpy as np

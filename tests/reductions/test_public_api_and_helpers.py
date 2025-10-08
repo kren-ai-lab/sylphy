@@ -1,10 +1,10 @@
-# tests/reductions/test_public_api_and_helpers.py
 from __future__ import annotations
 
 import sylphy.reductions as r
 
 
 def test_public_surface():
+    """The reductions module should expose the main symbols."""
     assert hasattr(r, "Reductions")
     assert hasattr(r, "LinearReduction")
     assert hasattr(r, "NonLinearReductions")
@@ -15,6 +15,7 @@ def test_public_surface():
 
 
 def test_get_available_and_kind_helpers():
+    """Helper queries for available methods and kind classification."""
     all_methods = r.get_available_methods()
     assert "pca" in all_methods and "isomap" in all_methods
 

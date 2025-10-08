@@ -1,11 +1,22 @@
-# tests/reductions/test_non_linear_reductions.py
 from __future__ import annotations
 
 import numpy as np
-
 import pytest
 
 from sylphy.reductions import NonLinearReductions
+
+# Optional deps: detect once, then use skip marks cleanly
+try:
+    import umap  # noqa: F401
+    HAS_UMAP = True
+except Exception:
+    HAS_UMAP = False
+
+try:
+    import clustpy  # noqa: F401
+    HAS_CLUSTPY = True
+except Exception:
+    HAS_CLUSTPY = False
 
 
 def test_isomap_and_spectral(X_small):
@@ -18,20 +29,22 @@ def test_isomap_and_spectral(X_small):
 
 def test_lle_basic(X_small):
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
-    Z = nr.apply_lle(n_components=2, n_neighbors=4, random_state=0)
+    # Avoid kwargs that may not be supported by certain sklearn versions
+    Z = nr.apply_lle(n_components=2, n_neighbors=4)
     assert Z is not None and Z.shape == (X_small.shape[0], 2)
 
 
-@pytest.mark.skipif(pytest.importorskip("umap", reason="umap not installed") is None, reason="umap missing")
+@pytest.mark.skipif(not HAS_UMAP, reason="umap not installed")
 def test_umap_if_available(X_small):
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z = nr.apply_umap(n_components=2, n_neighbors=3, min_dist=0.1, random_state=0)
     assert Z is not None and Z.shape == (X_small.shape[0], 2)
 
 
-@pytest.mark.skipif(pytest.importorskip("clustpy", reason="clustpy not installed") is None, reason="clustpy missing")
+@pytest.mark.skipif(not HAS_CLUSTPY, reason="clustpy not installed")
 def test_dipext_if_available(X_small):
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z = nr.apply_dip_ext(n_components=2)
-    # DipExt may reduce differently; just assert it returns something 2D
-    assert Z is None or (hasattr(Z, "shape") and Z.shape[0] == X_small.shape[0])
+    # DipExt may reduce differently; just assert it returns something 2D if provided
+    if Z is not None:
+        assert hasattr(Z, "shape") and Z.shape[0] == X_small.shape[0]

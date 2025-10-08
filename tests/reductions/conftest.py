@@ -1,5 +1,7 @@
-# tests/reductions/conftest.py
 from __future__ import annotations
+"""
+Shared fixtures for reduction tests: quiet logs, small synthetic datasets.
+"""
 
 import os
 from typing import Iterator
@@ -11,11 +13,11 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _quiet_logs_and_clean_env(tmp_path, monkeypatch) -> Iterator[None]:
-    # Silencia salidas y escribe logs en un archivo temporal
+    """Silence console logs and write logs under a temp file, clearing SYLPHY_LOG_* envs."""
     for k in list(os.environ.keys()):
-        if k.startswith("PR_LOG_"):
+        if k.startswith("SYLPHY_LOG_"):
             monkeypatch.delenv(k, raising=False)
-    monkeypatch.setenv("PR_LOG_FILE", str(tmp_path / "reductions.log"))
+    monkeypatch.setenv("SYLPHY_LOG_FILE", str(tmp_path / "reductions.log"))
     yield
 
 
@@ -27,13 +29,12 @@ def X_small() -> np.ndarray:
 
 @pytest.fixture
 def X_nonneg() -> np.ndarray:
-    # para NMF: datos no negativos
+    """Non-negative data for NMF tests."""
     rng = np.random.default_rng(1)
     return np.abs(rng.normal(size=(10, 5))).astype("float32")
 
 
 @pytest.fixture
 def df_small(X_small) -> pd.DataFrame:
-    import pandas as pd
     cols = [f"f{i}" for i in range(X_small.shape[1])]
     return pd.DataFrame(X_small, columns=cols)

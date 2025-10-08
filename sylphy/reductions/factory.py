@@ -1,4 +1,3 @@
-# protein_representation/reductions/factory.py
 from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
@@ -9,7 +8,7 @@ import pandas as pd
 from sylphy.logging import get_logger, add_context
 from .linear_reductions import LinearReduction
 from .non_linear_reductions import NonLinearReductions
-from .reduction_methods import ReturnType
+from .reduction_methods import ReturnType, Preprocess
 
 DatasetLike = Union[np.ndarray, pd.DataFrame]
 Kind = Literal["linear", "nonlinear"]
@@ -49,8 +48,8 @@ _METHODS: Dict[str, Tuple[Kind, str]] = {
 }
 
 # --- logging: ensure parent, then a child logger for the factory -------------
-_ = get_logger("protein_representation")
-logger = logging.getLogger("protein_representation.reductions.factory")
+_ = get_logger("sylphy")
+logger = logging.getLogger("sylphy.reductions.factory")
 add_context(logger, component="reductions", facility="factory")
 
 
@@ -92,9 +91,11 @@ def reduce_dimensionality(
     dataset: DatasetLike,
     *,
     return_type: ReturnType = "numpy",
+    preprocess: Preprocess = "none",
+    random_state: Optional[int] = None,
     debug: bool = True,
     debug_mode: int = logging.INFO,
-    logger_name: str = "protein_representation.reductions.factory",
+    logger_name: str = "sylphy.reductions.factory",
     **kwargs: Any,
 ) -> Tuple[Optional[object], Optional[Union[np.ndarray, pd.DataFrame]]]:
     """
@@ -111,11 +112,15 @@ def reduce_dimensionality(
         Input matrix of shape (N, D).
     return_type : {"numpy", "pandas"}, default "numpy"
         Output container for the transformed data.
+    preprocess : {"none","standardize","normalize","robust"}, default "none"
+        Optional preprocessing to apply before the reduction.
+    random_state : int | None, default None
+        Seed for supported estimators; defaults to ToolConfig.seed.
     debug : bool, default True
         Enable/disable logging for this call.
     debug_mode : int, default logging.INFO
         Logging level used by the internal logger.
-    logger_name : str, default "protein_representation.reductions.factory"
+    logger_name : str, default "sylphy.reductions.factory"
         Name for the logger (child of package logger).
     **kwargs : Any
         Extra parameters forwarded to the underlying estimator constructor
@@ -145,12 +150,14 @@ def reduce_dimensionality(
         raise ValueError(f"Unknown reduction method '{method}'. Available: {all_methods}")
 
     kind, attr = _METHODS[key]
-    log.info("Dispatching method='%s' (kind=%s) | kwargs=%s", key, kind, kwargs)
+    log.info("Dispatching method='%s' (kind=%s) | preprocess=%s | kwargs=%s", key, kind, preprocess, kwargs)
 
     if kind == "linear":
         runner = LinearReduction(
             dataset=dataset,
             return_type=return_type,
+            preprocess=preprocess,
+            random_state=random_state,
             debug=debug,
             debug_mode=debug_mode,
         )
@@ -162,6 +169,8 @@ def reduce_dimensionality(
     runner = NonLinearReductions(
         dataset=dataset,
         return_type=return_type,
+        preprocess=preprocess,
+        random_state=random_state,
         debug=debug,
         debug_mode=debug_mode,
     )

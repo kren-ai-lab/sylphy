@@ -1,9 +1,9 @@
-# protein_representation/reductions/non_linear_reductions.py
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional, Union, Any, Type
 import logging
 import traceback
+import inspect
 import numpy as np
 import pandas as pd
 
@@ -12,7 +12,7 @@ from sklearn.decomposition import DictionaryLearning, MiniBatchDictionaryLearnin
 from clustpy.partition import DipExt
 import umap.umap_ as umap
 
-from .reduction_methods import Reductions
+from .reduction_methods import Reductions, ReturnType, Preprocess
 
 
 class NonLinearReductions(Reductions):
@@ -30,18 +30,33 @@ class NonLinearReductions(Reductions):
         self,
         dataset: Union[np.ndarray, pd.DataFrame],
         *,
-        return_type: str = "numpy",
+        return_type: ReturnType = "numpy",
+        preprocess: Preprocess = "none",
+        random_state: Optional[int] = None,
         debug: bool = True,
         debug_mode: int = logging.INFO,
     ) -> None:
         super().__init__(
             dataset=dataset,
             return_type=return_type,
+            preprocess=preprocess,
+            random_state=random_state,
             debug=debug,
             debug_mode=debug_mode,
             name_logging=NonLinearReductions.__name__,
         )
         self.__logger__.info("Initialized NonLinearReductions with dataset shape=%s", self.dataset.shape)
+
+    # -----------------------------
+    # Helpers
+    # -----------------------------
+    def _init_with_seed(self, cls: Type, kwargs: dict) -> Any:
+        sig = inspect.signature(cls.__init__)
+        params = set(sig.parameters.keys())
+        k = dict(kwargs)
+        if "random_state" in params and "random_state" not in k:
+            k["random_state"] = self.random_state
+        return cls(**k)
 
     def _apply_model(
         self,
@@ -61,30 +76,48 @@ class NonLinearReductions(Reductions):
             self.__logger__.debug(traceback.format_exc())
             return None
 
+    # -----------------------------
     # Public API (one wrapper per method)
+    # -----------------------------
     def apply_tsne(self, **kwargs):
-        return self._apply_model(TSNE(**kwargs), "t-SNE", kwargs.get("n_components"))
+        n = self.dataset.shape[0]
+        perplexity = kwargs.get("perplexity", 30)
+        if perplexity >= max(1, n):
+            new_p = max(5, min(30, max(1, n // 3)))
+            self.__logger__.warning("t-SNE perplexity=%s >= n=%s; using %s instead.", perplexity, n, new_p)
+            kwargs["perplexity"] = new_p
+        model = self._init_with_seed(TSNE, kwargs)
+        return self._apply_model(model, "t-SNE", kwargs.get("n_components"))
 
     def apply_isomap(self, **kwargs):
-        return self._apply_model(Isomap(**kwargs), "Isomap", kwargs.get("n_components"))
+        model = Isomap(**kwargs)  # no random_state
+        return self._apply_model(model, "Isomap", kwargs.get("n_components"))
 
     def apply_mds(self, **kwargs):
-        return self._apply_model(MDS(**kwargs), "MDS", kwargs.get("n_components"))
+        model = self._init_with_seed(MDS, kwargs)
+        return self._apply_model(model, "MDS", kwargs.get("n_components"))
 
     def apply_lle(self, **kwargs):
-        return self._apply_model(LocallyLinearEmbedding(**kwargs), "LLE", kwargs.get("n_components"))
+        model = self._init_with_seed(LocallyLinearEmbedding, kwargs)
+        return self._apply_model(model, "LLE", kwargs.get("n_components"))
 
     def apply_spectral(self, **kwargs):
-        return self._apply_model(SpectralEmbedding(**kwargs), "SpectralEmbedding", kwargs.get("n_components"))
+        model = self._init_with_seed(SpectralEmbedding, kwargs)
+        return self._apply_model(model, "SpectralEmbedding", kwargs.get("n_components"))
 
     def apply_umap(self, **kwargs):
-        return self._apply_model(umap.UMAP(**kwargs), "UMAP", kwargs.get("n_components"))
+        # umap-learn supports 'random_state'
+        model = self._init_with_seed(umap.UMAP, kwargs)
+        return self._apply_model(model, "UMAP", kwargs.get("n_components"))
 
     def apply_dictionary_learning(self, **kwargs):
-        return self._apply_model(DictionaryLearning(**kwargs), "DictionaryLearning", kwargs.get("n_components"))
+        model = self._init_with_seed(DictionaryLearning, kwargs)
+        return self._apply_model(model, "DictionaryLearning", kwargs.get("n_components"))
 
     def apply_mini_batch_dictionary_learning(self, **kwargs):
-        return self._apply_model(MiniBatchDictionaryLearning(**kwargs), "MiniBatchDictionaryLearning", kwargs.get("n_components"))
+        model = self._init_with_seed(MiniBatchDictionaryLearning, kwargs)
+        return self._apply_model(model, "MiniBatchDictionaryLearning", kwargs.get("n_components"))
 
     def apply_dip_ext(self, **kwargs):
-        return self._apply_model(DipExt(**kwargs), "DipExt", kwargs.get("n_components"))
+        model = DipExt(**kwargs)  # library-specific, no random_state in __init__
+        return self._apply_model(model, "DipExt", kwargs.get("n_components"))

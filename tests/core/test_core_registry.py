@@ -6,6 +6,7 @@ import json
 import zipfile
 from pathlib import Path
 import sys
+import types
 
 import pytest
 
@@ -32,7 +33,6 @@ def test_register_and_get_spec_roundtrip():
     assert got.provider == "huggingface"
     assert got.ref == "org/model"
 
-    # Unknown model error
     with pytest.raises(ModelNotFoundError):
         get_model_spec("nope")
 
@@ -41,12 +41,10 @@ def test_alias_registration_and_listing():
     register_model(ModelSpec(name="esm2_small", provider="huggingface", ref="facebook/esm2_t6_8M_UR50D"))
     register_alias("esm2", "esm2_small")
 
-    # Alias resolves to spec (with alias_of on the stored alias entry)
     spec_alias = get_model_spec("esm2")
     assert spec_alias.alias_of == "esm2_small"
     assert spec_alias.name == "esm2"
 
-    # Listing
     names_no_alias = list_registered_models(include_aliases=False)
     names_with_alias = list_registered_models(include_aliases=True)
     assert "esm2_small" in names_no_alias and "esm2" not in names_no_alias
@@ -66,11 +64,11 @@ def test_unregister_and_clear():
 
 
 def test_env_override_path(monkeypatch, tmp_path):
-    # Force the prefix used inside the module
+    # Forzar el prefijo usado dentro del módulo
     import sylphy.core.model_registry as regmod
     monkeypatch.setattr(regmod, "_ENV_PREFIX", "PR_MODEL_", raising=True)
 
-    # Prepare env override directory
+    # Carpeta fake de override
     override_dir = tmp_path / "pre_downloaded" / "esm2_small"
     override_dir.mkdir(parents=True)
     (override_dir / "weights.bin").write_text("ok")
@@ -85,17 +83,18 @@ def test_env_override_path(monkeypatch, tmp_path):
 
 
 def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path):
-    # Mock huggingface_hub.snapshot_download to create a marker file
+    # Mock huggingface_hub como módulo real con snapshot_download
     calls = {"n": 0}
 
-    class DummyHF:
-        @staticmethod
-        def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None):
-            calls["n"] += 1
-            Path(local_dir).mkdir(parents=True, exist_ok=True)
-            (Path(local_dir) / "config.json").write_text(json.dumps({"ref": ref}))
+    hub = types.ModuleType("huggingface_hub")
 
-    monkeypatch.setitem(sys.modules := __import__("sys").modules, "huggingface_hub", DummyHF)
+    def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None):
+        calls["n"] += 1
+        Path(local_dir).mkdir(parents=True, exist_ok=True)
+        (Path(local_dir) / "config.json").write_text(json.dumps({"ref": ref}))
+    hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
+
+    monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
 
     register_model(ModelSpec(name="hf_model", provider="huggingface", ref="org/hf_model"))
     p1 = resolve_model("hf_model")
@@ -107,14 +106,12 @@ def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path):
 
 
 def test_resolve_other_local_copy(tmp_path):
-    # Create local "source" model dir
     src = tmp_path / "src_model"
     src.mkdir()
     (src / "file.txt").write_text("payload")
 
     register_model(ModelSpec(name="other_local", provider="other", ref=str(src)))
     local_dir = resolve_model("other_local")
-    # Should be under cache_root/provider/name
     assert (local_dir / "file.txt").exists()
 
 
@@ -126,7 +123,7 @@ def _make_zip_bytes() -> bytes:
 
 
 def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path):
-    # Mock requests.get to stream a small zip
+    # Mock requests.get → stream un zip pequeño
     class DummyResp:
         def __init__(self, data: bytes):
             self._data = data
@@ -141,20 +138,16 @@ def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path):
     def fake_get(url, stream=True, timeout=60):
         return DummyResp(_make_zip_bytes())
 
-    import sys
-    import types
     req = types.ModuleType("requests")
-    req.get = fake_get
+    req.get = fake_get  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "requests", req)
 
     register_model(ModelSpec(name="other_url", provider="other", ref="https://example.com/model.zip"))
     dst = resolve_model("other_url")
-    # Extracted file should exist
     assert (dst / "inner" / "ok.txt").exists()
 
 
 def test_download_error_is_wrapped(monkeypatch):
-    # Force HF download path to raise
     register_model(ModelSpec(name="will_fail", provider="huggingface", ref="org/fail"))
     import sylphy.core.model_registry as regmod
 
@@ -173,5 +166,4 @@ def test_config_temporary_cache_root(tmp_path):
     original = cfg.cache_paths.cache_root
     with temporary_cache_root(tmp_path / "alt"):
         assert get_config().cache_paths.cache_root != original
-    # Restored after context
     assert get_config().cache_paths.cache_root == original

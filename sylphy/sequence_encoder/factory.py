@@ -1,4 +1,3 @@
-# protein_representation/sequence_encoder/__init__.py
 from __future__ import annotations
 
 import logging
@@ -25,9 +24,9 @@ __all__ = [
     "create_encoder",
 ]
 
-# ensure package logger once, then child for the factory
-_ = get_logger("protein_representation")
-_logger = logging.getLogger("protein_representation.sequence_encoder.factory")
+# Ensure package logger once, then child for the factory
+_ = get_logger("sylphy")
+_logger = logging.getLogger("sylphy.sequence_encoder.factory")
 add_context(_logger, component="sequence_encoder", facility="factory")
 
 # Canonical names for encoders
@@ -37,7 +36,7 @@ _ALIASES: Dict[str, str] = {
     # ordinal
     "ordinal": "ordinal",
     # frequency
-    "frequency": "frequency",
+    "frequency": "frequency", "freq": "frequency",
     # k-mers
     "kmers": "kmers", "kmer": "kmers", "tfidf": "kmers",
     # physicochemical
@@ -58,13 +57,14 @@ _CLASSES = {
 
 # Whitelisted kwargs per encoder (only these are forwarded)
 _ALLOWED: Dict[str, Set[str]] = {
-    "one_hot": {"dataset", "sequence_column", "max_length", "debug", "debug_mode"},
-    "ordinal": {"dataset", "sequence_column", "max_length", "debug", "debug_mode"},
-    "frequency": {"dataset", "sequence_column", "max_length", "debug", "debug_mode"},
-    "kmers": {"dataset", "sequence_column", "size_kmer", "debug", "debug_mode"},
+    "one_hot": {"dataset", "sequence_column", "max_length", "allow_extended", "allow_unknown", "debug", "debug_mode"},
+    "ordinal": {"dataset", "sequence_column", "max_length", "allow_extended", "allow_unknown", "debug", "debug_mode"},
+    "frequency": {"dataset", "sequence_column", "allow_extended", "allow_unknown", "debug", "debug_mode"},
+    "kmers": {"dataset", "sequence_column", "size_kmer", "allow_extended", "allow_unknown", "debug", "debug_mode"},
     "physicochemical": {
         "dataset", "sequence_column", "max_length",
         "type_descriptor", "name_property",
+        "allow_extended", "allow_unknown",
         "debug", "debug_mode",
     },
     "fft": {"dataset", "sequence_column", "debug", "debug_mode"},

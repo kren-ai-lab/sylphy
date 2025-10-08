@@ -1,4 +1,3 @@
-# protein_representation/sequence_encoder/physicochemical_encoder.py
 from __future__ import annotations
 
 import io
@@ -10,13 +9,17 @@ import pandas as pd
 import requests
 
 from .base_encoder import Encoders
-from sylphy.constants.tool_constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
-from sylphy.core.config import get_config
+from sylphy.constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
+from sylphy.core import get_config
 
 
 class PhysicochemicalEncoder(Encoders):
     """
     Encode sequences using a selected physicochemical property (e.g., AAIndex).
+
+    Notes
+    -----
+    Non-canonical residues in the table are treated as 0.0 after validation.
     """
 
     def __init__(
@@ -26,13 +29,17 @@ class PhysicochemicalEncoder(Encoders):
         max_length: int = 1024,
         type_descriptor: str = "aaindex",
         name_property: str = "ANDN920101",
+        allow_extended: bool = False,
+        allow_unknown: bool = False,
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
         super().__init__(
             dataset=dataset,
-            sequence_column=sequence_column,
+            sequence_column=sequence_column or "sequence",
             max_length=max_length,
+            allow_extended=allow_extended,
+            allow_unknown=allow_unknown,
             debug=debug,
             debug_mode=debug_mode,
             name_logging=PhysicochemicalEncoder.__name__,
@@ -52,10 +59,7 @@ class PhysicochemicalEncoder(Encoders):
             self.__logger__.error(msg)
             raise ValueError(msg)
 
-        base_url = (
-            BASE_URL_AAINDEX if type_descriptor == "aaindex"
-            else BASE_URL_CLUSTERS_DESCRIPTORS
-        )
+        base_url = BASE_URL_AAINDEX if type_descriptor == "aaindex" else BASE_URL_CLUSTERS_DESCRIPTORS
 
         cfg = get_config()
         cache_dir = os.path.join(cfg.cache_paths.data(), type_descriptor)
@@ -69,9 +73,10 @@ class PhysicochemicalEncoder(Encoders):
         if not os.path.exists(filepath):
             try:
                 self.__logger__.warning("Descriptor file not found. Downloading from %s", base_url)
-                s = requests.get(base_url, timeout=60)
-                s.raise_for_status()
-                df = pd.read_csv(io.StringIO(s.content.decode("utf-8")))
+                with requests.Session() as sess:
+                    s = sess.get(base_url, timeout=60)
+                    s.raise_for_status()
+                    df = pd.read_csv(io.StringIO(s.content.decode("utf-8")))
                 df.to_csv(filepath, index=False)
                 self.__logger__.info("Descriptor cached at %s", filepath)
             except Exception as e:
@@ -79,7 +84,9 @@ class PhysicochemicalEncoder(Encoders):
                 raise RuntimeError("Failed to load or download descriptor file.") from e
 
         try:
-            return pd.read_csv(filepath, index_col=0)
+            df = pd.read_csv(filepath, index_col=0)
+            df.index = df.index.astype(str).str.upper()
+            return df
         except Exception as e:
             self.__logger__.error("Failed to read descriptor file from cache: %s", e)
             raise RuntimeError("Failed to read cached descriptor file.") from e
@@ -101,7 +108,7 @@ class PhysicochemicalEncoder(Encoders):
             pad = self.max_length - len(vec)
             if pad > 0:
                 vec.extend([0.0] * pad)
-            return vec
+            return vec[: self.max_length]
         except Exception as e:
             self.__logger__.error("Failed to encode sequence '%s': %s", sequence, e)
             return [0.0] * self.max_length

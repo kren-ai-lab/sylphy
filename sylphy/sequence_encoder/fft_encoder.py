@@ -1,4 +1,3 @@
-# protein_representation/sequence_encoder/fft_encoder.py
 from __future__ import annotations
 
 import logging
@@ -30,8 +29,8 @@ class FFTEncoder:
         debug_mode: int = logging.INFO,
     ) -> None:
         self.sequence_column = sequence_column
-        self._logger = get_logger("protein_representation")  # ensure configured once
-        self.__logger__ = logging.getLogger("protein_representation.sequence_encoder.FFTEncoder")
+        _ = get_logger("sylphy")
+        self.__logger__ = logging.getLogger("sylphy.sequence_encoder.FFTEncoder")
         self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
         add_context(self.__logger__, component="sequence_encoder", encoder="FFTEncoder")
 
@@ -99,12 +98,11 @@ class FFTEncoder:
         self,
         df_encoder: pd.DataFrame,
         path: str,
-        file_format: Literal["csv", "npy"] = "csv",
+        file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
     ) -> None:
         UtilsLib.export_data(
             df_encoded=df_encoder,
             path=path,
-            __logger__=self.__logger__,
-            base_message="Encoder generated ",
+            base_message="FFT encoder output",
             file_format=file_format,
         )

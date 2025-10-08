@@ -1,4 +1,3 @@
-# protein_representation/sequence_encoder/one_hot_encoder.py
 from __future__ import annotations
 
 import logging
@@ -7,12 +6,13 @@ from typing import Optional, List
 import pandas as pd
 
 from .base_encoder import Encoders
-from sylphy.constants.tool_constants import POSITION_RESIDUES
+from sylphy.constants import residues, get_index
 
 
 class OneHotEncoder(Encoders):
     """
-    One-hot encodes sequences; 20-dim per residue, zero-padded to `max_length`.
+    One-hot encode sequences; |alphabet|-dim per residue, zero-padded to `max_length`.
+    Supports canonical or extended alphabet via base class flags.
     """
 
     def __init__(
@@ -20,6 +20,8 @@ class OneHotEncoder(Encoders):
         dataset: Optional[pd.DataFrame] = None,
         sequence_column: Optional[str] = "sequence",
         max_length: int = 1024,
+        allow_extended: bool = False,
+        allow_unknown: bool = False,
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
@@ -27,27 +29,34 @@ class OneHotEncoder(Encoders):
             dataset=dataset,
             sequence_column=sequence_column or "sequence",
             max_length=max_length,
+            allow_extended=allow_extended,
+            allow_unknown=allow_unknown,
             debug=debug,
             debug_mode=debug_mode,
             name_logging=OneHotEncoder.__name__,
         )
+        self._alpha = residues(extended=self.allow_extended or self.allow_unknown)
+        self._A = len(self._alpha)
 
-    def __generate_vector_by_residue(self, residue: str) -> List[int]:
-        vector = [0] * 20
+    def __vector_for_residue(self, residue: str) -> List[int]:
+        v = [0] * self._A
         try:
-            position = POSITION_RESIDUES[residue]
-            vector[position] = 1
-        except KeyError:
-            self.__logger__.warning("Residue '%s' not found in mapping.", residue)
-        return vector
+            pos = get_index(residue, extended=(self.allow_extended or self.allow_unknown),
+                            allow_unknown=self.allow_unknown)
+            v[pos] = 1
+        except Exception:
+            # Unknown residue: keep zero vector
+            pass
+        return v
 
     def __zero_padding(self, current_length: int) -> List[int]:
-        return [0] * (self.max_length * 20 - current_length)
+        target = self.max_length * self._A
+        return [0] * (target - current_length)
 
-    def __coding_sequence(self, sequence: str) -> List[int]:
-        coded = []
-        for residue in sequence:
-            coded.extend(self.__generate_vector_by_residue(residue))
+    def __encode_sequence(self, sequence: str) -> List[int]:
+        coded: List[int] = []
+        for r in sequence:
+            coded.extend(self.__vector_for_residue(r))
         if len(sequence) < self.max_length:
             coded += self.__zero_padding(len(coded))
         return coded
@@ -59,7 +68,7 @@ class OneHotEncoder(Encoders):
 
         try:
             self.__logger__.info("Starting one-hot encoding for %d sequences.", len(self.dataset))
-            matrix = [self.__coding_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index]
+            matrix = [self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index]
             header = [f"p_{i}" for i in range(len(matrix[0]))]
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values

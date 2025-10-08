@@ -1,4 +1,3 @@
-# protein_representation/sequence_encoder/base_encoder.py
 from __future__ import annotations
 
 from typing import Optional, Literal
@@ -6,10 +5,7 @@ import logging
 import pandas as pd
 
 from sylphy.logging import get_logger, add_context
-from sylphy.constants.tool_constants import (get_residue, get_index, LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC,
-                                                             LIST_DESCRIPTORS_SEQUENCE, POSITION_RESIDUES, LIST_RESIDUES, BASE_URL_AAINDEX,
-                                                             BASE_URL_CLUSTERS_DESCRIPTORS)
-
+from sylphy.constants import residues
 from sylphy.misc.utils_lib import UtilsLib
 
 
@@ -17,7 +13,7 @@ class Encoders:
     """
     Common pre-processing and validation for protein/peptide sequence encoders.
 
-    This class validates canonical amino acids and maximum length constraints,
+    This class validates the input alphabet and maximum length constraints,
     preserving selected columns for downstream encoders.
 
     Parameters
@@ -29,13 +25,17 @@ class Encoders:
         Column that holds the sequence strings.
     max_length : int, default=1024
         Maximum allowed sequence length; longer sequences are filtered out.
+    allow_extended : bool, default=False
+        If True, accept extended amino acids (B, Z, X, U, O).
+    allow_unknown : bool, default=False
+        If True, allow 'X' even when `allow_extended=False`.
     debug : bool, default=False
-        If True, the *child* logger is set to `debug_mode`.
+        If True, the child logger is set to `debug_mode`.
     debug_mode : int, default=logging.INFO
         Logging level for this encoder's child logger (e.g., logging.DEBUG).
     name_logging : str, default="sequence_encoder.encoder"
         Child logger suffix; emitted as
-        ``protein_representation.sequence_encoder.<name_logging>``.
+        ``sylphy.sequence_encoder.<name_logging>``.
 
     Attributes
     ----------
@@ -49,6 +49,10 @@ class Encoders:
         Last status/error message.
     max_length : int
         Maximum permitted sequence length.
+    allow_extended : bool
+        Whether extended alphabet is enabled.
+    allow_unknown : bool
+        Whether 'X' is allowed when not using extended alphabet.
     __logger__ : logging.Logger
         Child logger for this encoder.
     """
@@ -58,29 +62,28 @@ class Encoders:
         dataset: Optional[pd.DataFrame] = None,
         sequence_column: str = "sequence",
         max_length: int = 1024,
+        allow_extended: bool = False,
+        allow_unknown: bool = False,
         debug: bool = False,
         debug_mode: int = logging.INFO,
         name_logging: str = "sequence_encoder.encoder",
     ) -> None:
-
-        # Ensure the top-level library logger is configured once,
-        # and use a child logger for this encoder.
-        _ = get_logger("protein_representation")
-        self.__logger__ = logging.getLogger(
-            f"protein_representation.sequence_encoder.{name_logging}"
-        )
+        # Ensure top-level logger is initialized once and create a child logger
+        _ = get_logger("sylphy")
+        self.__logger__ = logging.getLogger(f"sylphy.sequence_encoder.{name_logging}")
         self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
         add_context(self.__logger__, component="sequence_encoder", encoder=name_logging)
 
         self.dataset = dataset if dataset is not None else pd.DataFrame()
         self.sequence_column = sequence_column
         self.max_length = max_length
+        self.allow_extended = allow_extended
+        self.allow_unknown = allow_unknown
 
         self.status = True
         self.message = ""
         self.coded_dataset = pd.DataFrame()
 
-        # Fast-exit if dataset was not provided
         if dataset is None:
             self.status = False
             self.message = "[ERROR] No dataset provided to encoder."
@@ -99,7 +102,7 @@ class Encoders:
     # ----------------------------
 
     def make_revisions(self) -> None:
-        """Run residue-canonicity and length validations."""
+        """Run alphabet validation and length filtering."""
         if self.sequence_column not in self.dataset.columns:
             self.status = False
             self.message = f"[ERROR] Column '{self.sequence_column}' not found in dataset."
@@ -107,9 +110,10 @@ class Encoders:
             raise ValueError(self.message)
 
         try:
-            self.__logger__.info("Validating canonical residues.")
-            self.check_canonical_residues()
-            self.__logger__.info("Validating sequence lengths.")
+            self.__logger__.info("Validating alphabet (%s).",
+                                 "extended" if self.allow_extended or self.allow_unknown else "canonical")
+            self.check_allowed_alphabet()
+            self.__logger__.info("Validating sequence lengths (≤ %d).", self.max_length)
             self.process_length_sequences()
         except Exception as e:
             self.status = False
@@ -117,21 +121,25 @@ class Encoders:
             self.__logger__.exception(self.message)
             raise RuntimeError(self.message)
 
-    def check_canonical_residues(self) -> None:
-        """Keep only sequences composed of canonical residues."""
+    def check_allowed_alphabet(self) -> None:
+        """Keep only sequences composed of the selected alphabet."""
         try:
-            canon_mask = [
-                all(res in LIST_RESIDUES for res in seq)
-                for seq in self.dataset[self.sequence_column]
-            ]
-            self.dataset["is_canon"] = canon_mask
+            alpha = set(residues(extended=self.allow_extended or self.allow_unknown))
+            if not self.allow_extended and self.allow_unknown:
+                alpha.add("X")  # allow unknown explicitly if requested
+
+            def _ok(seq: str) -> bool:
+                return all((r in alpha) for r in seq)
+
+            mask = [ _ok(seq) for seq in self.dataset[self.sequence_column] ]
+            self.dataset["is_canon"] = mask
             before = len(self.dataset)
             self.dataset = self.dataset[self.dataset["is_canon"]].copy()
             removed = before - len(self.dataset)
-            self.__logger__.info("Filtered non-canonical sequences: %d removed.", removed)
+            self.__logger__.info("Filtered sequences outside alphabet: %d removed.", removed)
         except Exception:
-            self.__logger__.exception("[ERROR] Failed during canonical residue check.")
-            raise RuntimeError("Failed during canonical residue check.")
+            self.__logger__.exception("[ERROR] Failed during alphabet validation.")
+            raise RuntimeError("Failed during alphabet validation.")
 
     def process_length_sequences(self) -> None:
         """Filter out sequences longer than `max_length`."""
@@ -150,12 +158,11 @@ class Encoders:
     # IO
     # ----------------------------
 
-    def export_encoder(self, path: str, file_format: Literal["csv", "npy"] = "csv") -> None:
+    def export_encoder(self, path: str, file_format: Literal["csv", "npy", "npz", "parquet"] = "csv") -> None:
         """Persist the encoded matrix to disk."""
         UtilsLib.export_data(
             df_encoded=self.coded_dataset,
             path=path,
-            __logger__=self.__logger__,
-            base_message="Encoded generated",
+            base_message="Encoded features",
             file_format=file_format,
         )

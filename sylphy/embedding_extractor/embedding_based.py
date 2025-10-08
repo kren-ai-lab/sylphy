@@ -1,25 +1,32 @@
-# protein_representation/embedding_extraction/embedding_based.py
+# sylphy/embedding_extraction/embedding_based.py
 from __future__ import annotations
+
+import logging
+from abc import ABC
+from typing import List, Optional, Literal, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import torch
-from abc import ABC
-from typing import List, Optional, Literal
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 
 from sylphy.logging import get_logger, add_context
 from sylphy.core.model_registry import ModelSpec, resolve_model, register_model
-from sylphy.core.config import ToolConfig
 from sylphy.misc.utils_lib import UtilsLib
+
+
+LayerSpec = Union[str, int, Sequence[int]]
+LayerAgg = Literal["mean", "sum", "concat"]
+Pool = Literal["mean", "cls", "eos"]
 
 
 class EmbeddingBased(ABC):
     """
-    Base class for embedding extraction from protein sequences using HF models.
+    Base class for embedding extraction from protein sequences using HF-like models.
 
-    This class standardizes device handling, tokenizer/model loading from the local
-    registry/cache, mixed precision (optional), and a consistent logging strategy.
+    - Unified logging under "sylphy.embedding_extraction.*".
+    - Device & AMP handling (fp16/bf16) with safe CUDA fallback.
+    - Batch utilities and robust OOM backoff (halve batch on OOM and retry).
 
     Parameters
     ----------
@@ -37,18 +44,16 @@ class EmbeddingBased(ABC):
         HF revision (branch/tag/SHA).
     column_seq : str, default="sequence"
         Column name holding raw sequences.
-    debug : bool, default=ToolConfig.debug
-        If True, set this backend logger to DEBUG (file handler logs everything).
-    debug_mode : int, default=ToolConfig.log_level
+    debug : bool, default=False
+        If True, set this backend logger to `debug_mode`.
+    debug_mode : int, default=logging.INFO
         Logging level when `debug=True`; ignored otherwise.
-    name_logging : str, deprecated
-        Kept for backwards compatibility; ignored in favor of hierarchical loggers.
     trust_remote_code : bool, default=False
         Forwarded to HF `from_pretrained`.
     precision : {"fp32","fp16","bf16"}, default="fp32"
         AMP autocast dtype for CUDA.
     oom_backoff : bool, default=True
-        If True, halves batch size on CUDA OOM and retries once.
+        If True, halves batch size on CUDA OOM and retries.
     """
 
     def __init__(
@@ -60,9 +65,9 @@ class EmbeddingBased(ABC):
         provider: str = "huggingface",
         revision: Optional[str] = None,
         column_seq: str = "sequence",
-        debug: bool = ToolConfig.debug,
-        debug_mode: int = ToolConfig.log_level,
-        name_logging: str = "protein_representation.embedding",  # deprecated (ignored)
+        debug: bool = False,
+        debug_mode: int = logging.INFO,
+        name_logging: str = "EmbeddingBased",  # deprecated; kept for context info
         trust_remote_code: bool = False,
         precision: Literal["fp32", "fp16", "bf16"] = "fp32",
         oom_backoff: bool = True,
@@ -74,7 +79,9 @@ class EmbeddingBased(ABC):
 
         # --- device
         self.name_device = name_device
-        self.device = torch.device(self.name_device if torch.cuda.is_available() or name_device == "cpu" else "cpu")
+        self.device = torch.device(
+            self.name_device if (torch.cuda.is_available() or self.name_device == "cpu") else "cpu"
+        )
 
         # --- identifiers
         self.name_model = name_model.strip()
@@ -87,19 +94,14 @@ class EmbeddingBased(ABC):
         self.precision = precision
         self.oom_backoff = bool(oom_backoff)
 
-        # --- unified logging ----------------------------------------------
-        # Ensure package-level logger is configured once
-        _ = get_logger("protein_representation")
-        import logging
-        self.__logger__ = logging.getLogger(
-            f"protein_representation.embedding_extraction.{EmbeddingBased.__name__}"
-        )
-        # Inherit parent level unless debug=True for this encoder
+        # --- logging
+        _ = get_logger("sylphy")  # ensure package root once
+        self.__logger__ = logging.getLogger(f"sylphy.embedding_extraction.{name_logging}")
         self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
         add_context(
             self.__logger__,
             component="embedding_extraction",
-            backend=EmbeddingBased.__name__,
+            backend=name_logging,
             model=self.name_model or "<unset>",
         )
 
@@ -123,33 +125,11 @@ class EmbeddingBased(ABC):
             local_dir = resolve_model(self.name_model)
             return str(local_dir)
         except Exception:
-            # If not registered and it's a HF ref, self-register
             if self.provider == "huggingface" and ("/" in self.name_model):
-                try:
-                    register_model(ModelSpec(name=self.name_model, provider="huggingface", ref=self.name_model))
-                    local_dir = resolve_model(self.name_model)
-                    return str(local_dir)
-                except Exception as e:
-                    self.__logger__.error("Failed to self-register model '%s': %s", self.name_model, e)
-                    raise
-            # else: let the original error surface
+                register_model(ModelSpec(name=self.name_model, provider="huggingface", ref=self.name_model))
+                local_dir = resolve_model(self.name_model)
+                return str(local_dir)
             raise
-
-    # ---------------------------------------------------------------------
-    # Tokenization / batching utils
-    # ---------------------------------------------------------------------
-
-    def _amp_dtype(self) -> Optional[torch.dtype]:
-        if self.device.type != "cuda":
-            return None
-        return {"fp16": torch.float16, "bf16": torch.bfloat16}.get(self.precision, None)
-
-    def _make_batches(self, seqs: List[str], batch_size: int) -> List[List[str]]:
-        return [seqs[i : i + batch_size] for i in range(0, len(seqs), batch_size)]
-
-    # ---------------------------------------------------------------------
-    # Public API
-    # ---------------------------------------------------------------------
 
     def load_hf_tokenizer_and_model(self) -> None:
         """
@@ -158,7 +138,6 @@ class EmbeddingBased(ABC):
         try:
             local_dir = self._register_and_resolve()
 
-            # Optional read of config (e.g., hidden size)
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=self.trust_remote_code)
 
             self.__logger__.info("Loading tokenizer from: %s", local_dir)
@@ -171,7 +150,6 @@ class EmbeddingBased(ABC):
 
             # Ensure a pad token exists
             if getattr(self.tokenizer, "pad_token_id", None) is None:
-                # fallbacks: eos_token or add [PAD]
                 if getattr(self.tokenizer, "pad_token", None) is None:
                     if getattr(self.tokenizer, "eos_token", None) is not None:
                         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -190,123 +168,254 @@ class EmbeddingBased(ABC):
             self.__logger__.exception(self.message)
             raise RuntimeError(self.message)
 
-    def encode_batch_last_hidden(
+    # ---------------------------------------------------------------------
+    # Hooks & utilities
+    # ---------------------------------------------------------------------
+
+    def _pre_tokenize(self, batch: List[str]) -> List[str]:
+        """
+        Hook for subclasses to adapt raw sequences before tokenization.
+        Default: identity.
+        """
+        return batch
+
+    def _amp_dtype(self) -> Optional[torch.dtype]:
+        if self.device.type != "cuda":
+            return None
+        return {"fp16": torch.float16, "bf16": torch.bfloat16}.get(self.precision, None)
+
+    def _make_batches(self, seqs: List[str], batch_size: int) -> List[List[str]]:
+        return [seqs[i : i + batch_size] for i in range(0, len(seqs), batch_size)]
+
+    # ---------------------------------------------------------------------
+    # Forward helpers (HuggingFace-style)
+    # ---------------------------------------------------------------------
+
+    @torch.no_grad()
+    def _forward_hidden_states(
         self,
         sequences: List[str],
+        *,
+        max_length: int,
+    ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor]:
+        """
+        Tokenize → forward pass with `output_hidden_states=True`.
+
+        Returns
+        -------
+        hidden_states : tuple of Tensors
+            Tuple of length n_layers: each (B, L, H).
+        attention_mask : torch.Tensor
+            (B, L) attention mask (1 for real tokens).
+        """
+        assert self.model is not None and self.tokenizer is not None, \
+            "Call load_*_tokenizer_and_model() before forward."
+
+        enc = self.tokenizer(
+            self._pre_tokenize(sequences),
+            return_tensors="pt",
+            truncation=True,
+            padding=True,
+            add_special_tokens=True,
+            max_length=max_length,
+        )
+        enc = {k: v.to(self.device) for k, v in enc.items()}
+
+        amp_dtype = self._amp_dtype()
+        use_amp = (self.device.type == "cuda") and (amp_dtype is not None)
+
+        if use_amp:
+            with torch.autocast(device_type="cuda", dtype=amp_dtype):
+                out = self.model(**enc, output_hidden_states=True)
+        else:
+            out = self.model(**enc, output_hidden_states=True)
+
+        hidden_states = out.hidden_states  # type: ignore[attr-defined]
+        if hidden_states is None:
+            # Fallback to just last_hidden_state if the backend doesn't return hidden states.
+            hidden_states = (out.last_hidden_state,)  # type: ignore[attr-defined]
+
+        attn = enc.get("attention_mask", None)
+        if attn is None:
+            # Some tokenizers might not return it; synthesize a full-ones mask.
+            attn = torch.ones(out.last_hidden_state.shape[:2], device=self.device)  # type: ignore[attr-defined]
+        return hidden_states, attn
+
+    # ---------------------------------------------------------------------
+    # Layer & token aggregation
+    # ---------------------------------------------------------------------
+
+    @staticmethod
+    def _parse_layers(layers: LayerSpec, n_layers: int) -> List[int]:
+        """
+        Normalize a layer spec into a sorted list of 0-based indices.
+        Supports: "last", "last4", "all", int, [ints] (negative allowed).
+        """
+        if isinstance(layers, str):
+            key = layers.strip().lower()
+            if key == "last":
+                idx = [n_layers - 1]
+            elif key == "last4":
+                idx = list(range(max(0, n_layers - 4), n_layers))
+            elif key == "all":
+                idx = list(range(n_layers))
+            else:
+                raise ValueError(
+                    f"Unknown layer spec '{layers}'. Use 'last'|'last4'|'all' or an int/list of ints."
+                )
+        elif isinstance(layers, int):
+            idx = [layers]
+        else:
+            idx = list(layers)
+
+        # Convert negatives and validate range
+        fixed: List[int] = []
+        for j in idx:
+            jj = j if j >= 0 else n_layers + j
+            if not (0 <= jj < n_layers):
+                raise ValueError(f"Layer index {j} out of bounds (n_layers={n_layers}).")
+            fixed.append(jj)
+        return sorted(set(fixed))
+
+    @staticmethod
+    def _pool_tokens(
+        reps: torch.Tensor,  # (B, L, H)
+        attn: torch.Tensor,  # (B, L)
+        pool: Pool,
+    ) -> torch.Tensor:  # (B, H) or (B, H*)
+        if pool == "mean":
+            mask = attn.unsqueeze(-1).float()
+            summed = (reps * mask).sum(dim=1)
+            denom = mask.sum(dim=1).clamp(min=1.0)
+            return summed / denom
+        if pool == "cls":
+            return reps[:, 0, :]
+        if pool == "eos":
+            idx = attn.sum(dim=1) - 1
+            return reps[torch.arange(reps.size(0), device=reps.device), idx, :]
+        raise ValueError(f"Unknown token pool strategy '{pool}'")
+
+    @staticmethod
+    def _aggregate_layers(
+        hs: Tuple[torch.Tensor, ...],
+        select: List[int],
+        agg: LayerAgg,
+    ) -> torch.Tensor:
+        """
+        Aggregate selected layers into a single (B, L, H*) representation.
+        """
+        chosen = [hs[i] for i in select]
+        if agg == "concat":
+            return torch.cat(chosen, dim=-1)
+        if agg == "mean":
+            return torch.stack(chosen, dim=0).mean(dim=0)
+        if agg == "sum":
+            return torch.stack(chosen, dim=0).sum(dim=0)
+        raise ValueError(f"Unknown layer aggregation '{agg}'")
+
+    # ---------------------------------------------------------------------
+    # Public HF-style API (end-to-end on batches / dataset)
+    # ---------------------------------------------------------------------
+
+    def encode_batch_layers(
+        self,
+        sequences: List[str],
+        *,
         max_length: int = 1024,
-        batch_size: int = 8,
-        pool: Literal["mean", "cls", "eos"] = "mean",
+        layers: LayerSpec = "last",
+        layer_agg: LayerAgg = "mean",
+        pool: Pool = "mean",
     ) -> np.ndarray:
         """
-        Tokenize and run a batch through the model, returning pooled last hidden states.
-
-        Parameters
-        ----------
-        sequences : list of str
-        max_length : int
-        batch_size : int
-        pool : {"mean","cls","eos"}
-            Pooling strategy.
+        Encode a batch returning pooled, layer-aggregated embeddings.
 
         Returns
         -------
         np.ndarray
-            (N, H) matrix of pooled embeddings.
+            (B, H') with H' depending on `layer_agg` and the number of selected layers.
         """
-        assert self.model is not None and self.tokenizer is not None, "Call load_hf_tokenizer_and_model() first."
+        hidden_states, attn = self._forward_hidden_states(sequences, max_length=max_length)
+        n_layers = len(hidden_states)
+        select = self._parse_layers(layers, n_layers)
 
-        try:
-            enc = self.tokenizer(
-                sequences,
-                return_tensors="pt",
-                truncation=True,
-                padding=True,
-                add_special_tokens=False,
-                max_length=max_length,
-            )
-            enc = {k: v.to(self.device) for k, v in enc.items()}
-
-            amp_dtype = self._amp_dtype()
-            use_amp = (self.device.type == "cuda") and (amp_dtype is not None)
-
-            if use_amp:
-                self.__logger__.debug("Using autocast dtype=%s for batch forward.", amp_dtype)
-                with torch.autocast(device_type="cuda", dtype=amp_dtype):
-                    out = self.model(**enc)
-            else:
-                out = self.model(**enc)
-
-            last_hidden = out.last_hidden_state  # (B, L, H)
-
-            if pool == "mean":
-                mask = enc["attention_mask"].unsqueeze(-1).float()
-                summed = (last_hidden * mask).sum(dim=1)
-                denom = mask.sum(dim=1).clamp(min=1.0)
-                pooled = summed / denom
-            elif pool == "cls":
-                pooled = last_hidden[:, 0, :]
-            elif pool == "eos":
-                # find last non-pad token per row
-                idx = enc["attention_mask"].sum(dim=1) - 1
-                pooled = last_hidden[torch.arange(last_hidden.size(0)), idx, :]
-            else:
-                raise ValueError(f"Unknown pool strategy: {pool}")
-
-            return pooled.detach().cpu().numpy()
-
-        except torch.cuda.OutOfMemoryError as oom:
-            if self.oom_backoff and batch_size > 1:
-                self.__logger__.warning("CUDA OOM at bs=%d. Retrying with bs=%d.", batch_size, batch_size // 2)
-                return self.encode_batch_last_hidden(sequences, max_length, max(batch_size // 2, 1), pool)
-            self.__logger__.exception("CUDA OOM without backoff.")
-            raise
-        except Exception as e:
-            self.__logger__.exception("Encoding batch failed: %s", e)
-            raise
-
-    # ---------------------------------------------------------------------
-    # Convenience: end-to-end on the dataset
-    # ---------------------------------------------------------------------
+        reps = self._aggregate_layers(hidden_states, select, layer_agg)  # (B, L, H' or H)
+        pooled = self._pool_tokens(reps, attn, pool)                    # (B, H' or H)
+        return pooled.detach().cpu().numpy()
 
     def run_process(
         self,
+        *,
         max_length: int = 1024,
         batch_size: int = 8,
-        pool: Literal["mean", "cls", "eos"] = "mean",
+        layers: LayerSpec = "last",
+        layer_agg: LayerAgg = "mean",
+        pool: Pool = "mean",
     ) -> None:
         """
-        Encode all sequences in `self.dataset` and store the matrix in `coded_dataset`.
+        Encode all sequences in the dataset using the selected layers and pooling.
+        Stores the matrix in `self.coded_dataset`.
         """
         try:
             seqs = self.dataset[self.column_seq].astype(str).tolist()
-            chunks = self._make_batches(seqs, batch_size)
-            mats = [self.encode_batch_last_hidden(c, max_length=max_length, batch_size=len(c), pool=pool) for c in chunks]
-            X = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
+            mats: List[np.ndarray] = []
+            bs = max(1, int(batch_size))
 
-            header = [f"p_{i}" for i in range(X.shape[1])]
-            self.coded_dataset = pd.DataFrame(X, columns=header, index=self.dataset.index)
+            for chunk in self._make_batches(seqs, bs):
+                try:
+                    X = self.encode_batch_layers(
+                        chunk,
+                        max_length=max_length,
+                        layers=layers,
+                        layer_agg=layer_agg,
+                        pool=pool,
+                    )
+                    mats.append(X)
+                except torch.cuda.OutOfMemoryError:
+                    if not (self.oom_backoff and bs > 1 and self.device.type == "cuda"):
+                        raise
+                    new_bs = max(1, bs // 2)
+                    self.__logger__.warning("CUDA OOM at bs=%d. Retrying with bs=%d.", bs, new_bs)
+                    bs = new_bs
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                        try:
+                            torch.cuda.reset_peak_memory_stats()
+                        except Exception:
+                            pass
+                    # retry this same chunk with smaller batch
+                    for sub in self._make_batches(chunk, bs):
+                        X = self.encode_batch_layers(
+                            sub,
+                            max_length=max_length,
+                            layers=layers,
+                            layer_agg=layer_agg,
+                            pool=pool,
+                        )
+                        mats.append(X)
+
+            Xall = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
+            header = [f"p_{i}" for i in range(Xall.shape[1])]
+            self.coded_dataset = pd.DataFrame(Xall, columns=header, index=self.dataset.index)
             self.coded_dataset[self.column_seq] = self.dataset[self.column_seq].values
             self.status = True
             self.message = "OK"
-            self.__logger__.info("Embedding extraction complete. Shape: %s", X.shape)
+            self.__logger__.info(
+                "Embedding extraction complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
+                Xall.shape, layers, layer_agg, pool
+            )
         except Exception as e:
             self.status = False
             self.message = f"[ERROR] run_process failed: {e}"
             self.__logger__.exception(self.message)
             raise RuntimeError(self.message)
 
-    # ---------------------------------------------------------------------
-    # Export
-    # ---------------------------------------------------------------------
-
-    def export_encoder(self, path: str, file_format: Literal["csv", "npy"] = "csv") -> None:
+    def export_encoder(self, path: str, file_format: Literal["csv", "npy", "npz", "parquet"] = "csv") -> None:
         """
         Persist the encoded matrix to disk.
         """
         UtilsLib.export_data(
             df_encoded=self.coded_dataset,
             path=path,
-            __logger__=self.__logger__,
-            base_message="Embeddings generated",
+            base_message="Embeddings",
             file_format=file_format,
         )

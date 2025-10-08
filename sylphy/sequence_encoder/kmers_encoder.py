@@ -1,4 +1,3 @@
-# protein_representation/sequence_encoder/kmers_encoder.py
 from __future__ import annotations
 
 import logging
@@ -12,7 +11,7 @@ from .base_encoder import Encoders
 
 class KMersEncoders(Encoders):
     """
-    TF-IDF encode k-merized sequences.
+    TF-IDF encode k-merized sequences (word-level analyzer).
     """
 
     def __init__(
@@ -20,12 +19,17 @@ class KMersEncoders(Encoders):
         dataset: Optional[pd.DataFrame] = None,
         sequence_column: Optional[str] = "sequence",
         size_kmer: int = 3,
+        allow_extended: bool = False,
+        allow_unknown: bool = False,
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
         super().__init__(
             dataset=dataset,
             sequence_column=sequence_column or "sequence",
+            max_length=10**9,  # not used here
+            allow_extended=allow_extended,
+            allow_unknown=allow_unknown,
             debug=debug,
             debug_mode=debug_mode,
             name_logging=KMersEncoders.__name__,
@@ -33,8 +37,8 @@ class KMersEncoders(Encoders):
         self.size_kmer = size_kmer
 
     @staticmethod
-    def kmer(seq: str, kmer_length: int = 3) -> str:
-        return " ".join(seq[i : i + kmer_length] for i in range(len(seq) - kmer_length + 1))
+    def kmer(seq: str, k: int = 3) -> str:
+        return " ".join(seq[i : i + k] for i in range(max(0, len(seq) - k + 1)))
 
     def run_process(self) -> None:
         if not self.status:
@@ -47,8 +51,12 @@ class KMersEncoders(Encoders):
                 lambda x: self.kmer(x, self.size_kmer)
             )
 
-            vectorizer = TfidfVectorizer()
-            X = vectorizer.fit_transform(self.dataset["kmer_sequence"]).astype("float32")
+            vectorizer = TfidfVectorizer(
+                analyzer="word",
+                token_pattern=r"(?u)\b\w+\b",
+                dtype="float32",
+            )
+            X = vectorizer.fit_transform(self.dataset["kmer_sequence"])
 
             self.coded_dataset = pd.DataFrame(
                 data=X.toarray(),

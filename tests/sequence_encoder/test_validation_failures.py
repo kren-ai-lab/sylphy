@@ -1,4 +1,3 @@
-# tests/sequence_encoder/test_validation_failures.py
 from __future__ import annotations
 
 import pandas as pd
@@ -12,4 +11,5 @@ def test_missing_sequence_column_sets_status_false():
     assert enc.status is False
     # run_process should no-op but not crash
     enc.run_process()
+    assert hasattr(enc, "coded_dataset")
     assert enc.coded_dataset.empty

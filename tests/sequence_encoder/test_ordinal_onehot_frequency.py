@@ -1,4 +1,3 @@
-# tests/sequence_encoder/test_ordinal_onehot_frequency.py
 from __future__ import annotations
 
 import numpy as np
@@ -35,10 +34,33 @@ def test_onehot_shapes_and_sums(toy_df):
 
 
 def test_frequency_invariants():
-    df = pd.DataFrame({"sequence": ["ABBA".replace("B", "C")]})  # "ACCA"
-    enc = FrequencyEncoder(dataset=df, max_length=4, debug=True)
+    from sylphy.constants.tool_constants import LIST_RESIDUES
+
+    df = pd.DataFrame({"sequence": ["ACCA"]})
+    enc = FrequencyEncoder(dataset=df, debug=True)
     enc.run_process()
     X = enc.coded_dataset
-    v = X.iloc[0, :4].tolist()
-    # For "ACCA": counts are A=2/4, C=2/4 → positions [A,C,C,A] = [.5, .5, .5, .5]
-    assert v == pytest.approx([0.5, 0.5, 0.5, 0.5], rel=1e-6)
+
+    # Select feature columns (exclude 'sequence')
+    feat_cols = [c for c in X.columns if c != "sequence"]
+
+    # Prefer residue-named columns if present; otherwise assume canonical order
+    if set(LIST_RESIDUES).issubset(set(feat_cols)):
+        v = X.loc[0, LIST_RESIDUES].to_numpy()
+    else:
+        # Fallback: assume encoder uses canonical residue order across the first 20 cols
+        v = X.loc[0, feat_cols[:20]].to_numpy()
+
+    # Invariants: 20 residues, sum to 1.0, only A and C are 0.5 each for "ACCA"
+    assert len(v) == 20
+    assert v.sum() == pytest.approx(1.0, rel=1e-6)
+
+    idx = {res: i for i, res in enumerate(LIST_RESIDUES)}
+    a_i, c_i = idx["A"], idx["C"]
+    assert v[a_i] == pytest.approx(0.5, rel=1e-6)
+    assert v[c_i] == pytest.approx(0.5, rel=1e-6)
+
+    # All other residues should be ~0
+    for res, i in idx.items():
+        if res not in {"A", "C"}:
+            assert v[i] == pytest.approx(0.0, abs=1e-12)

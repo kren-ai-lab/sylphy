@@ -1,4 +1,3 @@
-# tests/sequence_encoder/test_factory_and_exports.py
 from __future__ import annotations
 
 import pandas as pd
@@ -6,7 +5,6 @@ import pytest
 
 from sylphy.sequence_encoder import (
     create_encoder,
-    EncoderName,
     OrdinalEncoder,
     OneHotEncoder,
     FrequencyEncoder,

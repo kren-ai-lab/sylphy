@@ -1,9 +1,5 @@
-# tests/sequence_encoder/test_fft_encoder.py
 from __future__ import annotations
 
-import math
-
-import numpy as np
 import pandas as pd
 
 from sylphy.sequence_encoder import FFTEncoder
@@ -23,7 +19,8 @@ def test_fft_encoder_half_spectrum_and_padding():
     enc.run_process()
     X = enc.coded_dataset
     # Next power of two >= 3 is 4 → half-spectrum = 2
-    assert X.drop(columns=["sequence"]).shape[1] == 2
+    n_features = X.drop(columns=["sequence"]).shape[1]
+    assert n_features == 2
     assert (X.drop(columns=["sequence"]).to_numpy() >= 0).all()
     # Sequence column preserved
     assert list(X["sequence"]) == ["AAA", "CCC"]

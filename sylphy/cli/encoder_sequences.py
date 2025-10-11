@@ -1,174 +1,218 @@
-# protein_representation/cli/encode_sequences.py
+"""sylphy/cli/encoder_sequences.py
+
+Unified CLI to encode protein/peptide sequences with:
+- one_hot
+- ordinal
+- frequency
+- kmers (TF-IDF)
+- physicochemical (AAIndex / group_based)
+- fft (pipeline: physicochemical -> FFT)
+
+Design goals:
+- Factory-first: build encoders via sylphy.sequence_encoder.factory
+- Lazy imports: avoid loading heavy deps at CLI startup
+- Consistent exports: ensure proper file extensions based on --format-output
+"""
 from __future__ import annotations
 
 from pathlib import Path
-import pandas as pd
+from typing import Optional
+
 import typer
-
-from sylphy.constants.cli_constants import (EncoderType, ExportOption, PhysicochemicalOption,
-                                                            DebugMode)
-
-from sylphy.sequence_encoder import (
-    create_encoder,
-    FFTEncoder,
-)
 
 app = typer.Typer(
     name="encode-sequences",
-    help="Encode protein sequences using classical strategies (one-hot, ordinal, k-mers, physicochemical, frequency, FFT).",
+    help="Encode sequences with one-hot, ordinal, frequency, k-mers, physicochemical (AAIndex/group_based) or FFT.",
+    no_args_is_help=True,
 )
 
-def _load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
+# ---- Declarative option sets (keep stdlib-only at import-time) ----
+ENCODER_CHOICES = ("one_hot", "ordinal", "frequency", "kmers", "physicochemical", "fft")
+DESCRIPTOR_CHOICES = ("aaindex", "group_based")
+EXPORT_CHOICES = ("csv", "npy", "npz", "parquet")
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+
+def _level_from_str(name: str) -> int:
+    """Map string log level to logging constant (lazy import)."""
+    import logging
+    return getattr(logging, (name or "INFO").upper(), logging.INFO)
+
+
+def _validate_choice(value: str, choices: tuple[str, ...], opt: str) -> str:
+    """Validate a CLI option against a list of choices (case-insensitive)."""
+    v = (value or "").strip().lower()
+    allowed = {c.lower(): c for c in choices}
+    if v not in allowed:
+        raise typer.BadParameter(f"Invalid {opt}: {value!r}. Allowed: {', '.join(choices)}")
+    return allowed[v]
+
+
+def _load_csv(input_path: Path, seq_col: str):
+    """Lazy-load CSV via pandas and validate the sequence column."""
     if not input_path.exists():
         raise typer.BadParameter(f"Input file not found: {input_path}")
     if input_path.suffix.lower() != ".csv":
-        raise typer.BadParameter("Only CSV is supported in this command.")
+        raise typer.BadParameter("Only CSV is supported as input.")
+    try:
+        import pandas as pd  # lazy
+    except Exception as exc:
+        raise typer.BadParameter("pandas is required to read CSV input.") from exc
+
     df = pd.read_csv(input_path)
     if seq_col not in df.columns:
-        raise typer.BadParameter(
-            f"Column '{seq_col}' not found. Available: {list(df.columns)}"
-        )
+        raise typer.BadParameter(f"Column '{seq_col}' not found. Available: {list(df.columns)}")
     df[seq_col] = df[seq_col].astype(str).fillna("")
     return df
 
-def _level_from_str(name: str) -> int:
-    import logging
-    mapping = {
-        "DEBUG": logging.DEBUG,
-        "INFO": logging.INFO,
-        "WARNING": logging.WARNING,
-        "ERROR": logging.ERROR,
-        "CRITICAL": logging.CRITICAL,
-    }
-    return mapping.get((name or "").strip().upper(), logging.INFO)
 
-@app.command()
+def _ensure_ext(path: Path, fmt: str) -> Path:
+    """Ensure output path has the correct extension based on fmt.
+
+    Rules:
+    - If path already has a suffix and it matches fmt (case-insensitive), keep it.
+    - If path has a different suffix, keep user's suffix (do NOT override).
+    - If path has no suffix, append .fmt
+    """
+    fmt = fmt.lower().lstrip(".")
+    if path.suffix:
+        # Keep user's explicit suffix
+        return path
+    return path.with_suffix(f".{fmt}")
+
+
+@app.command("run")
 def run(
-    # Strategy
-    encoder: EncoderType = typer.Option(
-        "onehot", "--encoder", "-e",
-        help="Encoding strategy.",
-        case_sensitive=False,
+    # encoder / pipeline
+    encoder: str = typer.Option(
+        "physicochemical",
+        "--encoder", "-e",
+        help=f"Encoder backend. One of: {', '.join(ENCODER_CHOICES)}.",
+        show_default=True,
     ),
-    # IO
-    input_data: Path = typer.Option(
-        ..., "--input-data", "-i",
-        help="Input CSV path with sequences.",
-    ),
-    output: Path = typer.Option(
-        ..., "--output", "-o",
-        help="Output file path (CSV or NPY).",
-    ),
-    format_output: ExportOption = typer.Option(
-        "csv", "--format-output", "-f",
-        help="Export format.",
-        case_sensitive=False,
-    ),
-    sequence_identifier: str = typer.Option(
-        "sequence", "--sequence-identifier", "-s",
-        help="Column in CSV that contains amino acid sequences.",
-    ),
-    # Encoder params
-    max_length: int = typer.Option(
-        1024, "--max-length", "-L", min=1,
-        help="Max length per sequence (padding/truncation, encoder dependent).",
-    ),
-    size_kmer: int = typer.Option(
-        3, "--size-kmer", "-k", min=2,
-        help="K-mer length for k-mers encoder.",
-    ),
-    type_descriptor: PhysicochemicalOption = typer.Option(
+    # dataset options
+    input_data: Path = typer.Option(..., "--input-data", "-i", help="CSV file with sequences."),
+    sequence_identifier: str = typer.Option("sequence", "--sequence-identifier", "-s", help="Sequence column name."),
+    max_length: int = typer.Option(1024, "--max-length", "-m", help="Max sequence length (when applicable)."),
+    allow_extended: bool = typer.Option(False, "--allow-extended/--no-allow-extended",
+                                        help="Enable extended alphabet (B, Z, X, U, O)."),
+    allow_unknown: bool = typer.Option(False, "--allow-unknown/--no-allow-unknown",
+                                       help="Allow 'X' when extended alphabet is not enabled."),
+    # backend-specific
+    type_descriptor: Optional[str] = typer.Option(
         "aaindex", "--type-descriptor", "-t",
-        help="Descriptor type for physicochemical encoder.",
-        case_sensitive=False,
+        help=f"Descriptor space for physicochemical encoders (and FFT pre-step). One of: {', '.join(DESCRIPTOR_CHOICES)}.",
+        show_default=True,
     ),
     name_property: str = typer.Option(
         "ANDN920101", "--name-property", "-n",
-        help="Descriptor name (AAindex or group_based).",
+        help="Property/column name in the descriptor table (AAIndex key or group_based label).",
+        show_default=True,
     ),
-    # Logging
-    debug: bool = typer.Option(
-        False, "--debug/--no-debug",
-        help="Enable verbose logs for this command.",
+    size_kmer: int = typer.Option(3, "--size-kmer", "-k", help="k for TF-IDF k-mers (kmers backend)."),
+    # output
+    output: Path = typer.Option(..., "--output", "-o", help="Output file path (extension can be omitted)."),
+    format_output: str = typer.Option(
+        "csv", "--format-output", "-f",
+        help=f"Output format. One of: {', '.join(EXPORT_CHOICES)}.",
+        show_default=True,
     ),
-    log_level: DebugMode = typer.Option(
-        "INFO", "--log-level",
-        help="Library log level.",
-        case_sensitive=False,
-    ),
-):
-    """
-    Examples
-    --------
-    \b
-    protein_representation encode-sequences run \\
-      --encoder kmers \\
-      --input-data data/sequences.csv \\
-      --output results/kmers_k3.csv \\
-      --sequence-identifier sequence \\
-      --size-kmer 3
-    \b
-    protein_representation encode-sequences run \\
-      --encoder physicochemical \\
-      --input-data data/sequences.csv \\
-      --output results/physchem.csv \\
-      --name-property ANDN920101
-    \b
-    # 'fft' applies FFT on top of a physicochemical vector
-    protein_representation encode-sequences run \\
-      --encoder fft \\
-      --input-data data/sequences.csv \\
-      --output results/physchem_fft.csv \\
-      --name-property ANDN920101
+    # logging
+    debug: bool = typer.Option(False, "--debug/--no-debug", help="Enable verbose logs within encoders."),
+    log_level: str = typer.Option("INFO", "--log-level", help=f"Log level: {', '.join(LOG_LEVELS)}.", show_default=True),
+) -> None:
+    """Encode sequences and export feature matrices using Sylphy's encoders.
+
+    Notes
+    -----
+    - 'fft' runs as a pipeline: physicochemical (AAIndex/group_based) first, then FFT,
+      so the signal is numerical before spectral analysis.
+    - Alphabet and length validation are handled by the shared base encoder.
     """
     try:
+        # Cheap validations (no heavy imports yet)
+        enc_choice = _validate_choice(encoder, ENCODER_CHOICES, "encoder")
+        fmt_choice = _validate_choice(format_output, EXPORT_CHOICES, "format-output")
+        if enc_choice == "physicochemical" or enc_choice == "fft":
+            _validate_choice(type_descriptor or "aaindex", DESCRIPTOR_CHOICES, "type-descriptor")
+
+        level = _level_from_str(log_level)
         df = _load_csv(input_data, sequence_identifier)
 
-        if encoder.lower() == EncoderType.fft:
-            # 1) Physicochemical encoding
+        # Import factory only when the user actually runs the command
+        from sylphy.sequence_encoder.factory import create_encoder
+
+        # Compute final output path with ensured extension (fix for missing extensions)
+        final_output = _ensure_ext(output, fmt_choice)
+
+        # --- FFT pipeline (physicochemical -> FFT) ---
+        if enc_choice == "fft":
             phys = create_encoder(
                 "physicochemical",
                 dataset=df,
                 sequence_column=sequence_identifier,
                 max_length=max_length,
-                debug=debug,
-                debug_mode=_level_from_str(log_level.value),
-                type_descriptor=type_descriptor.value,
+                type_descriptor=(type_descriptor or "aaindex"),
                 name_property=name_property,
+                allow_extended=allow_extended,
+                allow_unknown=allow_unknown,
+                debug=debug,
+                debug_mode=level,
             )
             phys.run_process()
+            if phys.coded_dataset is None or phys.coded_dataset.empty:
+                raise RuntimeError("Physicochemical step produced empty features.")
 
-            # 2) FFT on top of the numeric matrix
-            fft_encoder = FFTEncoder(
+            fft = create_encoder(
+                "fft",
                 dataset=phys.coded_dataset,
                 sequence_column=sequence_identifier,
                 debug=debug,
-                debug_mode=_level_from_str(log_level.value),
+                debug_mode=level,
             )
-            fft_encoder.run_process()
-            fft_encoder.export_encoder(
-                df_encoder=fft_encoder.coded_dataset,
-                path=str(output),
-                file_format=format_output.value.lower(),
-            )
-            typer.echo(f"Encoded features (physchem+FFT) saved to: {output}")
+            fft.run_process()
+
+            # Some implementations expect (data, path); others only (path).
+            # Keep the more specific signature used for FFT if your encoder requires the dataset:
+            try:
+                fft.export_encoder(fft.coded_dataset, str(final_output), file_format=fmt_choice)
+            except TypeError:
+                fft.export_encoder(str(final_output), file_format=fmt_choice)
+
+            typer.echo(f"[fft] Saved to: {final_output}")
             return
 
-        # Other encoders via factory
-        enc = create_encoder(
-            encoder.value,
+        # --- Single-step backends ---
+        kwargs_common = dict(
             dataset=df,
             sequence_column=sequence_identifier,
-            max_length=max_length,
+            allow_extended=allow_extended,
+            allow_unknown=allow_unknown,
             debug=debug,
-            debug_mode=_level_from_str(log_level.value),
-            size_kmer=size_kmer,
-            type_descriptor=type_descriptor.value,
-            name_property=name_property,
+            debug_mode=level,
         )
+
+        if enc_choice in ("one_hot", "ordinal", "physicochemical"):
+            kwargs_common["max_length"] = max_length
+
+        if enc_choice == "physicochemical":
+            kwargs_common["type_descriptor"] = (type_descriptor or "aaindex")
+            kwargs_common["name_property"] = name_property
+
+        if enc_choice == "kmers":
+            kwargs_common["size_kmer"] = size_kmer
+
+        enc = create_encoder(enc_choice, **kwargs_common)
         enc.run_process()
-        enc.export_encoder(path=str(output), file_format=format_output.value.lower())
-        typer.echo(f"Encoded features saved to: {output}")
+
+        # Export with ensured extension; support both possible method signatures
+        try:
+            enc.export_encoder(str(final_output), file_format=fmt_choice)
+        except TypeError:
+            # Older/export variants that expect (data, path)
+            enc.export_encoder(enc.coded_dataset, str(final_output), file_format=fmt_choice)
+
+        typer.echo(f"[{enc_choice}] Saved to: {final_output}")
 
     except typer.BadParameter as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)

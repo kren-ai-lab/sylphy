@@ -394,7 +394,7 @@ class UtilsLib:
                 _LOG.info("%s exported to CSV: %s", base_message, dest)
 
             elif file_format == "npy":
-                np.save(dest, df_encoded.values, allow_pickle=False)
+                np.save(dest, df_encoded.values, allow_pickle=True)
                 _LOG.info("%s exported to NPY: %s", base_message, dest)
 
             elif file_format == "npz":

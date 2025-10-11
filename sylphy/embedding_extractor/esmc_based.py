@@ -55,6 +55,15 @@ class ESMCBasedEmbedding(EmbeddingBased):
         )
         self._embedding_dim: Optional[int] = None
 
+    def _has_hidden_states(self, hs) -> bool:
+        if hs is None:
+            return False
+        if isinstance(hs, (list, tuple)):
+            return len(hs) > 0
+        if torch.is_tensor(hs):
+            return hs.numel() > 0
+        return False
+
     def load_model_tokenizer(self) -> None:
         try:
             # Try registry resolution; if not found, fall back to from_pretrained(name_model)
@@ -168,7 +177,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
                 for seq in tqdm(chunk, desc=f"[ESMC] idx {i}", leave=False):
                     emb, hs = self._embed_one(seq, return_hidden_states=True)
 
-                    if hs:  # hidden states available
+                    if self._has_hidden_states(hs):  # hidden states available
                         n_layers = len(hs)
                         # Select and aggregate layers
                         select = EmbeddingBased._parse_layers(layers, n_layers)
@@ -179,13 +188,18 @@ class ESMCBasedEmbedding(EmbeddingBased):
                             stacked = torch.stack(chosen, dim=0).sum(dim=0)
                         else:
                             stacked = torch.stack(chosen, dim=0).mean(dim=0)
-                        pooled = self._pool_tokens(stacked, pool=pool).squeeze(0)  # (H')  # type: ignore[arg-type]
+                        pooled = self._pool_tokens(stacked, pool=pool).squeeze(0)  # (H')
                     elif emb is not None:
                         pooled = self._pool_tokens(emb, pool=pool).squeeze(0)      # (H)
                     else:
                         continue
 
+                    # --- FIX: NumPy does not support torch.bfloat16/float16 ---
+                    pooled = pooled.contiguous()
+                    if pooled.dtype in (torch.bfloat16, torch.float16):
+                        pooled = pooled.to(torch.float32)
                     vec = pooled.detach().cpu().numpy()
+
                     if self._embedding_dim is None:
                         self._embedding_dim = int(vec.shape[-1])
                     out_vecs.append(vec)

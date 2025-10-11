@@ -14,10 +14,9 @@ from sylphy.logging import get_logger, add_context
 from sylphy.core.model_registry import ModelSpec, resolve_model, register_model
 from sylphy.misc.utils_lib import UtilsLib
 
-
-LayerSpec = Union[str, int, Sequence[int]]
-LayerAgg = Literal["mean", "sum", "concat"]
 Pool = Literal["mean", "cls", "eos"]
+LayerAgg = Literal["mean", "sum", "concat"]
+LayerSpec = Union[str, int, Sequence[int]]
 
 
 class EmbeddingBased(ABC):
@@ -35,9 +34,9 @@ class EmbeddingBased(ABC):
     name_device : {"cuda","cpu"}, default=auto
         Preferred device; falls back to CPU if CUDA not available.
     name_model : str
-        Model identifier (HF ref or registry key).
+        HF hub id or local path, used by registry to resolve local cache.
     name_tokenizer : str
-        Tokenizer identifier; defaults to `name_model`.
+        Optional; if empty, defaults to `name_model`.
     provider : {"huggingface","other"}, default="huggingface"
         Where to resolve `name_model` from (registry/provider).
     revision : str, optional
@@ -73,31 +72,23 @@ class EmbeddingBased(ABC):
         oom_backoff: bool = True,
     ) -> None:
 
-        # --- dataset & columns
         self.dataset = dataset
         self.column_seq = column_seq
 
-        # --- device
-        self.name_device = name_device
-        self.device = torch.device(
-            self.name_device if (torch.cuda.is_available() or self.name_device == "cpu") else "cpu"
-        )
-
-        # --- identifiers
-        self.name_model = name_model.strip()
-        self.name_tokenizer = (name_tokenizer.strip() or self.name_model)
+        self.name_model = name_model
+        self.name_tokenizer = name_tokenizer or name_model
         self.provider = provider
         self.revision = revision
-        self.trust_remote_code = bool(trust_remote_code)
 
-        # --- execution
+        self.device = torch.device(name_device if torch.cuda.is_available() and name_device == "cuda" else "cpu")
+        self.trust_remote_code = trust_remote_code
         self.precision = precision
-        self.oom_backoff = bool(oom_backoff)
+        self.oom_backoff = oom_backoff
 
-        # --- logging
-        _ = get_logger("sylphy")  # ensure package root once
-        self.__logger__ = logging.getLogger(f"sylphy.embedding_extraction.{name_logging}")
-        self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
+        # logger
+        self.__logger__ = get_logger("sylphy.embedding_extraction.base")
+        if debug:
+            self.__logger__.setLevel(debug_mode)
         add_context(
             self.__logger__,
             component="embedding_extraction",
@@ -174,15 +165,17 @@ class EmbeddingBased(ABC):
 
     def _pre_tokenize(self, batch: List[str]) -> List[str]:
         """
-        Hook for subclasses to adapt raw sequences before tokenization.
-        Default: identity.
+        Optional hook to adjust raw strings before tokenization (e.g., insert spaces).
+        Default: strip whitespace.
         """
-        return batch
+        return [s.strip() for s in batch]
 
     def _amp_dtype(self) -> Optional[torch.dtype]:
-        if self.device.type != "cuda":
-            return None
-        return {"fp16": torch.float16, "bf16": torch.bfloat16}.get(self.precision, None)
+        if self.precision == "fp16":
+            return torch.float16
+        if self.precision == "bf16":
+            return torch.bfloat16
+        return None
 
     def _make_batches(self, seqs: List[str], batch_size: int) -> List[List[str]]:
         return [seqs[i : i + batch_size] for i in range(0, len(seqs), batch_size)]
@@ -208,11 +201,12 @@ class EmbeddingBased(ABC):
         attention_mask : torch.Tensor
             (B, L) attention mask (1 for real tokens).
         """
-        assert self.model is not None and self.tokenizer is not None, \
-            "Call load_*_tokenizer_and_model() before forward."
+        if self.model is None or self.tokenizer is None:
+            raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
 
+        batch = self._pre_tokenize(sequences)
         enc = self.tokenizer(
-            self._pre_tokenize(sequences),
+            batch,
             return_tensors="pt",
             truncation=True,
             padding=True,
@@ -246,58 +240,54 @@ class EmbeddingBased(ABC):
     # ---------------------------------------------------------------------
 
     @staticmethod
-    def _parse_layers(layers: LayerSpec, n_layers: int) -> List[int]:
+    def _parse_layers(spec: LayerSpec, n_layers: int) -> List[int]:
         """
-        Normalize a layer spec into a sorted list of 0-based indices.
-        Supports: "last", "last4", "all", int, [ints] (negative allowed).
+        Normalize layer spec ('last'|'all'|int|[ints]|'last4') into a sorted list of indices.
         """
-        if isinstance(layers, str):
-            key = layers.strip().lower()
-            if key == "last":
-                idx = [n_layers - 1]
-            elif key == "last4":
-                idx = list(range(max(0, n_layers - 4), n_layers))
-            elif key == "all":
-                idx = list(range(n_layers))
-            else:
-                raise ValueError(
-                    f"Unknown layer spec '{layers}'. Use 'last'|'last4'|'all' or an int/list of ints."
-                )
-        elif isinstance(layers, int):
-            idx = [layers]
-        else:
-            idx = list(layers)
-
-        # Convert negatives and validate range
-        fixed: List[int] = []
-        for j in idx:
-            jj = j if j >= 0 else n_layers + j
-            if not (0 <= jj < n_layers):
-                raise ValueError(f"Layer index {j} out of bounds (n_layers={n_layers}).")
-            fixed.append(jj)
-        return sorted(set(fixed))
+        if isinstance(spec, int):
+            return [spec]
+        if isinstance(spec, (list, tuple)):
+            return sorted(list({int(i) for i in spec}))
+        if isinstance(spec, str):
+            if spec == "last":
+                return [n_layers - 1]
+            if spec == "all":
+                return list(range(n_layers))
+            if spec == "last4":
+                return list(range(max(0, n_layers - 4), n_layers))
+            try:
+                i = int(spec)
+                return [i]
+            except ValueError:
+                pass
+        raise ValueError(f"Invalid layer spec: {spec!r}")
 
     @staticmethod
     def _pool_tokens(
-        reps: torch.Tensor,  # (B, L, H)
-        attn: torch.Tensor,  # (B, L)
+        reps: torch.Tensor,                # (B, L, H)
+        attn: torch.Tensor,                # (B, L)
         pool: Pool,
-    ) -> torch.Tensor:  # (B, H) or (B, H*)
-        if pool == "mean":
-            mask = attn.unsqueeze(-1).float()
-            summed = (reps * mask).sum(dim=1)
-            denom = mask.sum(dim=1).clamp(min=1.0)
-            return summed / denom
+    ) -> torch.Tensor:
+        """
+        Pool tokens into a single (B, H) representation.
+        """
         if pool == "cls":
             return reps[:, 0, :]
         if pool == "eos":
-            idx = attn.sum(dim=1) - 1
-            return reps[torch.arange(reps.size(0), device=reps.device), idx, :]
-        raise ValueError(f"Unknown token pool strategy '{pool}'")
+            # pick last non-pad position
+            lengths = attn.sum(dim=1).long() - 1
+            return reps[torch.arange(reps.shape[0]), lengths, :]
+        if pool == "mean":
+            # mask padded tokens
+            mask = attn.unsqueeze(-1).to(reps.dtype)
+            num = (reps * mask).sum(dim=1)
+            den = mask.sum(dim=1).clamp_min(1e-6)
+            return num / den
+        raise ValueError(f"Unknown pool '{pool}'")
 
     @staticmethod
     def _aggregate_layers(
-        hs: Tuple[torch.Tensor, ...],
+        hs: Tuple[torch.Tensor, ...],      # tuple of (B, L, H)
         select: List[int],
         agg: LayerAgg,
     ) -> torch.Tensor:
@@ -334,6 +324,13 @@ class EmbeddingBased(ABC):
         np.ndarray
             (B, H') with H' depending on `layer_agg` and the number of selected layers.
         """
+        # Safety: ensure model & tokenizer are loaded
+        if (getattr(self, 'model', None) is None) or (getattr(self, 'tokenizer', None) is None):
+            if getattr(self, 'load_model_tokenizer', None) is not None:
+                self.load_model_tokenizer()
+            elif getattr(self, 'load_hf_tokenizer_and_model', None) is not None:
+                self.load_hf_tokenizer_and_model()
+
         hidden_states, attn = self._forward_hidden_states(sequences, max_length=max_length)
         n_layers = len(hidden_states)
         select = self._parse_layers(layers, n_layers)
@@ -341,6 +338,44 @@ class EmbeddingBased(ABC):
         reps = self._aggregate_layers(hidden_states, select, layer_agg)  # (B, L, H' or H)
         pooled = self._pool_tokens(reps, attn, pool)                    # (B, H' or H)
         return pooled.detach().cpu().numpy()
+
+    def clean_memory(self):
+        try:
+            if torch.cuda.is_available():
+                try:
+                    torch.cuda.synchronize()
+                except Exception:
+                    pass
+                torch.cuda.empty_cache()
+                try:
+                    torch.cuda.reset_peak_memory_stats()
+                except Exception:
+                    pass
+            # (nuevo) fuerza GC en CPU
+            import gc
+            gc.collect()
+        except Exception as e:
+            self.__logger__.debug("clean_memory() warning: %s", e)
+
+    def release_resources(self):
+        try:
+            if getattr(self, "model", None) is not None:
+                try:
+                    self.model.to("cpu")
+                except Exception:
+                    pass
+            try:
+                del self.model
+            except Exception:
+                pass
+            self.model = None
+            try:
+                del self.tokenizer
+            except Exception:
+                pass
+            self.tokenizer = None
+        finally:
+            self.clean_memory()
 
     def run_process(
         self,
@@ -356,6 +391,13 @@ class EmbeddingBased(ABC):
         Stores the matrix in `self.coded_dataset`.
         """
         try:
+            # Ensure tokenizer/model are loaded once before batching
+            if (getattr(self, 'model', None) is None) or (getattr(self, 'tokenizer', None) is None):
+                if getattr(self, 'load_model_tokenizer', None) is not None:
+                    self.load_model_tokenizer()
+                elif getattr(self, 'load_hf_tokenizer_and_model', None) is not None:
+                    self.load_hf_tokenizer_and_model()
+
             seqs = self.dataset[self.column_seq].astype(str).tolist()
             mats: List[np.ndarray] = []
             bs = max(1, int(batch_size))
@@ -393,6 +435,7 @@ class EmbeddingBased(ABC):
                         )
                         mats.append(X)
 
+            self.release_resources()
             Xall = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
             header = [f"p_{i}" for i in range(Xall.shape[1])]
             self.coded_dataset = pd.DataFrame(Xall, columns=header, index=self.dataset.index)

@@ -5,7 +5,7 @@ import logging
 from typing import List, Optional, Tuple
 
 import torch
-from transformers import AutoModel, AutoTokenizer, AutoConfig
+from transformers import AutoModel, AutoTokenizer, AutoConfig, T5EncoderModel
 
 from .embedding_based import EmbeddingBased
 
@@ -59,8 +59,9 @@ class Ankh2BasedEmbedding(EmbeddingBased):
                         self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
                 self.__logger__.debug("pad_token_id set to: %s", self.tokenizer.pad_token_id)
 
-            self.__logger__.info("Loading Ankh2 model from: %s on device=%s", local_dir, self.device)
-            self.model = AutoModel.from_pretrained(local_dir, trust_remote_code=True).to(self.device)
+            self.__logger__.info("Loading Ankh2 encoder from: %s on device=%s", local_dir, self.device)
+            self.model = T5EncoderModel.from_pretrained(local_dir, trust_remote_code=True).to(self.device)
+
             self.model.eval()
         except Exception as e:
             self.status = False

@@ -1,198 +1,191 @@
-# protein-representation
 
-A lightweight toolkit to turn **protein sequences** into numerical representations:
+# Sylphy 🧬 — Protein Representation Toolkit
 
-* Classical **sequence encoders** (one-hot, ordinal, k-mers TF-IDF, physicochemical, FFT)
-* **Embedding extraction** from pretrained PLMs (ESM2, ProtT5, ProtBERT, Mistral-Prot, Ankh2, ESM-C)
-* **Dimensionality reductions** (linear & non-linear) for downstream analysis
-* A small, consistent **logging** facade and **model registry/cache** layer
+**Sylphy** is a lightweight Python toolkit that transforms **protein sequences** into numerical representations for machine learning and bioinformatics workflows.
 
-> Design goals: thin public API, **lazy loading** of heavy deps, no side-effects on import, testable & configurable.
+It unifies three core components:
+
+* **Classical sequence encoders** — one-hot, ordinal, frequency, k-mers (TF-IDF), physicochemical, and FFT.
+* **Embedding extraction** — from state-of-the-art pretrained models (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C).
+* **Dimensionality reduction** — linear and non-linear methods for downstream visualization and clustering.
+
+> ✳️ **Design philosophy:** minimal public API, lazy loading of heavy dependencies, no side effects on import, fully testable and configurable.
 
 ---
 
-## Table of contents
+## Table of Contents
 
 * [Installation](#installation)
 * [Quickstart](#quickstart)
 
-  * [Logging (one-liner)](#logging-one-liner)
-  * [Sequence encoders](#sequence-encoders)
-  * [Embedding extraction](#embedding-extraction)
-  * [Dimensionality reduction](#dimensionality-reduction)
-* [Command-line interface (CLI)](#command-line-interface-cli)
-* [Configuration & cache](#configuration--cache)
-* [Model registry](#model-registry)
+  * [Logging](#logging)
+  * [Sequence Encoders](#sequence-encoders)
+  * [Embedding Extraction](#embedding-extraction)
+  * [Dimensionality Reduction](#dimensionality-reduction)
+* [Command-Line Interface (CLI)](#command-line-interface-cli)
+* [Configuration and Cache](#configuration-and-cache)
+* [Model Registry](#model-registry)
 * [Public API](#public-api)
-* [Development & testing](#development--testing)
+* [Development and Testing](#development-and-testing)
 * [License](#license)
+* [Acknowledgements](#acknowledgements)
+* [Contact](#contact)
 
 ---
 
 ## Installation
 
-### Python
+### Requirements
 
 * Python **3.10+**
+* Optional GPU acceleration (PyTorch + CUDA)
 
-### From PyPI (recommended)
-
-Core library:
-
-```bash
-pip install protein-representation
-```
-
-### From source
+### From Source
 
 ```bash
-git clone https://github.com/ProteinEngineering-PESB2/protein_representations.git
-cd protein-representation
+git clone https://github.com/KREN-AI-Lab/sylphy.git
+cd sylphy
 pip install -e .
 ```
-
-> The package name on PyPI is `protein-representation` (import is `protein_representation`).
-
 ---
 
 ## Quickstart
 
-### Logging (one-liner)
+### Logging
 
-Configure once at program start; all components use hierarchical child loggers.
+All modules share a unified, hierarchical logger. Configure once at startup:
 
 ```python
-from protein_representation import setup_logger
+from sylphy import setup_logger
 
-# Console INFO, file DEBUG (default path uses OS appdirs)
-setup_logger(name="protein_representation", level="INFO")
+setup_logger(name="sylphy", level="INFO")
 ```
 
-You can also direct logs to a file via environment variable (optional):
+Optional environment variable:
 
 ```bash
-export PR_LOG_FILE=/tmp/protein-repr.log
+export SYLPHY_LOG_FILE=/tmp/sylphy.log
 ```
 
 ---
 
-### Sequence encoders
+### Sequence Encoders
 
 ```python
 import pandas as pd
-from protein_representation.sequence_encoder import create_encoder
+from sylphy.sequence_encoder import create_encoder
 
 df = pd.DataFrame({"sequence": ["ACD", "WYYVV", "KLMNPQ", "GGG"]})
 
-enc = create_encoder(
-    "one_hot",                # "ordinal", "kmers", "physicochemical", "frequency", "fft"
+encoder = create_encoder(
+    "one_hot",                  # "ordinal", "kmers", "frequency", "physicochemical", "fft"
     dataset=df,
     sequence_column="sequence",
     max_length=1024,
     debug=True,
 )
 
-enc.run_process()
-X = enc.coded_dataset              # pandas.DataFrame (features + 'sequence')
-enc.export_encoder("onehot.csv")   # or .npy via file_format="npy"
+encoder.run_process()
+X = encoder.coded_dataset
+encoder.export_encoder("onehot.csv")
 ```
 
-**FFT** encoder expects a numeric matrix; a common pattern is physicochemical → FFT:
+**FFT** encoders expect a numeric input matrix. A common workflow is:
 
 ```python
-from protein_representation.sequence_encoder import FFTEncoder, create_encoder
+from sylphy.sequence_encoder import create_encoder
 
 phys = create_encoder("physicochemical", dataset=df, name_property="ANDN920101")
 phys.run_process()
 
-fft = FFTEncoder(dataset=phys.coded_dataset, sequence_column="sequence", debug=True)
+fft = create_encoder("fft", dataset=phys.coded_dataset, sequence_column="sequence")
 fft.run_process()
 fft.coded_dataset.head()
 ```
 
 ---
 
-### Embedding extraction
+### Embedding Extraction
 
-All heavy deps are lazily loaded. Use the factory to select the backend automatically.
+Heavy dependencies (PyTorch, Transformers) are loaded lazily.
 
 ```python
 import pandas as pd
-from protein_representation.embedding_extraction import create_embedding
+from sylphy.embedding_extraction import create_embedding
 
 df = pd.DataFrame({"sequence": ["MKT...", "GAVL...", "PPPP..."]})
 
 embedder = create_embedding(
-    model_name="facebook/esm2_t6_8M_UR50D",  # also supports ProtT5, ProtBERT, Mistral-Prot, Ankh2, ESM-C
+    model_name="facebook/esm2_t6_8M_UR50D",  # also: ProtT5, ProtBERT, Mistral-Prot, Ankh2, ESM-C
     dataset=df,
     column_seq="sequence",
-    name_device="cuda",          # or "cpu"
-    precision="fp16",            # "fp32"|"fp16"|"bf16" (CUDA only)
-    oom_backoff=True,            # halve batch size on CUDA OOM
+    name_device="cuda",
+    precision="fp16",
+    oom_backoff=True,
     debug=True,
 )
 
-embedder.load_hf_tokenizer_and_model()
-embedder.run_process(max_length=1024, batch_size=8, pool="mean")  # "mean"|"cls"|"eos"
-emb = embedder.coded_dataset
-embedder.export_encoder("embeddings.csv")
+embedder.run_process(max_length=1024, batch_size=8, pool="mean")  # "mean" | "cls" | "eos"
+embeddings = embedder.coded_dataset
+embedder.export_encoder("embeddings.parquet")
 ```
 
-**Supported families** (factory keys/aliases): `("esm2", "ankh2", "prot_t5", "prot_bert", "mistral_prot", "esmc")`.
+**Supported model families:**
+`("esm2", "ankh2", "prot_t5", "prot_bert", "mistral_prot", "esmc")`
 
 ---
 
-### Dimensionality reduction
+### Dimensionality Reduction
 
 ```python
 import numpy as np
-from protein_representation.reductions import reduce_dimensionality
+from sylphy.reductions import reduce_dimensionality
 
-# Suppose `X` is a (N, D) numpy array
-model, Xp = reduce_dimensionality(
-    method="pca",         # e.g., "truncated_svd", "nmf", "isomap", "umap"
+# Suppose X is an (N, D) matrix
+model, X_reduced = reduce_dimensionality(
+    method="pca",            # e.g. "truncated_svd", "umap", "isomap"
     dataset=X,
-    return_type="numpy",  # or "pandas"
+    return_type="numpy",
     n_components=2,
     random_state=0,
 )
 
-print(Xp.shape)  # (N, 2)
+print(X_reduced.shape)
 ```
 
 ---
 
-## Command-line interface (CLI)
+## Command-Line Interface (CLI)
 
-After installing the `cli` extra, you’ll have a single entrypoint:
+After installation, the CLI provides a single entrypoint:
 
 ```bash
-protein-representation --help
+sylphy --help
 ```
 
-### Extract embeddings
+### Embedding Extraction
 
 ```bash
-protein-representation get-embedding run \
+sylphy get-embedding run \
   --model facebook/esm2_t6_8M_UR50D \
   --input-data data/sequences.csv \
   --sequence-identifier sequence \
-  --output out/emb_esm2.csv \
+  --output out/emb_esm2.parquet \
   --device cuda --precision fp16 --batch-size 16 --pool mean
 ```
 
-### Encode sequences
+### Sequence Encoding
 
 ```bash
-# One-hot
-protein-representation encode-sequences run \
-  --encoder onehot \
+# One-hot encoding
+sylphy encode-sequences run \
+  --encoder one_hot \
   --input-data data/sequences.csv \
   --sequence-identifier sequence \
   --output out/onehot.csv
 
 # Physicochemical + FFT (two-stage)
-protein-representation encode-sequences run \
+sylphy encode-sequences run \
   --encoder fft \
   --input-data data/sequences.csv \
   --sequence-identifier sequence \
@@ -200,124 +193,110 @@ protein-representation encode-sequences run \
   --output out/physchem_fft.csv
 ```
 
-### Reduce embeddings
-
-```bash
-protein-representation reduce run \
-  --input out/emb_esm2.csv \
-  --method pca \
-  --n-components 2 \
-  --return-type pandas \
-  --out out/emb_esm2_pca.csv
-```
-
-> Use `protein-representation reduce run --list-methods` to see all available methods (linear & non-linear).
-
 ---
 
-## Configuration & cache
+## Configuration and Cache
 
-The library keeps a cache for downloaded models / aux files.
+Model weights and intermediate files are cached locally (following OS-specific appdirs).
 
 ```python
-from protein_representation import get_config, set_cache_root, temporary_cache_root
+from sylphy import get_config, set_cache_root, temporary_cache_root
 
 cfg = get_config()
-print(cfg.cache_paths.cache_root)   # OS-specific appdir
+print(cfg.cache_paths.cache_root)
 
-# Change cache root permanently:
-set_cache_root("/data/protein_cache")
+set_cache_root("/data/sylphy_cache")
 
-# Or temporarily within a context:
-with temporary_cache_root("/tmp/pr_cache"):
+with temporary_cache_root("/tmp/sylphy_cache"):
     ...
 ```
 
 ---
 
-## Model registry
+## Model Registry
 
-A tiny registry sits in front of providers (e.g., Hugging Face Hub) so you can pin names, create aliases, and resolve to local paths.
+Sylphy includes a minimal registry to manage model aliases, local overrides, and resolution.
 
 ```python
-from protein_representation import (
-  ModelSpec, register_model, register_alias, resolve_model, list_registered_models
+from sylphy import (
+    ModelSpec, register_model, register_alias, resolve_model, list_registered_models
 )
 
 register_model(ModelSpec(name="esm2_t6", provider="huggingface", ref="facebook/esm2_t6_8M_UR50D"))
 register_alias("esm2_small", "esm2_t6")
 
-local_dir = resolve_model("esm2_small")
-print(local_dir)
+path = resolve_model("esm2_small")
+print(path)
 print(list_registered_models(include_aliases=True))
 ```
 
-**Environment override** (per-model): set `PR_MODEL_<UPPERCASE_NAME>` to point to a local directory, and the resolver will use that path instead of downloading (e.g., `PR_MODEL_ESM2_SMALL=/models/esm2_t6`).
+> To override a model path:
+> set `SYLPHY_MODEL_<UPPERCASE_NAME>` as an environment variable
+> (e.g. `SYLPHY_MODEL_ESM2_SMALL=/models/esm2_t6`).
 
 ---
 
 ## Public API
 
-Top-level (lazy-loaded) imports for convenience:
-
 ```python
-from protein_representation import (
-  # logging
-  setup_logger, get_logger, add_context,
+from sylphy import (
+    # Logging
+    setup_logger, get_logger,
 
-  # core
-  get_config, set_cache_root, temporary_cache_root,
-  ModelSpec, register_model, register_alias, resolve_model,
+    # Config
+    get_config, set_cache_root, temporary_cache_root,
+    ModelSpec, register_model, register_alias, resolve_model,
 
-  # sequence encoders
-  create_encoder, OrdinalEncoder, OneHotEncoder, KMersEncoders,
-  PhysicochemicalEncoder, FFTEncoder, FrequencyEncoder,
+    # Sequence encoders
+    create_encoder, OneHotEncoder, OrdinalEncoder, KMersEncoder,
+    PhysicochemicalEncoder, FFTEncoder, FrequencyEncoder,
 
-  # embeddings
-  create_embedding, EmbeddingBased, SUPPORTED_FAMILIES,
+    # Embeddings
+    create_embedding, EmbeddingBased, SUPPORTED_FAMILIES,
 
-  # reductions
-  reduce_dimensionality, LinearReduction, NonLinearReductions,
+    # Reductions
+    reduce_dimensionality, LinearReduction, NonLinearReductions,
 )
 ```
 
-The subpackages also expose their own curated surfaces:
+Subpackages also expose curated surfaces:
 
-* `protein_representation.sequence_encoder`
-* `protein_representation.embedding_extraction`
-* `protein_representation.reductions`
+* `sylphy.sequence_encoder`
+* `sylphy.embedding_extraction`
+* `sylphy.reductions`
 
 ---
 
-## Development & testing
-
-We use `pytest`. The test suite is offline by default (fakes/mocks for heavy deps and network).
+## Development and Testing
 
 ```bash
 pip install -e .
 pytest -q
 ```
 
-Coding style: type-annotated Python, NumPy-style docstrings, no side-effects on import.
-For reproducible reductions, prefer to pass `random_state=0` where applicable.
+The test suite runs **offline** (mocked HF and torch).
+Coding style: fully type-annotated, NumPy-style docstrings, no side effects on import.
+
+For reproducibility, set `random_state=0` in all stochastic reducers.
 
 ---
 
 ## License
 
-This project is licensed under **GPL-3.0-only**.
-See `LICENSE` for full text.
+Licensed under **GPL-3.0-only**.
+See the `LICENSE` file for details.
 
 ---
 
 ## Acknowledgements
 
-* Protein language model backends rely on the Hugging Face ecosystem and, optionally, Meta’s ESM-C SDK.
-* Some non-linear reductions use UMAP and ClustPy.
+* Protein language models rely on the **Hugging Face ecosystem** and, optionally, **Meta’s ESM-C SDK**.
+* Non-linear reducers (UMAP, Isomap, t-SNE) use **scikit-learn** and **ClustPy**.
+* Developed by the **KREN AI Lab** (University of Magallanes, Chile).
 
 ---
 
-### Contact
+## Contact
 
-Maintained by **Kren AI Lab** — contributions and PRs are welcome! [Concat us!](mailto:krenai@umag.cl)
-
+Maintained by **KREN AI Lab**
+📧 [krenai@umag.cl](mailto:krenai@umag.cl)

@@ -8,45 +8,65 @@ README = Path(__file__).with_name("README.md")
 long_description = README.read_text(encoding="utf-8") if README.exists() else ""
 
 install_requires = [
-    # core
     "numpy>=1.24",
     "pandas>=2.0",
     "scikit-learn>=1.3",
+
     "typer>=0.9",
-    "appdirs>=1.4.4",
-    "huggingface-hub>=0.20",
-
-    # embeddings stack (installed by default)
-    "torch>=2.1",
-    "transformers>=4.40",
-    "accelerate>=0.29",
-    "safetensors>=0.4",
-    "sentencepiece>=0.1.99",
-    # Meta ESM-C SDK (not published for Windows at the time of writing)
-    "esm>=3.0; platform_system!='Windows'",
-
-    # reductions & related
-    "umap-learn>=0.5.5",
-    "clustpy>=0.0.2",
-    "tslearn>=0.6.0",
-
-    # CLI niceties
     "rich>=13.0",
+    "appdirs>=1.4.4",
     "joblib>=1.3",
 
-    # bio helpers
-    "biopython>=1.80",
-    "biotite>=0.38.0",
-    "igraph>=0.11.0",
-
-    # others
-    "anyio>=4.10.0",
-    "h11>=0.16.0",
-    "httpcore>=1.0.9",
-    "httpx>=0.28.1",
-    "sniffio>=1.3.1",
-    "pytest>=8.4.1"
+    "huggingface-hub>=0.20",
 ]
+
+extras_require = {
+    "embeddings": [
+        "torch>=2.1",                  
+        "transformers>=4.40",
+        "accelerate>=0.29",
+        "safetensors>=0.4",
+        "sentencepiece>=0.1.99",      
+        "esm>=3.0; platform_system!='Windows'",  
+    ],
+    "reductions": [
+        "umap-learn>=0.5.5",
+        "clustpy>=0.0.2",
+        "tslearn>=0.6.0",
+    ],
+    "parquet": [
+        "pyarrow>=14.0.0; platform_python_implementation!='PyPy'",
+        "fastparquet>=2024.5.0",
+    ],
+    "bio": [
+        "biopython>=1.80",
+        "biotite>=0.38.0",
+    ],
+    "graph": [
+        "igraph>=0.11.0",
+    ],
+    "cli": [
+        "rich>=13.0",
+    ],
+    "tests": [
+        "pytest>=8.4.1",
+        "pytest-cov>=5.0.0",
+    ],
+    "dev": [
+        "black>=24.3.0",
+        "ruff>=0.4.0",
+        "mypy>=1.8.0",
+        "build>=1.0.0",
+        "twine>=5.0.0",
+    ],
+}
+
+# convenience meta-groups
+extras_require["all"] = sorted({
+    dep
+    for group in ("embeddings", "reductions", "parquet", "bio", "graph", "cli")
+    for dep in extras_require[group]
+})
 
 setup(
     name="sylphy",
@@ -56,16 +76,18 @@ setup(
     description="Protein sequence representation: encoders, embeddings, and reductions.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/ProteinEngineering-PESB2/protein_representations",
+    url="https://github.com/KREN-AI-Lab/sylphy",
     project_urls={
-        "Source": "https://github.com/ProteinEngineering-PESB2/protein_representations",
-        "Issues": "https://github.com/ProteinEngineering-PESB2/protein_representations/issues",
+        "Source": "https://github.com/KREN-AI-Lab/sylphy",
+        "Issues": "https://github.com/KREN-AI-Lab/sylphy/issues",
+        "Documentation": "https://github.com/KREN-AI-Lab/sylphy#readme",
     },
     license="GPL-3.0-only",
     packages=find_packages(exclude=("tests", "tests.*", "docs", "examples")),
     include_package_data=True,
     python_requires=">=3.10",
     install_requires=install_requires,
+    extras_require=extras_require,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",

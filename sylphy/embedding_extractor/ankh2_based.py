@@ -43,6 +43,8 @@ class Ankh2BasedEmbedding(EmbeddingBased):
         self.use_encoder_only = use_encoder_only
 
     def load_model_tokenizer(self) -> None:
+
+        self.release_resources()
         try:
             local_dir = self._register_and_resolve()
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=True)

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, List, Sequence, Tuple, Union, Literal
+from typing import Optional, List, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -24,13 +24,14 @@ class ESMCBasedEmbedding(EmbeddingBased):
     -----
     - ESMC exposes embeddings and (optionally) hidden states via LogitsConfig.
     - We provide per-sequence embedding with optional layer selection/aggregation.
+    - No HuggingFace tokenizer is required for ESM-C.
     """
 
     def __init__(
         self,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "esmc_300m",
-        name_tokenizer: Optional[str] = None,
+        name_tokenizer: Optional[str] = None,  # ignored for ESM-C
         dataset: Optional[pd.DataFrame] = None,
         column_seq: Optional[str] = "sequence",
         debug: bool = False,
@@ -42,7 +43,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
             dataset=dataset,
             name_device=name_device,
             name_model=name_model,
-            name_tokenizer=name_tokenizer or "",
+            name_tokenizer="",  # force empty: ESM-C doesn't use tokenizer
             provider="other",
             revision=None,
             column_seq=column_seq or "sequence",
@@ -53,8 +54,11 @@ class ESMCBasedEmbedding(EmbeddingBased):
             precision=precision,
             oom_backoff=oom_backoff,
         )
+        self.requires_tokenizer = False
         self._embedding_dim: Optional[int] = None
+        self.model: Optional[ESMC] = None  # explicit type for clarity
 
+    # -------- utilities --------
     def _has_hidden_states(self, hs) -> bool:
         if hs is None:
             return False
@@ -63,6 +67,11 @@ class ESMCBasedEmbedding(EmbeddingBased):
         if torch.is_tensor(hs):
             return hs.numel() > 0
         return False
+
+    def ensure_loaded(self) -> None:
+        """Idempotent loader. Safe to call many times."""
+        if getattr(self, "model", None) is None:
+            self.load_model_tokenizer()
 
     def load_model_tokenizer(self) -> None:
         try:
@@ -75,8 +84,12 @@ class ESMCBasedEmbedding(EmbeddingBased):
 
             load_ref = local_dir if local_dir else self.name_model
             self.__logger__.info("Loading ESM-C from: %s on device=%s", load_ref, self.device)
-            self.model = ESMC.from_pretrained(load_ref).to(self.device)
-            self.model.eval()
+            mdl = ESMC.from_pretrained(load_ref)
+            mdl = mdl.to(self.device)  # move to device
+            mdl.eval()
+            self.model = mdl
+            self.status = True
+            self.message = "ESM-C model loaded."
             self.__logger__.info("ESM-C model '%s' loaded successfully.", load_ref)
         except Exception as e:
             self.status = False
@@ -86,7 +99,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
 
     @staticmethod
     def _pool_tokens(x: torch.Tensor, pool: Pool) -> torch.Tensor:
-        # ESMC outputs do not provide attention masks in the same way;
+        # ESM-C outputs do not provide attention masks in the same way;
         # we assume full length (padded/truncated upstream if needed).
         if pool == "mean":
             return x.mean(dim=1)
@@ -109,19 +122,28 @@ class ESMCBasedEmbedding(EmbeddingBased):
           - hidden_states: list of (1, L, H) or None
         """
         try:
+            self.ensure_loaded()
+            assert self.model is not None, "ESM-C model not loaded."
+
             protein = ESMProtein(sequence=sequence)
+
+            cfg = LogitsConfig(
+                return_embeddings=True,
+                return_hidden_states=return_hidden_states,
+            )
+
             if self.device.type == "cuda" and self._amp_dtype() is not None:
                 with torch.autocast(device_type="cuda", dtype=self._amp_dtype()):
-                    pt = self.model.encode(protein).to(self.device)
-                    cfg = LogitsConfig(return_embeddings=True, return_hidden_states=return_hidden_states)
+                    pt = self.model.encode(protein)  # cpu tensor
+                    pt = pt.to(self.device)
                     out = self.model.logits(pt, cfg)
             else:
-                pt = self.model.encode(protein).to(self.device)
-                cfg = LogitsConfig(return_embeddings=True, return_hidden_states=return_hidden_states)
+                pt = self.model.encode(protein)
+                pt = pt.to(self.device)
                 out = self.model.logits(pt, cfg)
 
             emb = out.embeddings  # (1, L, H) or None
-            hs = out.hidden_states if hasattr(out, "hidden_states") else None
+            hs = getattr(out, "hidden_states", None)
             return emb, hs
         except Exception as e:
             self.__logger__.warning("Failed to embed one sequence: %s", e)
@@ -150,7 +172,8 @@ class ESMCBasedEmbedding(EmbeddingBased):
         pool : {"mean","cls","eos"}
             Token pooling strategy.
         """
-        self.load_model_tokenizer()
+        # Ensure model is loaded (idempotent)
+        self.ensure_loaded()
 
         if self.dataset is None:
             raise ValueError("Dataset is not loaded.")
@@ -173,28 +196,28 @@ class ESMCBasedEmbedding(EmbeddingBased):
         while i < len(sequences):
             chunk = sequences[i : i + current_bs]
             try:
-                # ESMC API is per-sequence; we iterate inside the chunk
+                # ESM-C SDK is per-sequence; iterate inside the chunk
                 for seq in tqdm(chunk, desc=f"[ESMC] idx {i}", leave=False):
                     emb, hs = self._embed_one(seq, return_hidden_states=True)
 
                     if self._has_hidden_states(hs):  # hidden states available
                         n_layers = len(hs)
-                        # Select and aggregate layers
                         select = EmbeddingBased._parse_layers(layers, n_layers)
                         chosen = [hs[j] for j in select]  # each (1,L,H)
                         if layer_agg == "concat":
                             stacked = torch.cat(chosen, dim=-1)
                         elif layer_agg == "sum":
                             stacked = torch.stack(chosen, dim=0).sum(dim=0)
-                        else:
+                        else:  # mean (default)
                             stacked = torch.stack(chosen, dim=0).mean(dim=0)
                         pooled = self._pool_tokens(stacked, pool=pool).squeeze(0)  # (H')
                     elif emb is not None:
                         pooled = self._pool_tokens(emb, pool=pool).squeeze(0)      # (H)
                     else:
+                        # Skip if neither emb nor hs are available
                         continue
 
-                    # --- FIX: NumPy does not support torch.bfloat16/float16 ---
+                    # --- ensure FP32 before NumPy conversion ---
                     pooled = pooled.contiguous()
                     if pooled.dtype in (torch.bfloat16, torch.float16):
                         pooled = pooled.to(torch.float32)
@@ -223,6 +246,9 @@ class ESMCBasedEmbedding(EmbeddingBased):
 
         if not out_vecs:
             raise RuntimeError("No embeddings generated with ESM-C.")
+
+        # Release GPU memory
+        self.release_resources()
 
         mat = np.stack(out_vecs, axis=0)  # (N, H')
         headers = [f"p_{k+1}" for k in range(mat.shape[1])]

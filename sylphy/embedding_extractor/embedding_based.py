@@ -21,38 +21,15 @@ LayerSpec = Union[str, int, Sequence[int]]
 
 class EmbeddingBased(ABC):
     """
-    Base class for embedding extraction from protein sequences using HF-like models.
+    Base class for embedding extraction from protein sequences.
 
-    - Unified logging under "sylphy.embedding_extraction.*".
-    - Device & AMP handling (fp16/bf16) with safe CUDA fallback.
-    - Batch utilities and robust OOM backoff (halve batch on OOM and retry).
+    Supports:
+    - HuggingFace-style backends (model + tokenizer).
+    - Non-tokenizer backends (e.g., ESM-C) via `embedding_process()`.
 
-    Parameters
-    ----------
-    dataset : pd.DataFrame
-        Input dataframe with a column of sequences (`column_seq`).
-    name_device : {"cuda","cpu"}, default=auto
-        Preferred device; falls back to CPU if CUDA not available.
-    name_model : str
-        HF hub id or local path, used by registry to resolve local cache.
-    name_tokenizer : str
-        Optional; if empty, defaults to `name_model`.
-    provider : {"huggingface","other"}, default="huggingface"
-        Where to resolve `name_model` from (registry/provider).
-    revision : str, optional
-        HF revision (branch/tag/SHA).
-    column_seq : str, default="sequence"
-        Column name holding raw sequences.
-    debug : bool, default=False
-        If True, set this backend logger to `debug_mode`.
-    debug_mode : int, default=logging.INFO
-        Logging level when `debug=True`; ignored otherwise.
-    trust_remote_code : bool, default=False
-        Forwarded to HF `from_pretrained`.
-    precision : {"fp32","fp16","bf16"}, default="fp32"
-        AMP autocast dtype for CUDA.
-    oom_backoff : bool, default=True
-        If True, halves batch size on CUDA OOM and retries.
+    Behavior:
+    - If `requires_tokenizer=True` (default for provider="huggingface"), the HF path is used.
+    - If `requires_tokenizer=False`, `run_process()` delegates to `embedding_process()`.
     """
 
     def __init__(
@@ -61,7 +38,7 @@ class EmbeddingBased(ABC):
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "",
         name_tokenizer: str = "",
-        provider: str = "huggingface",
+        provider: str = "huggingface",  # {"huggingface","other"}
         revision: Optional[str] = None,
         column_seq: str = "sequence",
         debug: bool = False,
@@ -99,6 +76,8 @@ class EmbeddingBased(ABC):
         self.tokenizer = None
         self.model = None
 
+        self.requires_tokenizer: bool = (self.provider == "huggingface")
+
         self.status: bool = True
         self.message: str = ""
 
@@ -108,7 +87,7 @@ class EmbeddingBased(ABC):
 
     def _register_and_resolve(self) -> str:
         """
-        Try to resolve the model via the registry. If missing and provider is HF
+        Resolve the model via the registry. If missing and provider is HF
         and `name_model` looks like 'org/model', register it, then resolve.
         Returns a local directory path to the model.
         """
@@ -160,14 +139,44 @@ class EmbeddingBased(ABC):
             raise RuntimeError(self.message)
 
     # ---------------------------------------------------------------------
+    # Readiness helpers
+    # ---------------------------------------------------------------------
+
+    def _is_ready(self) -> bool:
+        """Check if model (and tokenizer, when required) are loaded."""
+        has_model = getattr(self, "model", None) is not None
+        if not has_model:
+            return False
+        if self.requires_tokenizer:
+            return getattr(self, "tokenizer", None) is not None
+        return True
+
+    def ensure_loaded(self) -> None:
+        """
+        Idempotent loader. If not ready, tries:
+        - subclass's `load_model_tokenizer()` if present (custom backends),
+        - else falls back to `load_hf_tokenizer_and_model()` (HF backends).
+        """
+        if self._is_ready():
+            return
+        if hasattr(self, "load_model_tokenizer"):
+            try:
+                # type: ignore[attr-defined]
+                self.load_model_tokenizer()  # subclass-provided (e.g., ESM-C)
+            except Exception as e:
+                self.__logger__.error("load_model_tokenizer() failed: %s", e)
+                raise
+        elif self.provider == "huggingface":
+            self.load_hf_tokenizer_and_model()
+        else:
+            raise RuntimeError("No loader available to initialize model/tokenizer.")
+
+    # ---------------------------------------------------------------------
     # Hooks & utilities
     # ---------------------------------------------------------------------
 
     def _pre_tokenize(self, batch: List[str]) -> List[str]:
-        """
-        Optional hook to adjust raw strings before tokenization (e.g., insert spaces).
-        Default: strip whitespace.
-        """
+        """Optional hook to adjust raw strings before tokenization (e.g., insert spaces)."""
         return [s.strip() for s in batch]
 
     def _amp_dtype(self) -> Optional[torch.dtype]:
@@ -201,7 +210,7 @@ class EmbeddingBased(ABC):
         attention_mask : torch.Tensor
             (B, L) attention mask (1 for real tokens).
         """
-        if self.model is None or self.tokenizer is None:
+        if (self.model is None) or (self.requires_tokenizer and self.tokenizer is None):
             raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
 
         batch = self._pre_tokenize(sequences)
@@ -226,12 +235,10 @@ class EmbeddingBased(ABC):
 
         hidden_states = out.hidden_states  # type: ignore[attr-defined]
         if hidden_states is None:
-            # Fallback to just last_hidden_state if the backend doesn't return hidden states.
             hidden_states = (out.last_hidden_state,)  # type: ignore[attr-defined]
 
         attn = enc.get("attention_mask", None)
         if attn is None:
-            # Some tokenizers might not return it; synthesize a full-ones mask.
             attn = torch.ones(out.last_hidden_state.shape[:2], device=self.device)  # type: ignore[attr-defined]
         return hidden_states, attn
 
@@ -241,9 +248,7 @@ class EmbeddingBased(ABC):
 
     @staticmethod
     def _parse_layers(spec: LayerSpec, n_layers: int) -> List[int]:
-        """
-        Normalize layer spec ('last'|'all'|int|[ints]|'last4') into a sorted list of indices.
-        """
+        """Normalize layer spec ('last'|'all'|int|[ints]|'last4') into a sorted list of indices."""
         if isinstance(spec, int):
             return [spec]
         if isinstance(spec, (list, tuple)):
@@ -268,17 +273,13 @@ class EmbeddingBased(ABC):
         attn: torch.Tensor,                # (B, L)
         pool: Pool,
     ) -> torch.Tensor:
-        """
-        Pool tokens into a single (B, H) representation.
-        """
+        """Pool tokens into a single (B, H) representation."""
         if pool == "cls":
             return reps[:, 0, :]
         if pool == "eos":
-            # pick last non-pad position
             lengths = attn.sum(dim=1).long() - 1
             return reps[torch.arange(reps.shape[0]), lengths, :]
         if pool == "mean":
-            # mask padded tokens
             mask = attn.unsqueeze(-1).to(reps.dtype)
             num = (reps * mask).sum(dim=1)
             den = mask.sum(dim=1).clamp_min(1e-6)
@@ -291,9 +292,7 @@ class EmbeddingBased(ABC):
         select: List[int],
         agg: LayerAgg,
     ) -> torch.Tensor:
-        """
-        Aggregate selected layers into a single (B, L, H*) representation.
-        """
+        """Aggregate selected layers into a single (B, L, H*) representation."""
         chosen = [hs[i] for i in select]
         if agg == "concat":
             return torch.cat(chosen, dim=-1)
@@ -304,7 +303,7 @@ class EmbeddingBased(ABC):
         raise ValueError(f"Unknown layer aggregation '{agg}'")
 
     # ---------------------------------------------------------------------
-    # Public HF-style API (end-to-end on batches / dataset)
+    # Public API
     # ---------------------------------------------------------------------
 
     def encode_batch_layers(
@@ -324,12 +323,15 @@ class EmbeddingBased(ABC):
         np.ndarray
             (B, H') with H' depending on `layer_agg` and the number of selected layers.
         """
-        # Safety: ensure model & tokenizer are loaded
-        if (getattr(self, 'model', None) is None) or (getattr(self, 'tokenizer', None) is None):
-            if getattr(self, 'load_model_tokenizer', None) is not None:
-                self.load_model_tokenizer()
-            elif getattr(self, 'load_hf_tokenizer_and_model', None) is not None:
-                self.load_hf_tokenizer_and_model()
+        if not self.requires_tokenizer:
+            raise NotImplementedError(
+                "encode_batch_layers is only available for HuggingFace-style backends. "
+                "Backends without tokenizer must implement `embedding_process()`."
+            )
+
+        self.ensure_loaded()
+        if not self._is_ready():
+            raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
 
         hidden_states, attn = self._forward_hidden_states(sequences, max_length=max_length)
         n_layers = len(hidden_states)
@@ -351,7 +353,6 @@ class EmbeddingBased(ABC):
                     torch.cuda.reset_peak_memory_stats()
                 except Exception:
                     pass
-            # (nuevo) fuerza GC en CPU
             import gc
             gc.collect()
         except Exception as e:
@@ -387,16 +388,35 @@ class EmbeddingBased(ABC):
         pool: Pool = "mean",
     ) -> None:
         """
-        Encode all sequences in the dataset using the selected layers and pooling.
-        Stores the matrix in `self.coded_dataset`.
+        Encode all sequences in the dataset and store `self.coded_dataset`.
+
+        Routing:
+        - If `requires_tokenizer=False` and subclass implements `embedding_process`,
+          delegate to that pipeline (non-HF backends).
+        - Else, use the HF path (tokenizer + model).
         """
         try:
-            # Ensure tokenizer/model are loaded once before batching
-            if (getattr(self, 'model', None) is None) or (getattr(self, 'tokenizer', None) is None):
-                if getattr(self, 'load_model_tokenizer', None) is not None:
-                    self.load_model_tokenizer()
-                elif getattr(self, 'load_hf_tokenizer_and_model', None) is not None:
-                    self.load_hf_tokenizer_and_model()
+            self.ensure_loaded()
+            if not self._is_ready():
+                raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
+
+            if not self.requires_tokenizer and hasattr(self, "embedding_process"):
+                df = self.embedding_process(   # type: ignore[attr-defined]
+                    batch_size=batch_size,
+                    seq_len=max_length,       
+                    layers=layers,
+                    layer_agg=layer_agg,
+                    pool=pool,
+                )
+                self.release_resources()
+                self.coded_dataset = df
+                self.status = True
+                self.message = "OK"
+                self.__logger__.info(
+                    "Embedding extraction (non-HF) complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
+                    df.shape, layers, layer_agg, pool
+                )
+                return
 
             seqs = self.dataset[self.column_seq].astype(str).tolist()
             mats: List[np.ndarray] = []
@@ -453,9 +473,7 @@ class EmbeddingBased(ABC):
             raise RuntimeError(self.message)
 
     def export_encoder(self, path: str, file_format: Literal["csv", "npy", "npz", "parquet"] = "csv") -> None:
-        """
-        Persist the encoded matrix to disk.
-        """
+        """Persist the encoded matrix to disk."""
         UtilsLib.export_data(
             df_encoded=self.coded_dataset,
             path=path,

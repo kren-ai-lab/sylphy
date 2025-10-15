@@ -16,12 +16,18 @@ def test_encode_onehot_saves_expected_shape(tmp_path):
     runner = CliRunner()
     args = [
         "run",
-        "--encoder", "onehot",
-        "--input-data", str(inp),
-        "--output", str(out),
-        "--sequence-identifier", "sequence",
-        "--format-output", "csv",
-        "--max-length", "5",
+        "--encoder",
+        "onehot",
+        "--input-data",
+        str(inp),
+        "--output",
+        str(out),
+        "--sequence-identifier",
+        "sequence",
+        "--format-output",
+        "csv",
+        "--max-length",
+        "5",
         "--debug",
     ]
     res = runner.invoke(app, args)
@@ -42,12 +48,18 @@ def test_encode_ordinal_basic(tmp_path):
     runner = CliRunner()
     args = [
         "run",
-        "--encoder", "ordinal",
-        "--input-data", str(inp),
-        "--output", str(out),
-        "--sequence-identifier", "sequence",
-        "--format-output", "npy",
-        "--max-length", "4",
+        "--encoder",
+        "ordinal",
+        "--input-data",
+        str(inp),
+        "--output",
+        str(out),
+        "--sequence-identifier",
+        "sequence",
+        "--format-output",
+        "npy",
+        "--max-length",
+        "4",
     ]
     res = runner.invoke(app, args)
     assert res.exit_code == 0, res.stdout

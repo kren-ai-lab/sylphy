@@ -4,14 +4,14 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from sylphy.logging import get_logger, add_context
+from sylphy.logging import add_context, get_logger
 
-from .esm_based import ESMBasedEmbedding
 from .ankh2_based import Ankh2BasedEmbedding
-from .prot5_based import Prot5Based
 from .bert_based import BertBasedEmbedding
-from .mistral_based import MistralBasedEmbedding
+from .esm_based import ESMBasedEmbedding
 from .esmc_based import ESMCBasedEmbedding
+from .mistral_based import MistralBasedEmbedding
+from .prot5_based import Prot5Based
 
 if TYPE_CHECKING:
     from .embedding_based import EmbeddingBased  # for type hints only

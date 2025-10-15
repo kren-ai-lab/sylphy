@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import json
+
 import numpy as np
 import pandas as pd
-from typer.testing import CliRunner
-
 from sylphy.cli.reduce import app
+from typer.testing import CliRunner
 
 
 def test_reduce_pca_numpy_roundtrip(tmp_path):
@@ -18,13 +18,19 @@ def test_reduce_pca_numpy_roundtrip(tmp_path):
     runner = CliRunner()
     args = [
         "run",
-        "--input", str(inp),
-        "--out", str(out),
-        "--method", "pca",
-        "--n-components", "2",
-        "--return-type", "numpy",
+        "--input",
+        str(inp),
+        "--out",
+        str(out),
+        "--method",
+        "pca",
+        "--n-components",
+        "2",
+        "--return-type",
+        "numpy",
         "--debug",
-        "--log-level", "INFO",
+        "--log-level",
+        "INFO",
     ]
     res = runner.invoke(app, args)
     assert res.exit_code == 0, res.stdout
@@ -33,7 +39,9 @@ def test_reduce_pca_numpy_roundtrip(tmp_path):
 
 
 def test_reduce_isomap_pandas_from_csv(tmp_path):
-    df = pd.DataFrame(np.random.RandomState(1).randn(10, 5).astype("float32"), columns=[f"f{i}" for i in range(5)])
+    df = pd.DataFrame(
+        np.random.RandomState(1).randn(10, 5).astype("float32"), columns=[f"f{i}" for i in range(5)]
+    )
     inp = tmp_path / "X.csv"
     df.to_csv(inp, index=False)
     out = tmp_path / "X_iso.csv"
@@ -41,14 +49,21 @@ def test_reduce_isomap_pandas_from_csv(tmp_path):
     runner = CliRunner()
     args = [
         "run",
-        "--input", str(inp),
-        "--out", str(out),
-        "--method", "isomap",
-        "--n-components", "2",
-        "--return-type", "pandas",
-        "--columns", "f0,f1,f2,f3,f4",
+        "--input",
+        str(inp),
+        "--out",
+        str(out),
+        "--method",
+        "isomap",
+        "--n-components",
+        "2",
+        "--return-type",
+        "pandas",
+        "--columns",
+        "f0,f1,f2,f3,f4",
         "--debug",
-        "--log-level", "INFO",
+        "--log-level",
+        "INFO",
     ]
     res = runner.invoke(app, args)
     assert res.exit_code == 0, res.stdout
@@ -67,11 +82,16 @@ def test_reduce_params_from_json_string(tmp_path):
     runner = CliRunner()
     args = [
         "run",
-        "--input", str(inp),
-        "--out", str(out),
-        "--method", "truncated_svd",
-        "--params", params,
-        "--return-type", "numpy",
+        "--input",
+        str(inp),
+        "--out",
+        str(out),
+        "--method",
+        "truncated_svd",
+        "--params",
+        params,
+        "--return-type",
+        "numpy",
     ]
     res = runner.invoke(app, args)
     assert res.exit_code == 0, res.stdout

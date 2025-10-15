@@ -3,14 +3,15 @@ from __future__ import annotations
 import io
 import logging
 import os
-from typing import Optional, List
+from typing import List, Optional
 
 import pandas as pd
 import requests
 
-from .base_encoder import Encoders
 from sylphy.constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
 from sylphy.core import get_config
+
+from .base_encoder import Encoders
 
 
 class PhysicochemicalEncoder(Encoders):
@@ -116,7 +117,9 @@ class PhysicochemicalEncoder(Encoders):
     def __encoding_dataset(self) -> None:
         try:
             self.__logger__.info("Encoding dataset with physicochemical property: %s", self.name_property)
-            matrix = [self.__encoding_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index]
+            matrix = [
+                self.__encoding_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
+            ]
             header = [f"p_{i}" for i in range(len(matrix[0]))]
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values

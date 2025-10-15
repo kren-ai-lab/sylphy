@@ -1,6 +1,7 @@
 # tests/test_public_api.py
 from __future__ import annotations
 
+
 def test_public_surface_imports():
     import sylphy as pr
 

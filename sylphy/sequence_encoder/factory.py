@@ -3,15 +3,15 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Set
 
-from sylphy.logging import get_logger, add_context
+from sylphy.logging import add_context, get_logger
 
 from .base_encoder import Encoders
-from .ordinal_encoder import OrdinalEncoder
-from .one_hot_encoder import OneHotEncoder
+from .fft_encoder import FFTEncoder
 from .frequency_encoder import FrequencyEncoder
 from .kmers_encoder import KMersEncoders
+from .one_hot_encoder import OneHotEncoder
+from .ordinal_encoder import OrdinalEncoder
 from .physicochemical_encoder import PhysicochemicalEncoder
-from .fft_encoder import FFTEncoder
 
 __all__ = [
     "Encoders",
@@ -32,15 +32,21 @@ add_context(_logger, component="sequence_encoder", facility="factory")
 # Canonical names for encoders
 _ALIASES: Dict[str, str] = {
     # one-hot
-    "onehot": "one_hot", "one_hot": "one_hot",
+    "onehot": "one_hot",
+    "one_hot": "one_hot",
     # ordinal
     "ordinal": "ordinal",
     # frequency
-    "frequency": "frequency", "freq": "frequency",
+    "frequency": "frequency",
+    "freq": "frequency",
     # k-mers
-    "kmers": "kmers", "kmer": "kmers", "tfidf": "kmers",
+    "kmers": "kmers",
+    "kmer": "kmers",
+    "tfidf": "kmers",
     # physicochemical
-    "physicochemical": "physicochemical", "physchem": "physicochemical", "aaindex": "physicochemical",
+    "physicochemical": "physicochemical",
+    "physchem": "physicochemical",
+    "aaindex": "physicochemical",
     # fft
     "fft": "fft",
 }
@@ -57,18 +63,48 @@ _CLASSES = {
 
 # Whitelisted kwargs per encoder (only these are forwarded)
 _ALLOWED: Dict[str, Set[str]] = {
-    "one_hot": {"dataset", "sequence_column", "max_length", "allow_extended", "allow_unknown", "debug", "debug_mode"},
-    "ordinal": {"dataset", "sequence_column", "max_length", "allow_extended", "allow_unknown", "debug", "debug_mode"},
+    "one_hot": {
+        "dataset",
+        "sequence_column",
+        "max_length",
+        "allow_extended",
+        "allow_unknown",
+        "debug",
+        "debug_mode",
+    },
+    "ordinal": {
+        "dataset",
+        "sequence_column",
+        "max_length",
+        "allow_extended",
+        "allow_unknown",
+        "debug",
+        "debug_mode",
+    },
     "frequency": {"dataset", "sequence_column", "allow_extended", "allow_unknown", "debug", "debug_mode"},
-    "kmers": {"dataset", "sequence_column", "size_kmer", "allow_extended", "allow_unknown", "debug", "debug_mode"},
+    "kmers": {
+        "dataset",
+        "sequence_column",
+        "size_kmer",
+        "allow_extended",
+        "allow_unknown",
+        "debug",
+        "debug_mode",
+    },
     "physicochemical": {
-        "dataset", "sequence_column", "max_length",
-        "type_descriptor", "name_property",
-        "allow_extended", "allow_unknown",
-        "debug", "debug_mode",
+        "dataset",
+        "sequence_column",
+        "max_length",
+        "type_descriptor",
+        "name_property",
+        "allow_extended",
+        "allow_unknown",
+        "debug",
+        "debug_mode",
     },
     "fft": {"dataset", "sequence_column", "debug", "debug_mode"},
 }
+
 
 def _canonical(name: str) -> str:
     key = (name or "").strip().lower()
@@ -79,6 +115,7 @@ def _canonical(name: str) -> str:
         f"Available: {sorted(set(_ALIASES.values()))} (aliases supported: {sorted(_ALIASES.keys())})"
     )
 
+
 def _filter_kwargs(kind: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
     allowed = _ALLOWED[kind]
     filtered = {k: v for k, v in kwargs.items() if k in allowed}
@@ -86,6 +123,7 @@ def _filter_kwargs(kind: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
     if ignored:
         _logger.debug("Ignoring unsupported arguments for %s: %s", kind, ignored)
     return filtered
+
 
 def create_encoder(name: str, **kwargs: Any) -> Encoders:
     """

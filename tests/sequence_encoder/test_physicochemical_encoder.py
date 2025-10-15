@@ -5,8 +5,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from sylphy.sequence_encoder import PhysicochemicalEncoder
 from sylphy.constants.tool_constants import BASE_URL_AAINDEX
+from sylphy.sequence_encoder import PhysicochemicalEncoder
 
 
 def test_physicochemical_reads_cached_file(monkeypatch, tmp_path):
@@ -14,6 +14,7 @@ def test_physicochemical_reads_cached_file(monkeypatch, tmp_path):
     Avoid network: create the cached AAIndex CSV that the encoder expects.
     The encoder should load from cache and not attempt to download.
     """
+
     # Point `get_config().cache_paths.data()` to a temp directory
     class _CachePaths:
         def data(self):  # matches usage in encoder
@@ -23,6 +24,7 @@ def test_physicochemical_reads_cached_file(monkeypatch, tmp_path):
         cache_paths = _CachePaths()
 
     from sylphy.core import config as cfg_mod
+
     monkeypatch.setattr(cfg_mod, "get_config", lambda: _Cfg(), raising=True)
 
     # Build the exact filepath the encoder will use:
@@ -66,6 +68,7 @@ def test_physicochemical_raises_on_unknown_property(monkeypatch, tmp_path):
         cache_paths = _CachePaths()
 
     from sylphy.core import config as cfg_mod
+
     monkeypatch.setattr(cfg_mod, "get_config", lambda: _Cfg(), raising=True)
 
     # Prepare a valid aaindex CSV with a different property name

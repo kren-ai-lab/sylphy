@@ -8,15 +8,15 @@ Public API:
   `is_linear_method`, `is_nonlinear_method`
 """
 
-from .reduction_methods import Reductions, ReturnType, Preprocess
-from .linear_reductions import LinearReduction
-from .non_linear_reductions import NonLinearReductions
 from .factory import (
-    reduce_dimensionality,
     get_available_methods,
     is_linear_method,
     is_nonlinear_method,
+    reduce_dimensionality,
 )
+from .linear_reductions import LinearReduction
+from .non_linear_reductions import NonLinearReductions
+from .reduction_methods import Preprocess, Reductions, ReturnType
 
 __all__ = [
     "Reductions",

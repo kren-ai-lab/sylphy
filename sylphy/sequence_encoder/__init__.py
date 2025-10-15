@@ -8,13 +8,13 @@ one-hot, ordinal, frequency, k-mer TF-IDF, physicochemical (AAIndex), and FFT.
 """
 
 from .base_encoder import Encoders
-from .ordinal_encoder import OrdinalEncoder
-from .one_hot_encoder import OneHotEncoder
+from .factory import create_encoder
+from .fft_encoder import FFTEncoder
 from .frequency_encoder import FrequencyEncoder
 from .kmers_encoder import KMersEncoders
+from .one_hot_encoder import OneHotEncoder
+from .ordinal_encoder import OrdinalEncoder
 from .physicochemical_encoder import PhysicochemicalEncoder
-from .fft_encoder import FFTEncoder
-from .factory import create_encoder
 
 __all__ = [
     "Encoders",

@@ -17,10 +17,10 @@ Backends are selected by the factory from the model name. See:
 - EmbeddingBased: run_process(), layer selection/aggregation, pooling, export.
 
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -43,6 +43,7 @@ LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 def _level_from_str(name: str) -> int:
     """Map string log level to logging constant (lazy import)."""
     import logging
+
     return getattr(logging, (name or "INFO").upper(), logging.INFO)
 
 
@@ -90,79 +91,105 @@ def _ensure_ext(path: Path, fmt: str) -> Path:
 def run(
     # Model & backend
     model: str = typer.Option(
-        "facebook/esm2_t6_8M_UR50D", "--model", "-m",
+        "facebook/esm2_t6_8M_UR50D",
+        "--model",
+        "-m",
         help="Model identifier (HF ref or registry key), e.g. 'facebook/esm2_t6_8M_UR50D'.",
         show_default=True,
     ),
     device: str = typer.Option(
-        "cuda", "--device", "-d",
+        "cuda",
+        "--device",
+        "-d",
         help=f"Inference device. One of: {', '.join(DEVICE_CHOICES)}.",
         show_default=True,
     ),
     precision: str = typer.Option(
-        "fp32", "--precision", "-p",
+        "fp32",
+        "--precision",
+        "-p",
         help=f"AMP precision on CUDA. One of: {', '.join(PRECISION_CHOICES)}.",
         show_default=True,
     ),
     batch_size: int = typer.Option(
-        8, "--batch-size", "-b", min=1,
+        8,
+        "--batch-size",
+        "-b",
+        min=1,
         help="Batch size for inference.",
         show_default=True,
     ),
     max_length: int = typer.Option(
-        1024, "--max-length", "-L", min=1,
+        1024,
+        "--max-length",
+        "-L",
+        min=1,
         help="Max tokens per sequence (truncation at tokenizer level).",
         show_default=True,
     ),
     oom_backoff: bool = typer.Option(
-        True, "--oom-backoff/--no-oom-backoff",
+        True,
+        "--oom-backoff/--no-oom-backoff",
         help="Auto-reduce batch size on CUDA OOM and retry.",
         show_default=True,
     ),
     # Layer/Pooling controls (handled by EmbeddingBased) :contentReference[oaicite:2]{index=2}
     layers: str = typer.Option(
-        "last", "--layers",
+        "last",
+        "--layers",
         help="Layer selection: 'last' | 'last4' | 'all' | an integer index. "
-             "Multiple indices can be provided as comma-separated (e.g., '0,3,6').",
+        "Multiple indices can be provided as comma-separated (e.g., '0,3,6').",
         show_default=True,
     ),
     layer_agg: str = typer.Option(
-        "mean", "--layer-agg",
+        "mean",
+        "--layer-agg",
         help=f"Aggregation across selected layers. One of: {', '.join(LAYER_AGG_CHOICES)}.",
         show_default=True,
     ),
     pool: str = typer.Option(
-        "mean", "--pool",
+        "mean",
+        "--pool",
         help=f"Token pooling strategy. One of: {', '.join(POOL_CHOICES)}.",
         show_default=True,
     ),
     # IO
     input_data: Path = typer.Option(
-        ..., "--input-data", "-i",
+        ...,
+        "--input-data",
+        "-i",
         help="Input CSV with sequences.",
     ),
     sequence_identifier: str = typer.Option(
-        "sequence", "--sequence-identifier", "-s",
+        "sequence",
+        "--sequence-identifier",
+        "-s",
         help="Column in CSV that contains amino acid sequences.",
         show_default=True,
     ),
     output: Path = typer.Option(
-        ..., "--output", "-o",
+        ...,
+        "--output",
+        "-o",
         help="Output file path for embeddings (extension can be omitted).",
     ),
     format_output: str = typer.Option(
-        "csv", "--format-output", "-f",
+        "csv",
+        "--format-output",
+        "-f",
         help=f"Export format. One of: {', '.join(EXPORT_CHOICES)}.",
         show_default=True,
     ),
     # Logging
     debug: bool = typer.Option(
-        False, "--debug/--no-debug",
+        False,
+        "--debug/--no-debug",
         help="Enable verbose logs for this command.",
         show_default=True,
     ),
     log_level: str = typer.Option(
-        "INFO", "--log-level",
+        "INFO",
+        "--log-level",
         help=f"Library log level: {', '.join(LOG_LEVELS)}.",
         show_default=True,
     ),
@@ -219,7 +246,9 @@ def run(
 
         # Import the factory only here (avoid heavy imports at module import time)
         # Factory chooses backend based on model name. :contentReference[oaicite:5]{index=5}
-        from sylphy.embedding_extractor import create_embedding  # lazy alias to EmbeddingFactory :contentReference[oaicite:6]{index=6}
+        from sylphy.embedding_extractor import (
+            create_embedding,  # lazy alias to EmbeddingFactory :contentReference[oaicite:6]{index=6}
+        )
 
         embedder = create_embedding(
             model_name=model,
@@ -236,9 +265,9 @@ def run(
         embedder.run_process(
             max_length=max_length,
             batch_size=batch_size,
-            layers=layers_spec,       # "last" | "last4" | "all" | int | [ints]
-            layer_agg=layer_agg_v,    # "mean" | "sum" | "concat"
-            pool=pool_v,              # "mean" | "cls" | "eos"
+            layers=layers_spec,  # "last" | "last4" | "all" | int | [ints]
+            layer_agg=layer_agg_v,  # "mean" | "sum" | "concat"
+            pool=pool_v,  # "mean" | "cls" | "eos"
         )
 
         # Ensure output extension and export (supports csv/npy/npz/parquet) :contentReference[oaicite:8]{index=8}

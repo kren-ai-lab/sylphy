@@ -6,7 +6,6 @@ rotation, context injection, and global controls. These tests are resilient
 to different internal implementations (e.g., with or without console handler).
 """
 
-import io
 import json
 import logging
 import sys
@@ -14,12 +13,12 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from sylphy.logging import (
-    setup_logger,
-    get_logger,
     add_context,
+    get_logger,
     reset_logging,
-    silence_external,
     set_global_level,
+    setup_logger,
+    silence_external,
 )
 
 PKG_LOGGER_NAME = "sylphy"
@@ -96,6 +95,7 @@ def test_env_level_override(monkeypatch, tmp_path, capsys):
 
     if not _find_console_handler(logger):
         import pytest
+
         pytest.skip("No console handler present; skipping console assertions.")
 
     out, err, both = _read_console(capsys)
@@ -117,6 +117,7 @@ def test_json_console_output_and_stderr(monkeypatch, tmp_path, capsys):
 
     if not _find_console_handler(logger):
         import pytest
+
         pytest.skip("No console handler present; skipping console JSON assertions.")
 
     logger.info("hello-json", extra={"run_id": "abc123"})
@@ -170,6 +171,7 @@ def test_console_formatter_utc_suffix(monkeypatch, tmp_path, capsys):
 
     if not _find_console_handler(logger):
         import pytest
+
         pytest.skip("No console handler present; skipping console format assertions.")
 
     out, err, both = _read_console(capsys)
@@ -190,6 +192,7 @@ def test_add_context_injection_with_json(monkeypatch, tmp_path, capsys):
     logger = setup_logger(name=PKG_LOGGER_NAME, level="INFO")
     if not _find_console_handler(logger):
         import pytest
+
         pytest.skip("No console handler present; skipping console JSON assertions.")
 
     add_context(logger, project="pr", phase="train")

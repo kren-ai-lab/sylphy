@@ -6,9 +6,11 @@ from pathlib import Path
 from threading import RLock
 from typing import Generator
 
-from sylphy.logging import get_logger
 from sylphy.constants.config_constants import CachePaths
-from sylphy.constants.tool_configs import ToolConfig, get_config as _get_config, set_config as _set_config
+from sylphy.constants.tool_configs import ToolConfig
+from sylphy.constants.tool_configs import get_config as _get_config
+from sylphy.constants.tool_configs import set_config as _set_config
+from sylphy.logging import get_logger
 
 _LOG = get_logger(__name__)
 _LOCK = RLock()

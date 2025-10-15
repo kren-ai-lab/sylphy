@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 import logging
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
 
-from sylphy.logging import get_logger, add_context
+from sylphy.logging import add_context, get_logger
+
 from .linear_reductions import LinearReduction
 from .non_linear_reductions import NonLinearReductions
-from .reduction_methods import ReturnType, Preprocess
+from .reduction_methods import Preprocess, ReturnType
 
 DatasetLike = Union[np.ndarray, pd.DataFrame]
 Kind = Literal["linear", "nonlinear"]

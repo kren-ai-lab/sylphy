@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Shared fixtures for reduction tests: quiet logs, small synthetic datasets.
 """

@@ -4,6 +4,7 @@ Fast-start CLI utilities to inspect and manage Sylphy's cache directory.
 
 Keeps the same UX as your current version, but with lazy imports to speed up startup.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,11 +43,13 @@ _DELTA_RE = re.compile(
     re.IGNORECASE,
 )
 
+
 def _human_size(num_bytes: int) -> str:
     for unit, factor in (("TB", 1024**4), ("GB", 1024**3), ("MB", 1024**2), ("KB", 1024), ("B", 1)):
         if num_bytes >= factor:
             return f"{num_bytes} B" if unit == "B" else f"{num_bytes / factor:.2f} {unit}"
     return "0 B"
+
 
 def _parse_size(text: str) -> int:
     m = _SIZE_RE.match(text or "")
@@ -54,6 +57,7 @@ def _parse_size(text: str) -> int:
         raise typer.BadParameter(f"Invalid size: {text}")
     value, unit = m.group(1), (m.group(2) or "B").upper()
     return int(value) * _SIZE_UNITS[unit]
+
 
 def _parse_timedelta(text: str) -> timedelta:
     m = _DELTA_RE.match(text or "")
@@ -66,6 +70,7 @@ def _parse_timedelta(text: str) -> timedelta:
         seconds=int(m.group("seconds") or 0),
     )
 
+
 # ----------------------------
 # Lazy helpers (avoid heavy imports at import-time)
 # ----------------------------
@@ -73,18 +78,22 @@ def _console():
     """Return a rich Console if available, else None (lazy import)."""
     try:
         from rich.console import Console  # type: ignore
+
         return Console(stderr=False)
     except Exception:
         return None
 
+
 def _table():
     """Return (Table, box) lazily if rich is available, else (None, None)."""
     try:
-        from rich.table import Table  # type: ignore
         from rich import box  # type: ignore
+        from rich.table import Table  # type: ignore
+
         return Table, box
     except Exception:
         return None, None
+
 
 def _user_cache_dir(app: str, vendor: str) -> Optional[Path]:
     """Lazy import appdirs if present."""
@@ -94,12 +103,14 @@ def _user_cache_dir(app: str, vendor: str) -> Optional[Path]:
         return None
     return Path(user_cache_dir(app, vendor)).expanduser().resolve()
 
+
 # ----------------------------
 # Cache Discovery
 # ----------------------------
 DEFAULT_VENDOR = "KREN AI LAB"
 DEFAULT_APP = "sylphy"
 ENV_CACHE = "SYLPHY_CACHE_DIR"
+
 
 def _default_cache_dir() -> Path:
     # Priority: env var -> appdirs -> ~/.cache/sylphy
@@ -111,6 +122,7 @@ def _default_cache_dir() -> Path:
         return appdirs
     base = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
     return (base / DEFAULT_APP).expanduser().resolve()
+
 
 # ----------------------------
 # Data Structures
@@ -125,6 +137,7 @@ class CacheEntry:
     @property
     def mtime_dt(self) -> datetime:
         return datetime.fromtimestamp(self.mtime, tz=timezone.utc).astimezone()
+
 
 class CacheManager:
     """Helper to inspect and manipulate the cache directory (stdlib-only)."""
@@ -222,10 +235,12 @@ class CacheManager:
             freed += e.size
         return deleted, freed
 
+
 # ----------------------------
 # Presentation helpers
 # ----------------------------
 SORT_CHOICES = {"name", "size", "mtime"}
+
 
 def _sort_entries(entries: List[CacheEntry], sort: str, reverse: bool) -> List[CacheEntry]:
     key = {
@@ -235,11 +250,13 @@ def _sort_entries(entries: List[CacheEntry], sort: str, reverse: bool) -> List[C
     }[sort]
     return sorted(entries, key=key, reverse=reverse)
 
+
 def _print_kv(con, key: str, value: str) -> None:
     if con:
         con.print(f"[bold]{key}[/bold] {value}")
     else:
         typer.echo(f"{key} {value}")
+
 
 # ----------------------------
 # Commands
@@ -252,6 +269,7 @@ def _callback() -> None:
         con.print(f"[dim]{msg}[/dim]")
     else:
         typer.echo(msg)
+
 
 @app.command("ls")
 def cmd_ls(
@@ -297,6 +315,7 @@ def cmd_ls(
             size = _human_size(e.size) if human_readable else str(e.size)
             typer.echo(f"{e.path.relative_to(mgr.cache_dir)}\t{size}\t{e.mtime_dt:%Y-%m-%d %H:%M}")
 
+
 @app.command("stats")
 def cmd_stats() -> None:
     mgr = CacheManager()
@@ -317,17 +336,21 @@ def cmd_stats() -> None:
     if oldest:
         _print_kv(con, "Oldest:", f"{oldest.path.name} @ {oldest.mtime_dt:%Y-%m-%d %H:%M}")
 
+
 @app.command("rm")
 def cmd_rm(
     pattern: Optional[str] = typer.Option(None, "--pattern", "-p", help="Glob like '**/*.tmp'."),
-    older_than: Optional[str] = typer.Option(None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h')."),
+    older_than: Optional[str] = typer.Option(
+        None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h')."
+    ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation when applying."),
 ) -> None:
     mgr = CacheManager()
     td = _parse_timedelta(older_than) if older_than else None
     candidates = [
-        e for e in mgr.iter_entries(pattern=pattern, recursive=True)
+        e
+        for e in mgr.iter_entries(pattern=pattern, recursive=True)
         if not e.is_dir and (td is None or (datetime.now(timezone.utc) - e.mtime_dt) >= td)
     ]
     total_bytes = sum(e.size for e in candidates)
@@ -340,10 +363,15 @@ def cmd_rm(
     deleted, freed = mgr.rm(pattern=pattern, older_than=td, dry_run=dry_run)
     _print_kv(con, "Result:", f"Deleted {deleted} files, freed {_human_size(freed)}")
 
+
 @app.command("prune")
 def cmd_prune(
-    max_size: Optional[str] = typer.Option(None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB)."),
-    remove_empty_dirs: bool = typer.Option(True, "--prune-empty/--keep-empty", help="Remove empty directories."),
+    max_size: Optional[str] = typer.Option(
+        None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB)."
+    ),
+    remove_empty_dirs: bool = typer.Option(
+        True, "--prune-empty/--keep-empty", help="Remove empty directories."
+    ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
 ) -> None:
     mgr = CacheManager()
@@ -363,7 +391,11 @@ def cmd_prune(
                 freed_sim += e.size
                 to_delete += 1
             con = _console()
-            _print_kv(con, "Prune (simulated):", f"Would delete {to_delete} files to reach {max_size} (free {_human_size(freed_sim)}).")
+            _print_kv(
+                con,
+                "Prune (simulated):",
+                f"Would delete {to_delete} files to reach {max_size} (free {_human_size(freed_sim)}).",
+            )
         else:
             deleted, freed = mgr.prune_to_max_size(max_bytes=max_bytes, dry_run=False)
 
@@ -383,9 +415,11 @@ def cmd_prune(
         _print_kv(con, "Prune:", f"Deleted {deleted} files, freed {_human_size(freed)}")
     _print_kv(con, "Removed empty dirs:", str(removed_dirs))
 
+
 @app.command("path")
 def cmd_path() -> None:
     typer.echo(str(_default_cache_dir()))
+
 
 @app.command("clear")
 def cmd_clear(
@@ -402,4 +436,3 @@ def cmd_clear(
         typer.echo("Cache cleared.")
     except Exception as exc:
         raise typer.Exit(code=1) from exc
-

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 End-to-end checks for loading + pooling + layer selection using the fake HF stack.
 """
@@ -36,7 +37,9 @@ def test_load_and_pool_mean_cls_eos_and_layers():
         assert out.shape == (3, 4)  # B x H, with H=4 from the fake model
 
     # Multi-layer: last4 with concat -> 4 * H
-    out_concat = inst.encode_batch_layers(seqs, max_length=16, layers="last4", layer_agg="concat", pool="mean")
+    out_concat = inst.encode_batch_layers(
+        seqs, max_length=16, layers="last4", layer_agg="concat", pool="mean"
+    )
     assert out_concat.shape == (3, 16)
 
     # Multi-layer: last4 with mean aggregation -> H

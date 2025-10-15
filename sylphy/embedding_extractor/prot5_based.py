@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
-import torch
 import pandas as pd
-from transformers import T5Tokenizer, T5EncoderModel, AutoConfig
+import torch
+from transformers import AutoConfig, T5EncoderModel, T5Tokenizer
 
 from .embedding_based import EmbeddingBased
 
@@ -47,9 +47,7 @@ class Prot5Based(EmbeddingBased):
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
 
             self.__logger__.info("Loading ProtT5 tokenizer from: %s", local_dir)
-            self.tokenizer = T5Tokenizer.from_pretrained(
-                local_dir, do_lower_case=False, use_fast=False
-            )
+            self.tokenizer = T5Tokenizer.from_pretrained(local_dir, do_lower_case=False, use_fast=False)
             if getattr(self.tokenizer, "pad_token_id", None) is None:
                 self.tokenizer.add_special_tokens({"pad_token": "<pad>"})
                 self.__logger__.debug("pad_token_id set to: %s", self.tokenizer.pad_token_id)

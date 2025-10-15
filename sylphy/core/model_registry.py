@@ -7,11 +7,11 @@ from pathlib import Path
 from threading import RLock
 from typing import Dict, List, Optional, Tuple
 
-from .config import get_config
-from .model_spec import ModelSpec
-
 from sylphy.constants.tool_constants import _ENV_PREFIX
 from sylphy.logging import get_logger
+
+from .config import get_config
+from .model_spec import ModelSpec
 
 logger = get_logger(__name__)
 _LOCK = RLock()
@@ -19,6 +19,7 @@ _LOCK = RLock()
 # ----------------------------
 # Exceptions
 # ----------------------------
+
 
 class ModelRegistryError(Exception):
     """Base error for the model registry."""
@@ -86,10 +87,7 @@ def list_registered_models(include_aliases: bool = False) -> List[str]:
         If False, return only canonical names.
     """
     with _LOCK:
-        names = [
-            name for name, spec in _REGISTRY.items()
-            if include_aliases or not spec.is_alias()
-        ]
+        names = [name for name, spec in _REGISTRY.items() if include_aliases or not spec.is_alias()]
     return sorted(names)
 
 
@@ -104,15 +102,14 @@ def get_model_spec(name: str) -> ModelSpec:
     """
     with _LOCK:
         if name not in _REGISTRY:
-            raise ModelNotFoundError(
-                f"Unknown model '{name}'. Available: {sorted(_REGISTRY)}"
-            )
+            raise ModelNotFoundError(f"Unknown model '{name}'. Available: {sorted(_REGISTRY)}")
         return _REGISTRY[name]
 
 
 # ----------------------------
 # Resolution / download
 # ----------------------------
+
 
 def _env_override_path(name: str) -> Optional[Path]:
     """
@@ -127,9 +124,7 @@ def _env_override_path(name: str) -> Optional[Path]:
 
     p = Path(val).expanduser().resolve()
     if not p.exists():
-        raise FileNotFoundError(
-            f"Environment override {key} points to non-existent path: {p}"
-        )
+        raise FileNotFoundError(f"Environment override {key} points to non-existent path: {p}")
     logger.debug("Using environment override %s -> %s", key, p)
     return p
 
@@ -226,6 +221,7 @@ def _download_other(ref: str, dst: Path) -> None:
     import tarfile
     import zipfile
     from urllib.parse import urlparse
+
     import requests
 
     p = Path(ref).expanduser()
@@ -273,74 +269,98 @@ def _download_other(ref: str, dst: Path) -> None:
 
 def _init_default_registry() -> None:
     # --- ESM2 family ---
-    register_model(ModelSpec(
-        name="esm2_t6_8M_UR50D",
-        provider="huggingface",
-        ref="facebook/esm2_t6_8M_UR50D",
-    ))
-    register_model(ModelSpec(
-        name="esm2_t12_35M_UR50D",
-        provider="huggingface",
-        ref="facebook/esm2_t12_35M_UR50D",
-    ))
-    register_model(ModelSpec(
-        name="esm2_t30_150M_UR50D",
-        provider="huggingface",
-        ref="facebook/esm2_t30_150M_UR50D",
-    ))
-    register_model(ModelSpec(
-        name="esm2_t33_650M_UR50D",
-        provider="huggingface",
-        ref="facebook/esm2_t33_650M_UR50D",
-    ))
-    register_model(ModelSpec(
-        name="esm2_t36_3B_UR50D",
-        provider="huggingface",
-        ref="facebook/esm2_t36_3B_UR50D",
-    ))
-    register_model(ModelSpec(
-        name="esm2_t48_15B_UR50D",
-        provider="huggingface",
-        ref="facebook/esm2_t48_15B_UR50D",
-    ))
+    register_model(
+        ModelSpec(
+            name="esm2_t6_8M_UR50D",
+            provider="huggingface",
+            ref="facebook/esm2_t6_8M_UR50D",
+        )
+    )
+    register_model(
+        ModelSpec(
+            name="esm2_t12_35M_UR50D",
+            provider="huggingface",
+            ref="facebook/esm2_t12_35M_UR50D",
+        )
+    )
+    register_model(
+        ModelSpec(
+            name="esm2_t30_150M_UR50D",
+            provider="huggingface",
+            ref="facebook/esm2_t30_150M_UR50D",
+        )
+    )
+    register_model(
+        ModelSpec(
+            name="esm2_t33_650M_UR50D",
+            provider="huggingface",
+            ref="facebook/esm2_t33_650M_UR50D",
+        )
+    )
+    register_model(
+        ModelSpec(
+            name="esm2_t36_3B_UR50D",
+            provider="huggingface",
+            ref="facebook/esm2_t36_3B_UR50D",
+        )
+    )
+    register_model(
+        ModelSpec(
+            name="esm2_t48_15B_UR50D",
+            provider="huggingface",
+            ref="facebook/esm2_t48_15B_UR50D",
+        )
+    )
 
     # --- ProtT5 family ---
-    register_model(ModelSpec(
-        name="prot_t5_xl_uniref50",
-        provider="huggingface",
-        ref="Rostlab/prot_t5_xl_uniref50",
-    ))
-    register_model(ModelSpec(
-        name="prot_t5_xl_bfd",
-        provider="huggingface",
-        ref="Rostlab/prot_t5_xl_bfd",
-    ))
+    register_model(
+        ModelSpec(
+            name="prot_t5_xl_uniref50",
+            provider="huggingface",
+            ref="Rostlab/prot_t5_xl_uniref50",
+        )
+    )
+    register_model(
+        ModelSpec(
+            name="prot_t5_xl_bfd",
+            provider="huggingface",
+            ref="Rostlab/prot_t5_xl_bfd",
+        )
+    )
 
     # --- ProtBERT ---
-    register_model(ModelSpec(
-        name="prot_bert",
-        provider="huggingface",
-        ref="Rostlab/prot_bert",
-    ))
+    register_model(
+        ModelSpec(
+            name="prot_bert",
+            provider="huggingface",
+            ref="Rostlab/prot_bert",
+        )
+    )
 
     # --- ANKH2 ---
-    register_model(ModelSpec(
-        name="ankh2_ext1",
-        provider="huggingface",
-        ref="ElnaggarLab/ankh2-ext1",
-    ))
-    register_model(ModelSpec(
-        name="ankh2_large",
-        provider="huggingface",
-        ref="ElnaggarLab/ankh2-large",
-    ))
+    register_model(
+        ModelSpec(
+            name="ankh2_ext1",
+            provider="huggingface",
+            ref="ElnaggarLab/ankh2-ext1",
+        )
+    )
+    register_model(
+        ModelSpec(
+            name="ankh2_large",
+            provider="huggingface",
+            ref="ElnaggarLab/ankh2-large",
+        )
+    )
 
     # --- Mistral-Prot ---
-    register_model(ModelSpec(
-        name="mistral_prot_15m",
-        provider="huggingface",
-        ref="RaphaelMourad/Mistral-Prot-v1-15M",
-    ))
+    register_model(
+        ModelSpec(
+            name="mistral_prot_15m",
+            provider="huggingface",
+            ref="RaphaelMourad/Mistral-Prot-v1-15M",
+        )
+    )
 
 
 # Initialize once on import

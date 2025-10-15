@@ -1,26 +1,26 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple, Union, Any, Type
+import inspect
 import logging
 import traceback
-import inspect
+from typing import Any, Optional, Tuple, Type, Union
+
 import numpy as np
 import pandas as pd
-
 from sklearn.decomposition import (
-    PCA,
-    IncrementalPCA,
-    SparsePCA,
-    FastICA,
-    TruncatedSVD,
-    MiniBatchNMF,
     NMF,
-    MiniBatchSparsePCA,
+    PCA,
     FactorAnalysis,
+    FastICA,
+    IncrementalPCA,
     LatentDirichletAllocation,
+    MiniBatchNMF,
+    MiniBatchSparsePCA,
+    SparsePCA,
+    TruncatedSVD,
 )
 
-from .reduction_methods import Reductions, ReturnType, Preprocess
+from .reduction_methods import Preprocess, Reductions, ReturnType
 
 
 class LinearReduction(Reductions):
@@ -75,7 +75,11 @@ class LinearReduction(Reductions):
             params = getattr(model, "get_params", lambda: {})()
             self.__logger__.info("Applying %s with params=%s", method_name, params)
             transformed = model.fit_transform(self.dataset)
-            k = n_components if n_components is not None else getattr(model, "n_components", transformed.shape[1])
+            k = (
+                n_components
+                if n_components is not None
+                else getattr(model, "n_components", transformed.shape[1])
+            )
             self.__logger__.info("%s successful. Output shape=%s", method_name, transformed.shape)
             return model, self.generate_dataset_post_reduction(transformed, k)
         except Exception as e:
@@ -90,7 +94,9 @@ class LinearReduction(Reductions):
         model = self._init_with_seed(PCA, kwargs)
         return self._apply_model(model, "PCA", kwargs.get("n_components"))
 
-    def apply_incremental_pca(self, **kwargs) -> Tuple[IncrementalPCA, Optional[Union[np.ndarray, pd.DataFrame]]]:
+    def apply_incremental_pca(
+        self, **kwargs
+    ) -> Tuple[IncrementalPCA, Optional[Union[np.ndarray, pd.DataFrame]]]:
         model = self._init_with_seed(IncrementalPCA, kwargs)
         return self._apply_model(model, "IncrementalPCA", kwargs.get("n_components"))
 
@@ -98,7 +104,9 @@ class LinearReduction(Reductions):
         model = self._init_with_seed(SparsePCA, kwargs)
         return self._apply_model(model, "SparsePCA", kwargs.get("n_components"))
 
-    def apply_minibatch_sparse_pca(self, **kwargs) -> Tuple[MiniBatchSparsePCA, Optional[Union[np.ndarray, pd.DataFrame]]]:
+    def apply_minibatch_sparse_pca(
+        self, **kwargs
+    ) -> Tuple[MiniBatchSparsePCA, Optional[Union[np.ndarray, pd.DataFrame]]]:
         model = self._init_with_seed(MiniBatchSparsePCA, kwargs)
         return self._apply_model(model, "MiniBatchSparsePCA", kwargs.get("n_components"))
 
@@ -110,7 +118,9 @@ class LinearReduction(Reductions):
         model = self._init_with_seed(TruncatedSVD, kwargs)
         return self._apply_model(model, "TruncatedSVD", kwargs.get("n_components"))
 
-    def apply_factor_analysis(self, **kwargs) -> Tuple[FactorAnalysis, Optional[Union[np.ndarray, pd.DataFrame]]]:
+    def apply_factor_analysis(
+        self, **kwargs
+    ) -> Tuple[FactorAnalysis, Optional[Union[np.ndarray, pd.DataFrame]]]:
         model = self._init_with_seed(FactorAnalysis, kwargs)
         return self._apply_model(model, "FactorAnalysis", kwargs.get("n_components"))
 
@@ -123,6 +133,8 @@ class LinearReduction(Reductions):
         model = self._init_with_seed(MiniBatchNMF, kwargs)
         return self._apply_model(model, "MiniBatchNMF", kwargs.get("n_components"))
 
-    def apply_latent_dirichlet_allocation(self, **kwargs) -> Tuple[LatentDirichletAllocation, Optional[Union[np.ndarray, pd.DataFrame]]]:
+    def apply_latent_dirichlet_allocation(
+        self, **kwargs
+    ) -> Tuple[LatentDirichletAllocation, Optional[Union[np.ndarray, pd.DataFrame]]]:
         model = self._init_with_seed(LatentDirichletAllocation, kwargs)
         return self._apply_model(model, "LatentDirichletAllocation", kwargs.get("n_components"))

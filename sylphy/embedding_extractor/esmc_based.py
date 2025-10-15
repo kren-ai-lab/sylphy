@@ -2,18 +2,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
 import torch
-from tqdm import tqdm
-
 from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
+from tqdm import tqdm
 
-from .embedding_based import LayerSpec, LayerAgg, Pool  # types & semantics
-from .embedding_based import EmbeddingBased
+from .embedding_based import EmbeddingBased, LayerAgg, LayerSpec, Pool  # types & semantics
 
 
 class ESMCBasedEmbedding(EmbeddingBased):
@@ -186,7 +184,10 @@ class ESMCBasedEmbedding(EmbeddingBased):
 
         self.__logger__.info(
             "Embedding %d sequences with ESM-C (device=%s, precision=%s, OOM backoff=%s).",
-            len(sequences), self.device, self.precision, self.oom_backoff
+            len(sequences),
+            self.device,
+            self.precision,
+            self.oom_backoff,
         )
 
         current_bs = max(1, int(batch_size))
@@ -212,7 +213,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
                             stacked = torch.stack(chosen, dim=0).mean(dim=0)
                         pooled = self._pool_tokens(stacked, pool=pool).squeeze(0)  # (H')
                     elif emb is not None:
-                        pooled = self._pool_tokens(emb, pool=pool).squeeze(0)      # (H)
+                        pooled = self._pool_tokens(emb, pool=pool).squeeze(0)  # (H)
                     else:
                         # Skip if neither emb nor hs are available
                         continue
@@ -251,7 +252,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         self.release_resources()
 
         mat = np.stack(out_vecs, axis=0)  # (N, H')
-        headers = [f"p_{k+1}" for k in range(mat.shape[1])]
+        headers = [f"p_{k + 1}" for k in range(mat.shape[1])]
         df_emb = pd.DataFrame(mat, columns=headers, index=self.dataset.index)
         df_emb[self.column_seq] = self.dataset[self.column_seq].values
         self.__logger__.info("ESM-C embedding completed. Shape: %s", df_emb.shape)

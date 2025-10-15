@@ -4,19 +4,19 @@ from __future__ import annotations
 from importlib import metadata as _metadata
 
 from .config import get_config, set_cache_root, temporary_cache_root
-from .model_spec import ModelSpec
 from .model_registry import (
-    ModelRegistryError,
-    ModelNotFoundError,
     ModelDownloadError,
-    register_model,
-    register_alias,
-    unregister,
+    ModelNotFoundError,
+    ModelRegistryError,
     clear_registry,
-    list_registered_models,
     get_model_spec,
+    list_registered_models,
+    register_alias,
+    register_model,
     resolve_model,
+    unregister,
 )
+from .model_spec import ModelSpec
 
 __all__ = [
     # version

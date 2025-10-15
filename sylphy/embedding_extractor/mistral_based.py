@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
 import torch
-from transformers import AutoModel, AutoTokenizer, AutoConfig
+from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from .embedding_based import EmbeddingBased
 

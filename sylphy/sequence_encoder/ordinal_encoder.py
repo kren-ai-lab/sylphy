@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 import pandas as pd
 
-from .base_encoder import Encoders
 from sylphy.constants import get_index, residues
+
+from .base_encoder import Encoders
 
 
 class OrdinalEncoder(Encoders):
@@ -45,8 +46,11 @@ class OrdinalEncoder(Encoders):
         for r in sequence:
             try:
                 coded.append(
-                    get_index(r, extended=(self.allow_extended or self.allow_unknown),
-                              allow_unknown=self.allow_unknown)
+                    get_index(
+                        r,
+                        extended=(self.allow_extended or self.allow_unknown),
+                        allow_unknown=self.allow_unknown,
+                    )
                 )
             except Exception:
                 coded.append(0)
@@ -61,7 +65,9 @@ class OrdinalEncoder(Encoders):
 
         try:
             self.__logger__.info("Starting ordinal encoding for %d sequences.", len(self.dataset))
-            matrix = [self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index]
+            matrix = [
+                self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
+            ]
             header = [f"p_{i}" for i in range(len(matrix[0]))]
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values

@@ -73,20 +73,28 @@ class _FakeTokenizer:
 class _FakeModelOutput:
     def __init__(self, last_hidden_state: torch.Tensor):
         self.last_hidden_state = last_hidden_state
+        self.hidden_states = (last_hidden_state,)
 
 
 class _FakeModel:
     OOM_THRESHOLD: int | None = None
     FORWARD_CALLS: int = 0
 
+    def __init__(self):
+        self._device = torch.device("cpu")
+
     @classmethod
     def from_pretrained(cls, local_dir: str, trust_remote_code: bool = False):
         return cls()
 
-    def to(self, device: torch.device):  # no-op
+    def to(self, device):
+        if isinstance(device, str):
+            self._device = torch.device(device)
+        else:
+            self._device = device
         return self
 
-    def eval(self):  # no-op
+    def eval(self):
         return self
 
     def __call__(self, **enc) -> _FakeModelOutput:
@@ -106,6 +114,9 @@ def _install_fake_transformers(monkeypatch) -> Iterator[None]:
     mod.AutoTokenizer = _FakeTokenizer
     mod.AutoModel = _FakeModel
     mod.AutoConfig = _FakeConfig
+    mod.T5EncoderModel = _FakeModel
+    mod.T5Tokenizer = _FakeTokenizer
+    mod.PreTrainedTokenizerFast = _FakeTokenizer
     monkeypatch.setitem(sys.modules, "transformers", mod)
 
     yield

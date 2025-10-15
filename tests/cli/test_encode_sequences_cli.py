@@ -15,9 +15,8 @@ def test_encode_onehot_saves_expected_shape(tmp_path):
 
     runner = CliRunner()
     args = [
-        "run",
         "--encoder",
-        "onehot",
+        "one_hot",
         "--input-data",
         str(inp),
         "--output",
@@ -47,7 +46,6 @@ def test_encode_ordinal_basic(tmp_path):
 
     runner = CliRunner()
     args = [
-        "run",
         "--encoder",
         "ordinal",
         "--input-data",

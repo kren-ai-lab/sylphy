@@ -3,9 +3,79 @@ from __future__ import annotations
 
 from pathlib import Path
 from setuptools import setup, find_packages
+from setuptools.command.install import install
+from setuptools.command.develop import develop
+import os
 
 README = Path(__file__).with_name("README.md")
 long_description = README.read_text(encoding="utf-8") if README.exists() else ""
+PACKAGE_NAME = "sylphy"
+
+def _resolve_cache_dir(cli_value: str | None) -> str:
+    """Decide cache dir during installation time."""
+    if cli_value:
+        return str(Path(cli_value).expanduser())
+    env = os.getenv("SYLPHY_CACHE_DIR")
+    if env:
+        return str(Path(env).expanduser())
+    # fallback: platformdirs
+    try:
+        from platformdirs import user_cache_dir
+        base = Path(user_cache_dir(PACKAGE_NAME))
+    except Exception:
+        base = Path.home() / ".cache" / PACKAGE_NAME
+    return str((base).expanduser())
+
+def _write_siteconfig(target_root: Path, cache_dir: str) -> None:
+
+    pkg_dir = target_root / PACKAGE_NAME
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    siteconfig = pkg_dir / "_siteconfig.py"
+    siteconfig.write_text(
+        f'# Auto-generated at install time\nCACHE_DIR = r"{cache_dir}"\n',
+        encoding="utf-8"
+    )
+
+class SylphyInstall(install):
+    user_options = install.user_options + [
+        ('sylphy-cache-dir=', None, 'Custom cache directory for Sylphy'),
+    ]
+
+    def initialize_options(self):
+        super().initialize_options()
+        self.sylphy_cache_dir = None
+
+    def finalize_options(self):
+        super().finalize_options()
+
+    def run(self):
+        super().run()
+        cache_dir = _resolve_cache_dir(self.sylphy_cache_dir)
+        target_root = Path(self.install_lib)
+        _write_siteconfig(target_root, cache_dir)
+        Path(cache_dir).mkdir(parents=True, exist_ok=True)
+        self.announce(f"[Sylphy] Cache dir set to: {cache_dir}", level=2)
+
+class SylphyDevelop(develop):
+    user_options = develop.user_options + [
+        ('sylphy-cache-dir=', None, 'Custom cache directory for Sylphy (editable install)'),
+    ]
+
+    def initialize_options(self):
+        super().initialize_options()
+        self.sylphy_cache_dir = None
+
+    def finalize_options(self):
+        super().finalize_options()
+
+    def run(self):
+        super().run()
+        cache_dir = _resolve_cache_dir(self.sylphy_cache_dir)
+        project_root = Path(__file__).resolve().parent
+        target_root = project_root  
+        _write_siteconfig(target_root, cache_dir)
+        Path(cache_dir).mkdir(parents=True, exist_ok=True)
+        self.announce(f"[Sylphy] (editable) Cache dir set to: {cache_dir}", level=2)
 
 install_requires = [
     "numpy>=1.24",
@@ -69,7 +139,7 @@ extras_require["all"] = sorted({
 })
 
 setup(
-    name="sylphy",
+    name=PACKAGE_NAME,
     version="0.1.0",
     author="Kren AI Lab",
     author_email="krenai@umag.cl",
@@ -110,4 +180,8 @@ setup(
         ],
     },
     zip_safe=False,
+    cmdclass={
+        "install": SylphyInstall,
+        "develop": SylphyDevelop,
+    },
 )

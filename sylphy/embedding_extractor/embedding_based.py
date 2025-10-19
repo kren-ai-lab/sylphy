@@ -7,6 +7,9 @@ from typing import List, Optional, Literal, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import os
+from pathlib import Path
+
 import torch
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 
@@ -49,6 +52,9 @@ class EmbeddingBased(ABC):
         oom_backoff: bool = True,
     ) -> None:
 
+        self._cache_root = UtilsLib.get_cache_dir()  # <- resuelve _siteconfig/env/platformdirs
+        self._wire_cache_envs(self._cache_root)
+        
         self.dataset = dataset
         self.column_seq = column_seq
 
@@ -81,6 +87,26 @@ class EmbeddingBased(ABC):
         self.status: bool = True
         self.message: str = ""
 
+    @staticmethod
+    def _wire_cache_envs(root: Path) -> None:
+        root = Path(root).expanduser()
+        # Carpeta unificada de Sylphy
+        os.environ.setdefault("SYLPHY_CACHE_DIR", str(root))
+
+        # Hugging Face / Transformers / Datasets
+        os.environ.setdefault("HF_HOME",              str(root / "hf"))
+        os.environ.setdefault("TRANSFORMERS_CACHE",   str(root / "hf" / "transformers"))
+        os.environ.setdefault("HF_DATASETS_CACHE",    str(root / "hf" / "datasets"))
+
+        # Torch hub
+        os.environ.setdefault("TORCH_HOME",           str(root / "torch"))
+
+        # (opcional) Tokenizers (a veces usan su propia caché)
+        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+    def _hf_cache_dir_models(self) -> str:
+        # subcarpeta consistente para modelos HF bajo el cache de Sylphy
+        return str(Path(self._cache_root) / "models" / "huggingface")
     # ---------------------------------------------------------------------
     # Model resolution & loading
     # ---------------------------------------------------------------------

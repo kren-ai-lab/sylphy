@@ -7,13 +7,12 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Iterable, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import pairwise_distances
 from sklearn.utils import shuffle
-
 
 _LOG = logging.getLogger("sylphy.misc.utils")
 
@@ -99,9 +98,7 @@ class UtilsLib:
             unknown = [lab for lab in labels if lab not in present]
             if unknown:
                 _LOG.error("Unknown labels for '%s': %s", label_name, unknown)
-                raise ValueError(
-                    f"The following labels were not found in column '{label_name}': {unknown}"
-                )
+                raise ValueError(f"The following labels were not found in column '{label_name}': {unknown}")
             use_labels = list(labels)
 
         # Per-label sampling
@@ -167,10 +164,30 @@ class UtilsLib:
         cls,
         matrix_data: np.ndarray,
         metric: Literal[
-            "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan", "nan_euclidean",
-            "braycurtis", "canberra", "chebyshev", "correlation", "dice", "hamming", "jaccard",
-            "kulsinski", "mahalanobis", "minkowski", "rogerstanimoto", "russellrao", "seuclidean",
-            "sokalmichener", "sokalsneath", "sqeuclidean", "yule"
+            "cityblock",
+            "cosine",
+            "euclidean",
+            "l1",
+            "l2",
+            "manhattan",
+            "nan_euclidean",
+            "braycurtis",
+            "canberra",
+            "chebyshev",
+            "correlation",
+            "dice",
+            "hamming",
+            "jaccard",
+            "kulsinski",
+            "mahalanobis",
+            "minkowski",
+            "rogerstanimoto",
+            "russellrao",
+            "seuclidean",
+            "sokalmichener",
+            "sokalsneath",
+            "sqeuclidean",
+            "yule",
         ] = "euclidean",
         *,
         metric_params: Optional[Dict[str, Any]] = None,
@@ -212,10 +229,30 @@ class UtilsLib:
             raise ValueError(f"matrix_data must be 2D; got shape {matrix_data.shape}")
 
         supported_metrics = {
-            "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan", "nan_euclidean",
-            "braycurtis", "canberra", "chebyshev", "correlation", "dice", "hamming", "jaccard",
-            "kulsinski", "mahalanobis", "minkowski", "rogerstanimoto", "russellrao", "seuclidean",
-            "sokalmichener", "sokalsneath", "sqeuclidean", "yule",
+            "cityblock",
+            "cosine",
+            "euclidean",
+            "l1",
+            "l2",
+            "manhattan",
+            "nan_euclidean",
+            "braycurtis",
+            "canberra",
+            "chebyshev",
+            "correlation",
+            "dice",
+            "hamming",
+            "jaccard",
+            "kulsinski",
+            "mahalanobis",
+            "minkowski",
+            "rogerstanimoto",
+            "russellrao",
+            "seuclidean",
+            "sokalmichener",
+            "sokalsneath",
+            "sqeuclidean",
+            "yule",
         }
         if metric not in supported_metrics:
             _LOG.error("Unsupported metric '%s'.", metric)
@@ -241,7 +278,9 @@ class UtilsLib:
 
         # Most metrics expect finite values (except specialized ones like nan_euclidean).
         if metric != "nan_euclidean" and not np.isfinite(matrix_data).all():
-            raise ValueError("matrix_data contains non-finite values; consider 'nan_euclidean' or clean the data.")
+            raise ValueError(
+                "matrix_data contains non-finite values; consider 'nan_euclidean' or clean the data."
+            )
 
         _LOG.info("Computing pairwise distances with metric '%s'.", metric)
         return pairwise_distances(matrix_data, metric=metric, n_jobs=n_jobs, **params)
@@ -421,7 +460,8 @@ class UtilsLib:
             return Path(env).expanduser()
 
         try:
-            from sylphy._siteconfig import CACHE_DIR  
+            from sylphy._siteconfig import CACHE_DIR
+
             if CACHE_DIR:
                 return Path(CACHE_DIR).expanduser()
         except Exception:
@@ -429,6 +469,7 @@ class UtilsLib:
 
         try:
             from platformdirs import user_cache_dir
+
             base = Path(user_cache_dir("sylphy"))
         except Exception:
             base = Path.home() / ".cache" / "sylphy"

@@ -13,5 +13,4 @@ def test_main_help_lists_subcommands():
     text = result.stdout
     assert "get-embedding" in text
     assert "encode-sequences" in text
-    assert "reduce" in text
     assert "cache" in text

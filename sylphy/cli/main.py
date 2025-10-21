@@ -21,14 +21,14 @@ app.add_typer(
 )
 
 app.add_typer(
-    encoder_sequence_app, 
-    name="encode-sequences", 
-    help="Encode sequences (one-hot, ordinal, freq, kmers, physchem, FFT)")
+    encoder_sequence_app,
+    name="encode-sequences",
+    help="Encode sequences (one-hot, ordinal, freq, kmers, physchem, FFT)",
+)
 
 app.add_typer(
-    embedding_extractor_app, 
-    name="get-embedding", 
-    help="Extract embeddings from pretrained protein models")
+    embedding_extractor_app, name="get-embedding", help="Extract embeddings from pretrained protein models"
+)
 
 if __name__ == "__main__":
     app()

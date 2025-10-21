@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Literal
-
+from typing import Literal, Optional
 
 Provider = Literal["huggingface", "other"]
 

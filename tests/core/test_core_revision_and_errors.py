@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from pathlib import Path
 import sys
 import types
+from pathlib import Path
 
 import pytest
 
-from sylphy.core.model_spec import ModelSpec
+from sylphy.core.config import get_config
 from sylphy.core.model_registry import (
+    ModelDownloadError,
+    ModelNotFoundError,
+    register_alias,
     register_model,
     resolve_model,
-    register_alias,
-    ModelNotFoundError,
-    ModelDownloadError,
 )
-from sylphy.core.config import get_config
+from sylphy.core.model_spec import ModelSpec
 
 
 def test_hf_revision_path_is_used(monkeypatch, tmp_path):
@@ -29,6 +29,7 @@ def test_hf_revision_path_is_used(monkeypatch, tmp_path):
         calls["n"] += 1
         Path(local_dir).mkdir(parents=True, exist_ok=True)
         (Path(local_dir) / "marker.txt").write_text("ok")
+
     hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
 
@@ -53,6 +54,7 @@ def test_alias_requires_existing_canonical():
 
 def test_env_override_nonexistent_raises(monkeypatch, tmp_path):
     import sylphy.core.model_registry as regmod
+
     monkeypatch.setattr(regmod, "_ENV_PREFIX", "PR_MODEL_", raising=True)
     register_model(ModelSpec(name="x", provider="huggingface", ref="org/x"))
     monkeypatch.setenv("PR_MODEL_X", str(tmp_path / "does_not_exist"))

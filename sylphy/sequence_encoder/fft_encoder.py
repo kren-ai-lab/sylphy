@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, List, Literal
+from typing import List, Literal, Optional
 
 import numpy as np
 import pandas as pd
 from scipy.fft import fft
 
-from sylphy.logging import get_logger, add_context
+from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
 
 

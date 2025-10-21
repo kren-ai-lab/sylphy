@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
-import json
 from pathlib import Path
-from typing import Optional, Any, Iterable
+from typing import Any, Iterable, Optional
 
 try:
     from appdirs import user_log_dir
@@ -16,19 +16,21 @@ _CONFIGURED_ROOTS: set[str] = set()
 
 # Import lightweight constants/helpers (avoid cycles)
 from sylphy.constants.logging_constants import (
-    LOG_ENV_PREFIX,                     # "SYLPHY_LOG_"
-    LOG_DEFAULT_NAME,                   # "sylphy"
-    LOG_DEFAULT_LEVEL,                  # logging.INFO
-    LOG_DEFAULT_JSON,                   # False
-    LOG_DEFAULT_STDERR,                 # False
-    LOG_DEFAULT_MAX_BYTES,              # 10 MB
-    LOG_DEFAULT_BACKUPS,                # 3
-    LOG_LEVEL_MAP,                      # str->level
-    env_log_level, env_log_json, env_log_stderr,
+    LOG_DEFAULT_BACKUPS,  # 3
+    LOG_DEFAULT_JSON,  # False
+    LOG_DEFAULT_LEVEL,  # logging.INFO
+    LOG_DEFAULT_MAX_BYTES,  # 10 MB
+    LOG_DEFAULT_NAME,  # "sylphy"
+    LOG_DEFAULT_STDERR,  # False
+    LOG_ENV_PREFIX,  # "SYLPHY_LOG_"
+    LOG_LEVEL_MAP,  # str->level
+    env_log_json,
+    env_log_level,
+    env_log_stderr,
 )
 
-
 # ---------- helpers ----------
+
 
 def _env_int(name: str, default: int) -> int:
     """
@@ -53,8 +55,9 @@ def _env_bool(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _resolve_log_file(default_name: str = "sylphy.log",
-                      explicit_path: Optional[Path] = None) -> Optional[Path]:
+def _resolve_log_file(
+    default_name: str = "sylphy.log", explicit_path: Optional[Path] = None
+) -> Optional[Path]:
     """
     Decide log file path without importing heavy modules at import time.
 
@@ -81,6 +84,7 @@ def _resolve_log_file(default_name: str = "sylphy.log",
     # 3) Lazy import to avoid cycles
     try:
         from sylphy.constants.tool_configs import get_config  # local import
+
         root = Path(get_config().cache_paths.logs())
         root.mkdir(parents=True, exist_ok=True)
         return root / default_name
@@ -110,6 +114,7 @@ class _JsonFormatter(logging.Formatter):
         # ISO-ish time; respect UTC flag
         if self._use_utc:
             import time
+
             ct = time.gmtime(record.created)
             return time.strftime("%Y-%m-%dT%H:%M:%S", ct)
         return super().formatTime(record, datefmt=datefmt)
@@ -124,10 +129,27 @@ class _JsonFormatter(logging.Formatter):
         # Attach extra context fields (added via filters or loggerAdapter)
         for k, v in record.__dict__.items():
             if k in {
-                "args", "asctime", "created", "exc_info", "exc_text", "filename",
-                "funcName", "levelname", "levelno", "lineno", "module", "msecs",
-                "msg", "name", "pathname", "process", "processName", "relativeCreated",
-                "stack_info", "thread", "threadName",
+                "args",
+                "asctime",
+                "created",
+                "exc_info",
+                "exc_text",
+                "filename",
+                "funcName",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "msg",
+                "name",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "stack_info",
+                "thread",
+                "threadName",
             }:
                 continue
             # Keep only JSON-safe values; fallback to str.
@@ -146,8 +168,9 @@ class _JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
-def _make_stream_handler(level: int, fmt: str, *,
-                         use_json: bool, use_utc: bool, datefmt: Optional[str]) -> logging.Handler:
+def _make_stream_handler(
+    level: int, fmt: str, *, use_json: bool, use_utc: bool, datefmt: Optional[str]
+) -> logging.Handler:
     h = logging.StreamHandler()
     h.setLevel(level)
     if use_json:
@@ -158,12 +181,21 @@ def _make_stream_handler(level: int, fmt: str, *,
     return h
 
 
-def _make_file_handler(path: Path, level: int, fmt: str, *,
-                       use_json: bool, use_utc: bool, datefmt: Optional[str],
-                       max_bytes: int, backups: int) -> logging.Handler:
+def _make_file_handler(
+    path: Path,
+    level: int,
+    fmt: str,
+    *,
+    use_json: bool,
+    use_utc: bool,
+    datefmt: Optional[str],
+    max_bytes: int,
+    backups: int,
+) -> logging.Handler:
     # Prefer rotating handler; gracefully fallback to simple file handler.
     try:
         from logging.handlers import RotatingFileHandler
+
         fh = RotatingFileHandler(
             path,
             maxBytes=max_bytes,
@@ -181,6 +213,7 @@ def _make_file_handler(path: Path, level: int, fmt: str, *,
 
 
 # ---------- public API ----------
+
 
 def setup_logger(
     name: str = LOG_DEFAULT_NAME,
@@ -293,7 +326,10 @@ def setup_logger(
     # Console handler (stderr)
     if with_console:
         ch = _make_stream_handler(
-            lvl, fmt_console, use_json=bool(use_json), use_utc=bool(use_utc),
+            lvl,
+            fmt_console,
+            use_json=bool(use_json),
+            use_utc=bool(use_utc),
             datefmt=datefmt_console,
         )
         logger.addHandler(ch)
@@ -303,9 +339,14 @@ def setup_logger(
         path = _resolve_log_file(explicit_path=file_path)
         if path is not None:
             fh = _make_file_handler(
-                path, level=logging.DEBUG,  # keep file verbose
-                fmt=fmt_file, use_json=bool(use_json), use_utc=bool(use_utc),
-                datefmt=datefmt_file, max_bytes=int(max_bytes), backups=int(backups),
+                path,
+                level=logging.DEBUG,  # keep file verbose
+                fmt=fmt_file,
+                use_json=bool(use_json),
+                use_utc=bool(use_utc),
+                datefmt=datefmt_file,
+                max_bytes=int(max_bytes),
+                backups=int(backups),
             )
             logger.addHandler(fh)
 
@@ -331,6 +372,7 @@ class _ContextFilter(logging.Filter):
     """
     Static key-value context injector. Useful for adding component/model identifiers.
     """
+
     def __init__(self, **static_context: Any) -> None:
         super().__init__()
         self._ctx = static_context

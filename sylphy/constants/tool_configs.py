@@ -1,8 +1,8 @@
 # tool_configs.py
-from dataclasses import dataclass, field
-from pathlib import Path
 import os
 import platform
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 from .config_constants import CachePaths
@@ -33,6 +33,7 @@ def _detect_cuda_available() -> bool:
     """
     try:
         import torch  # type: ignore
+
         return bool(getattr(torch, "cuda", None)) and torch.cuda.is_available()
     except Exception:
         return False
@@ -60,6 +61,7 @@ class ToolConfig:
     """
     Global configuration container for sylphy runtime.
     """
+
     cache_paths: CachePaths = field(default_factory=lambda: CachePaths(_default_cache_root()))
     debug: bool = False
     default_device: str = field(default_factory=_default_device)

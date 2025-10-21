@@ -4,13 +4,13 @@ import pandas as pd
 import pytest
 
 from sylphy.sequence_encoder import (
-    create_encoder,
-    OrdinalEncoder,
-    OneHotEncoder,
+    FFTEncoder,
     FrequencyEncoder,
     KMersEncoders,
+    OneHotEncoder,
+    OrdinalEncoder,
     PhysicochemicalEncoder,
-    FFTEncoder,
+    create_encoder,
 )
 
 

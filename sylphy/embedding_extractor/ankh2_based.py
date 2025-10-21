@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import torch
-from transformers import AutoModel, AutoTokenizer, AutoConfig, T5EncoderModel
+from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
 
 from .embedding_based import EmbeddingBased
 
@@ -43,7 +43,6 @@ class Ankh2BasedEmbedding(EmbeddingBased):
         self.use_encoder_only = use_encoder_only
 
     def load_model_tokenizer(self) -> None:
-
         self.release_resources()
         try:
             local_dir = self._register_and_resolve()
@@ -107,7 +106,9 @@ class Ankh2BasedEmbedding(EmbeddingBased):
             else:
                 out = self.model(**enc, output_hidden_states=True)
 
-        hs = out.hidden_states if getattr(out, "hidden_states", None) is not None else (out.last_hidden_state,)
+        hs = (
+            out.hidden_states if getattr(out, "hidden_states", None) is not None else (out.last_hidden_state,)
+        )
         attn = enc.get("attention_mask", None)
         if attn is None:
             pad_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else 0

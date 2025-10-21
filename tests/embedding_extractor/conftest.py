@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Test bootstrap for embedding_extractor tests.
 
@@ -14,16 +15,15 @@ Test bootstrap for embedding_extractor tests.
 import os
 import sys
 import types
-from typing import Iterator, Dict, List, Tuple
-from pathlib import Path
+from typing import Dict, Iterator, List, Tuple
 
 import pytest
 import torch
 
-
 # ----------------------------
 # Fake Transformers (installed before importing the code under test)
 # ----------------------------
+
 
 class _FakeConfig:
     hidden_size: int = 4
@@ -39,8 +39,13 @@ class _FakeTokenizer:
     eos_token: str = "[EOS]"
 
     @classmethod
-    def from_pretrained(cls, local_dir: str, do_lower_case: bool = False,
-                        use_fast: bool = True, trust_remote_code: bool = False):
+    def from_pretrained(
+        cls,
+        local_dir: str,
+        do_lower_case: bool = False,
+        use_fast: bool = True,
+        trust_remote_code: bool = False,
+    ):
         return cls()
 
     def add_special_tokens(self, mapping: Dict[str, str]) -> None:
@@ -51,13 +56,15 @@ class _FakeTokenizer:
     def get_vocab(self) -> Dict[str, int]:
         return {"<cls>": 1, self.pad_token: 0, self.eos_token: 2}
 
-    def __call__(self,
-                 sequences: List[str],
-                 return_tensors: str = "pt",
-                 truncation: bool = True,
-                 padding: bool = True,
-                 add_special_tokens: bool = True,
-                 max_length: int = 1024) -> Dict[str, torch.Tensor]:
+    def __call__(
+        self,
+        sequences: List[str],
+        return_tensors: str = "pt",
+        truncation: bool = True,
+        padding: bool = True,
+        add_special_tokens: bool = True,
+        max_length: int = 1024,
+    ) -> Dict[str, torch.Tensor]:
         def encode(s: str) -> List[int]:
             ids = [max(1, (ord(ch.upper()) - 64)) for ch in s if s and ch.strip()]
             return ids[:max_length] if truncation else ids
@@ -90,6 +97,7 @@ class _FakeModel:
     - exposes 4 hidden layers in `hidden_states`
     - supports simulated CUDA OOM via class attribute `OOM_THRESHOLD`
     """
+
     OOM_THRESHOLD: int | None = None
     FORWARD_CALLS: int = 0
 
@@ -129,9 +137,12 @@ _fake_tf.BertModel = _FakeModel
 _fake_tf.AutoModelForCausalLM = _FakeModel
 _fake_tf.EsmTokenizer = _FakeTokenizer
 
+
 # Some libs import this symbol directly (ensure it exists)
 class PreTrainedTokenizerFast:  # thin placeholder
     pass
+
+
 _fake_tf.PreTrainedTokenizerFast = PreTrainedTokenizerFast
 
 sys.modules["transformers"] = _fake_tf
@@ -149,13 +160,20 @@ _fake_esm_models = types.ModuleType("esm.models")
 _fake_esm_models.__path__ = []
 _fake_esm_models_esmc = types.ModuleType("esm.models.esmc")
 
+
 class ESMC:
     """Minimal ESMC stub with HF-like call signature."""
+
     @classmethod
     def from_pretrained(cls, *args, **kwargs):
         return cls()
-    def to(self, device): return self
-    def eval(self): return self
+
+    def to(self, device):
+        return self
+
+    def eval(self):
+        return self
+
     def __call__(self, **enc):
         x: torch.Tensor = enc["input_ids"]
         B, L = x.shape
@@ -164,10 +182,13 @@ class ESMC:
         base = torch.arange(1, H + 1, dtype=torch.float32, device=x.device).view(1, 1, H).repeat(B, L, 1)
         hidden_states = tuple(base + float(i) for i in range(4))
         last_hidden = hidden_states[-1]
+
         class _Out:
             last_hidden_state = last_hidden
             hidden_states = hidden_states
+
         return _Out()
+
 
 _fake_esm_models_esmc.ESMC = ESMC
 
@@ -177,10 +198,16 @@ _fake_esm_sdk.__path__ = []
 _fake_esm_sdk_api = types.ModuleType("esm.sdk.api")
 _fake_esm_sdk_forge = types.ModuleType("esm.sdk.forge")
 
+
 # Minimal API classes used by your backends
 class ESMProtein: ...
+
+
 class LogitsConfig: ...
+
+
 class ESM3ForgeInferenceClient: ...
+
 
 _fake_esm_sdk_api.ESMProtein = ESMProtein
 _fake_esm_sdk_api.LogitsConfig = LogitsConfig
@@ -199,6 +226,7 @@ sys.modules["esm.sdk.forge"] = _fake_esm_sdk_forge
 # Pytest fixtures (env & resolver)
 # ----------------------------
 
+
 @pytest.fixture(autouse=True)
 def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
     """Confine logging to tmp and disable any pre-existing SYLPHY_LOG_* env vars."""
@@ -216,6 +244,7 @@ def _stub_resolve_model(tmp_path, monkeypatch) -> Iterator[None]:
     without network or real artifacts.
     """
     from sylphy.core import model_registry as reg
+
     local = tmp_path / "fake_model_dir"
     local.mkdir(parents=True, exist_ok=True)
     (local / "config.json").write_text("{}", encoding="utf-8")

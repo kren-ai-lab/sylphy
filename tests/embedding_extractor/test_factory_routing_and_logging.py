@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Factory routing: ensure model name routes to the correct backend class.
 No brittle assumptions about logger names.
@@ -8,12 +9,12 @@ import pandas as pd
 import pytest
 
 from sylphy.embedding_extractor import EmbeddingFactory
-from sylphy.embedding_extractor.esm_based import ESMBasedEmbedding
 from sylphy.embedding_extractor.ankh2_based import Ankh2BasedEmbedding
-from sylphy.embedding_extractor.prot5_based import Prot5Based
 from sylphy.embedding_extractor.bert_based import BertBasedEmbedding
-from sylphy.embedding_extractor.mistral_based import MistralBasedEmbedding
+from sylphy.embedding_extractor.esm_based import ESMBasedEmbedding
 from sylphy.embedding_extractor.esmc_based import ESMCBasedEmbedding
+from sylphy.embedding_extractor.mistral_based import MistralBasedEmbedding
+from sylphy.embedding_extractor.prot5_based import Prot5Based
 
 
 @pytest.mark.parametrize(

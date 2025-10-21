@@ -8,12 +8,14 @@ from sylphy.reductions import NonLinearReductions
 # Optional deps: detect once, then use skip marks cleanly
 try:
     import umap  # noqa: F401
+
     HAS_UMAP = True
 except Exception:
     HAS_UMAP = False
 
 try:
     import clustpy  # noqa: F401
+
     HAS_CLUSTPY = True
 except Exception:
     HAS_CLUSTPY = False

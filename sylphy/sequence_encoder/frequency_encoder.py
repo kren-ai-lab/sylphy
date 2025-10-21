@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 import pandas as pd
 
-from .base_encoder import Encoders
 from sylphy.constants import residues
+
+from .base_encoder import Encoders
 
 
 class FrequencyEncoder(Encoders):
@@ -50,11 +51,15 @@ class FrequencyEncoder(Encoders):
 
         try:
             self.__logger__.info("Starting frequency encoding (alphabet size=%d).", len(self._alpha))
-            matrix = [self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index]
+            matrix = [
+                self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
+            ]
             header = [f"freq_{r}" for r in self._alpha]
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
-            self.__logger__.info("Frequency encoding completed with %d features.", self.coded_dataset.shape[1])
+            self.__logger__.info(
+                "Frequency encoding completed with %d features.", self.coded_dataset.shape[1]
+            )
         except Exception as e:
             self.status = False
             self.message = f"[ERROR] Failed to encode sequences: {e}"

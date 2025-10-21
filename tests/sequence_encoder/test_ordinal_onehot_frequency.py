@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from sylphy.sequence_encoder import OrdinalEncoder, OneHotEncoder, FrequencyEncoder
+from sylphy.sequence_encoder import FrequencyEncoder, OneHotEncoder, OrdinalEncoder
 
 
 def test_ordinal_shapes_and_padding(toy_df):

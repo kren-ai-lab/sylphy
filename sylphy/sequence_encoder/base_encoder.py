@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional, Literal
 import logging
+from typing import Literal, Optional
+
 import pandas as pd
 
-from sylphy.logging import get_logger, add_context
 from sylphy.constants import residues
+from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
 
 
@@ -110,8 +111,10 @@ class Encoders:
             raise ValueError(self.message)
 
         try:
-            self.__logger__.info("Validating alphabet (%s).",
-                                 "extended" if self.allow_extended or self.allow_unknown else "canonical")
+            self.__logger__.info(
+                "Validating alphabet (%s).",
+                "extended" if self.allow_extended or self.allow_unknown else "canonical",
+            )
             self.check_allowed_alphabet()
             self.__logger__.info("Validating sequence lengths (≤ %d).", self.max_length)
             self.process_length_sequences()
@@ -131,7 +134,7 @@ class Encoders:
             def _ok(seq: str) -> bool:
                 return all((r in alpha) for r in seq)
 
-            mask = [ _ok(seq) for seq in self.dataset[self.sequence_column] ]
+            mask = [_ok(seq) for seq in self.dataset[self.sequence_column]]
             self.dataset["is_canon"] = mask
             before = len(self.dataset)
             self.dataset = self.dataset[self.dataset["is_canon"]].copy()

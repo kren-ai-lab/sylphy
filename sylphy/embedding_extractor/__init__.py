@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any, Dict, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Tuple
 
 """
 Embedding Extraction
@@ -58,6 +58,7 @@ def __getattr__(name: str) -> Any:
     if spec is None:
         if name == "create_embedding":
             from .embedding_factory import EmbeddingFactory as _F  # lazy alias
+
             return _F
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
     mod_name, attr = spec
@@ -69,6 +70,7 @@ def __getattr__(name: str) -> Any:
 
 def __dir__():
     return sorted(list(__all__))
+
 
 # Optional typing-only exposure (keeps runtime lazy)
 if TYPE_CHECKING:  # pragma: no cover

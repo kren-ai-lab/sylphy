@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 """
 OOM backoff: simulate CUDA OOM via the fake model and verify automatic halving.
 """
 
 import pandas as pd
+from transformers import AutoModel as _FakeModel  # defined in conftest
 
 from sylphy.embedding_extractor import EmbeddingFactory
-from transformers import AutoModel as _FakeModel  # defined in conftest
 
 
 def test_cuda_oom_backoff_retries_and_succeeds():

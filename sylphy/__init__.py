@@ -1,5 +1,6 @@
 # sylphy/__init__.py
 from __future__ import annotations
+
 from importlib import metadata as _metadata
 
 """
@@ -22,16 +23,16 @@ except _metadata.PackageNotFoundError:  # local dev / not installed
 # Public core API (re-export)
 from .core import (  # noqa: E402
     ModelSpec,
-    register_model,
-    register_alias,
-    unregister,
     clear_registry,
-    list_registered_models,
-    get_model_spec,
-    resolve_model,
     get_config,
+    get_model_spec,
+    list_registered_models,
+    register_alias,
+    register_model,
+    resolve_model,
     set_cache_root,
     temporary_cache_root,
+    unregister,
 )
 
 __all__ = [

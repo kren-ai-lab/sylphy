@@ -1,22 +1,37 @@
 # tool_constants.py
 from __future__ import annotations
-from typing import Tuple, Dict
+
+from typing import Dict, Tuple
 
 # Environment variable prefix used across the project (e.g., SYLPHY_CACHE_ROOT)
 _ENV_PREFIX: str = "SYLPHY_"
 
 # Remote sources for descriptor tables used by encoders
-BASE_URL_AAINDEX: str = (
-    "https://raw.githubusercontent.com/ProteinEngineering-PESB2/data_and_info/refs/heads/main/aaindex_processed/aaindex_encoders.csv"
-)
-BASE_URL_CLUSTERS_DESCRIPTORS: str = (
-    "https://raw.githubusercontent.com/ProteinEngineering-PESB2/data_and_info/refs/heads/main/cluster_based_encoder/cluster_encoders.csv"
-)
+BASE_URL_AAINDEX: str = "https://raw.githubusercontent.com/ProteinEngineering-PESB2/data_and_info/refs/heads/main/aaindex_processed/aaindex_encoders.csv"
+BASE_URL_CLUSTERS_DESCRIPTORS: str = "https://raw.githubusercontent.com/ProteinEngineering-PESB2/data_and_info/refs/heads/main/cluster_based_encoder/cluster_encoders.csv"
 
 # Canonical amino acids (20). Keep this as the default set to avoid ambiguity.
 LIST_RESIDUES: Tuple[str, ...] = (
-    "A", "C", "D", "E", "F", "G", "H", "I", "N", "K",
-    "L", "M", "P", "Q", "R", "S", "T", "V", "W", "Y",
+    "A",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "N",
+    "K",
+    "L",
+    "M",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "V",
+    "W",
+    "Y",
 )
 
 # Extended alphabet (optionally enabled via function parameters)
@@ -25,11 +40,36 @@ LIST_RESIDUES_EXTENDED: Tuple[str, ...] = LIST_RESIDUES + ("B", "Z", "X", "U", "
 
 # Standard sequence-level descriptors
 LIST_DESCRIPTORS_SEQUENCE: Tuple[str, ...] = (
-    "length", "molecular_weight", "aliphatic_index", "aromaticity", "boman_index",
-    "hydrophobic_ratio", "charge", "charge_density", "instability_index", "isoelectric_point",
-    "freq_A", "freq_C", "freq_D", "freq_E", "freq_F", "freq_G", "freq_H", "freq_I", "freq_N",
-    "freq_K", "freq_L", "freq_M", "freq_P", "freq_Q", "freq_R", "freq_S", "freq_T", "freq_V",
-    "freq_W", "freq_Y",
+    "length",
+    "molecular_weight",
+    "aliphatic_index",
+    "aromaticity",
+    "boman_index",
+    "hydrophobic_ratio",
+    "charge",
+    "charge_density",
+    "instability_index",
+    "isoelectric_point",
+    "freq_A",
+    "freq_C",
+    "freq_D",
+    "freq_E",
+    "freq_F",
+    "freq_G",
+    "freq_H",
+    "freq_I",
+    "freq_N",
+    "freq_K",
+    "freq_L",
+    "freq_M",
+    "freq_P",
+    "freq_Q",
+    "freq_R",
+    "freq_S",
+    "freq_T",
+    "freq_V",
+    "freq_W",
+    "freq_Y",
 )
 
 # Non-numeric fields frequently carried in encoded tables

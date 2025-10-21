@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import List, Union, Optional, Literal
 import logging
+from typing import List, Literal, Optional, Union
+
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-
-from sylphy.logging import get_logger, add_context
 from sylphy.constants.tool_configs import get_config
+from sylphy.logging import add_context, get_logger
 
 ReturnType = Literal["numpy", "pandas"]
 Preprocess = Literal["none", "standardize", "normalize", "robust"]
@@ -77,7 +77,11 @@ class Reductions:
 
         self.__logger__.info(
             "Initialized %s with dataset shape=%s, dtype=%s | preprocess=%s | seed=%d",
-            name_logging, self.dataset.shape, self.dataset.dtype, self.preprocess, self.random_state
+            name_logging,
+            self.dataset.shape,
+            self.dataset.dtype,
+            self.preprocess,
+            self.random_state,
         )
 
         # Apply optional preprocessing in-place
@@ -106,7 +110,7 @@ class Reductions:
     # Output helpers
     # -----------------------------
     def _make_headers(self, n_components: int) -> List[str]:
-        return [f"p_{i+1}" for i in range(n_components)]
+        return [f"p_{i + 1}" for i in range(n_components)]
 
     def generate_dataset_post_reduction(
         self,

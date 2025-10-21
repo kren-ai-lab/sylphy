@@ -2,19 +2,18 @@
 from __future__ import annotations
 
 import logging
+import os
 from abc import ABC
-from typing import List, Optional, Literal, Sequence, Tuple, Union
+from pathlib import Path
+from typing import List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
-import os
-from pathlib import Path
-
 import torch
-from transformers import AutoTokenizer, AutoModel, AutoConfig
+from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from sylphy.logging import get_logger, add_context
-from sylphy.core.model_registry import ModelSpec, resolve_model, register_model
+from sylphy.core.model_registry import ModelSpec, register_model, resolve_model
+from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
 
 Pool = Literal["mean", "cls", "eos"]
@@ -51,10 +50,9 @@ class EmbeddingBased(ABC):
         precision: Literal["fp32", "fp16", "bf16"] = "fp32",
         oom_backoff: bool = True,
     ) -> None:
-
         self._cache_root = UtilsLib.get_cache_dir()  # <- resuelve _siteconfig/env/platformdirs
         self._wire_cache_envs(self._cache_root)
-        
+
         self.dataset = dataset
         self.column_seq = column_seq
 
@@ -63,7 +61,9 @@ class EmbeddingBased(ABC):
         self.provider = provider
         self.revision = revision
 
-        self.device = torch.device(name_device if torch.cuda.is_available() and name_device == "cuda" else "cpu")
+        self.device = torch.device(
+            name_device if torch.cuda.is_available() and name_device == "cuda" else "cpu"
+        )
         self.trust_remote_code = trust_remote_code
         self.precision = precision
         self.oom_backoff = oom_backoff
@@ -82,7 +82,7 @@ class EmbeddingBased(ABC):
         self.tokenizer = None
         self.model = None
 
-        self.requires_tokenizer: bool = (self.provider == "huggingface")
+        self.requires_tokenizer: bool = self.provider == "huggingface"
 
         self.status: bool = True
         self.message: str = ""
@@ -94,12 +94,12 @@ class EmbeddingBased(ABC):
         os.environ.setdefault("SYLPHY_CACHE_DIR", str(root))
 
         # Hugging Face / Transformers / Datasets
-        os.environ.setdefault("HF_HOME",              str(root / "hf"))
-        os.environ.setdefault("TRANSFORMERS_CACHE",   str(root / "hf" / "transformers"))
-        os.environ.setdefault("HF_DATASETS_CACHE",    str(root / "hf" / "datasets"))
+        os.environ.setdefault("HF_HOME", str(root / "hf"))
+        os.environ.setdefault("TRANSFORMERS_CACHE", str(root / "hf" / "transformers"))
+        os.environ.setdefault("HF_DATASETS_CACHE", str(root / "hf" / "datasets"))
 
         # Torch hub
-        os.environ.setdefault("TORCH_HOME",           str(root / "torch"))
+        os.environ.setdefault("TORCH_HOME", str(root / "torch"))
 
         # (opcional) Tokenizers (a veces usan su propia caché)
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -107,6 +107,7 @@ class EmbeddingBased(ABC):
     def _hf_cache_dir_models(self) -> str:
         # subcarpeta consistente para modelos HF bajo el cache de Sylphy
         return str(Path(self._cache_root) / "models" / "huggingface")
+
     # ---------------------------------------------------------------------
     # Model resolution & loading
     # ---------------------------------------------------------------------
@@ -295,8 +296,8 @@ class EmbeddingBased(ABC):
 
     @staticmethod
     def _pool_tokens(
-        reps: torch.Tensor,                # (B, L, H)
-        attn: torch.Tensor,                # (B, L)
+        reps: torch.Tensor,  # (B, L, H)
+        attn: torch.Tensor,  # (B, L)
         pool: Pool,
     ) -> torch.Tensor:
         """Pool tokens into a single (B, H) representation."""
@@ -314,7 +315,7 @@ class EmbeddingBased(ABC):
 
     @staticmethod
     def _aggregate_layers(
-        hs: Tuple[torch.Tensor, ...],      # tuple of (B, L, H)
+        hs: Tuple[torch.Tensor, ...],  # tuple of (B, L, H)
         select: List[int],
         agg: LayerAgg,
     ) -> torch.Tensor:
@@ -364,7 +365,7 @@ class EmbeddingBased(ABC):
         select = self._parse_layers(layers, n_layers)
 
         reps = self._aggregate_layers(hidden_states, select, layer_agg)  # (B, L, H' or H)
-        pooled = self._pool_tokens(reps, attn, pool)                    # (B, H' or H)
+        pooled = self._pool_tokens(reps, attn, pool)  # (B, H' or H)
         return pooled.detach().cpu().numpy()
 
     def clean_memory(self):
@@ -380,6 +381,7 @@ class EmbeddingBased(ABC):
                 except Exception:
                     pass
             import gc
+
             gc.collect()
         except Exception as e:
             self.__logger__.debug("clean_memory() warning: %s", e)
@@ -427,9 +429,9 @@ class EmbeddingBased(ABC):
                 raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
 
             if not self.requires_tokenizer and hasattr(self, "embedding_process"):
-                df = self.embedding_process(   # type: ignore[attr-defined]
+                df = self.embedding_process(  # type: ignore[attr-defined]
                     batch_size=batch_size,
-                    seq_len=max_length,       
+                    seq_len=max_length,
                     layers=layers,
                     layer_agg=layer_agg,
                     pool=pool,
@@ -440,7 +442,10 @@ class EmbeddingBased(ABC):
                 self.message = "OK"
                 self.__logger__.info(
                     "Embedding extraction (non-HF) complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
-                    df.shape, layers, layer_agg, pool
+                    df.shape,
+                    layers,
+                    layer_agg,
+                    pool,
                 )
                 return
 
@@ -490,7 +495,10 @@ class EmbeddingBased(ABC):
             self.message = "OK"
             self.__logger__.info(
                 "Embedding extraction complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
-                Xall.shape, layers, layer_agg, pool
+                Xall.shape,
+                layers,
+                layer_agg,
+                pool,
             )
         except Exception as e:
             self.status = False

@@ -3,26 +3,26 @@ from __future__ import annotations
 
 import io
 import json
-import zipfile
-from pathlib import Path
 import sys
 import types
+import zipfile
+from pathlib import Path
 
 import pytest
 
-from sylphy.core.model_spec import ModelSpec
-from sylphy.core.model_registry import (
-    register_model,
-    register_alias,
-    unregister,
-    clear_registry,
-    list_registered_models,
-    get_model_spec,
-    resolve_model,
-    ModelNotFoundError,
-    ModelDownloadError,
-)
 from sylphy.core.config import get_config, temporary_cache_root
+from sylphy.core.model_registry import (
+    ModelDownloadError,
+    ModelNotFoundError,
+    clear_registry,
+    get_model_spec,
+    list_registered_models,
+    register_alias,
+    register_model,
+    resolve_model,
+    unregister,
+)
+from sylphy.core.model_spec import ModelSpec
 
 
 def test_register_and_get_spec_roundtrip():
@@ -66,6 +66,7 @@ def test_unregister_and_clear():
 def test_env_override_path(monkeypatch, tmp_path):
     # Forzar el prefijo usado dentro del módulo
     import sylphy.core.model_registry as regmod
+
     monkeypatch.setattr(regmod, "_ENV_PREFIX", "PR_MODEL_", raising=True)
 
     # Carpeta fake de override
@@ -92,6 +93,7 @@ def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path):
         calls["n"] += 1
         Path(local_dir).mkdir(parents=True, exist_ok=True)
         (Path(local_dir) / "config.json").write_text(json.dumps({"ref": ref}))
+
     hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
 
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
@@ -129,11 +131,18 @@ def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path):
             self._data = data
             self.status_code = 200
             self.ok = True
-        def raise_for_status(self): pass
+
+        def raise_for_status(self):
+            pass
+
         def iter_content(self, chunk_size=65536):
             yield self._data
-        def __enter__(self): return self
-        def __exit__(self, *exc): return False
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
 
     def fake_get(url, stream=True, timeout=60):
         return DummyResp(_make_zip_bytes())

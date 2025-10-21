@@ -4,10 +4,8 @@ from __future__ import annotations
 import os
 import sys
 import types
-from pathlib import Path
-from typing import Iterator, Dict, List
+from typing import Dict, Iterator, List
 
-import pandas as pd
 import pytest
 import torch
 
@@ -43,19 +41,23 @@ class _FakeTokenizer:
             self.pad_token = mapping["pad_token"]
             self.pad_token_id = 0
 
-    def __call__(self,
-                 sequences: List[str],
-                 return_tensors: str = "pt",
-                 truncation: bool = True,
-                 padding: bool = True,
-                 add_special_tokens: bool = False,
-                 max_length: int = 1024) -> Dict[str, torch.Tensor]:
+    def __call__(
+        self,
+        sequences: List[str],
+        return_tensors: str = "pt",
+        truncation: bool = True,
+        padding: bool = True,
+        add_special_tokens: bool = False,
+        max_length: int = 1024,
+    ) -> Dict[str, torch.Tensor]:
         def enc(s: str) -> List[int]:
             ids = [max(1, (ord(ch.upper()) - 64)) for ch in s]  # A..Z → 1..26
             return ids[:max_length] if truncation else ids
 
         batch_ids = [enc(s) for s in sequences]
-        max_len = min(max(len(x) for x in batch_ids), max_length) if padding else max(len(x) for x in batch_ids)
+        max_len = (
+            min(max(len(x) for x in batch_ids), max_length) if padding else max(len(x) for x in batch_ids)
+        )
         padded, mask = [], []
         for ids in batch_ids:
             ids = ids[:max_len]
@@ -71,20 +73,28 @@ class _FakeTokenizer:
 class _FakeModelOutput:
     def __init__(self, last_hidden_state: torch.Tensor):
         self.last_hidden_state = last_hidden_state
+        self.hidden_states = (last_hidden_state,)
 
 
 class _FakeModel:
     OOM_THRESHOLD: int | None = None
     FORWARD_CALLS: int = 0
 
+    def __init__(self):
+        self._device = torch.device("cpu")
+
     @classmethod
     def from_pretrained(cls, local_dir: str, trust_remote_code: bool = False):
         return cls()
 
-    def to(self, device: torch.device):  # no-op
+    def to(self, device):
+        if isinstance(device, str):
+            self._device = torch.device(device)
+        else:
+            self._device = device
         return self
 
-    def eval(self):  # no-op
+    def eval(self):
         return self
 
     def __call__(self, **enc) -> _FakeModelOutput:
@@ -100,11 +110,13 @@ class _FakeModel:
 
 @pytest.fixture(autouse=True)
 def _install_fake_transformers(monkeypatch) -> Iterator[None]:
-
     mod = types.ModuleType("transformers")
     mod.AutoTokenizer = _FakeTokenizer
     mod.AutoModel = _FakeModel
     mod.AutoConfig = _FakeConfig
+    mod.T5EncoderModel = _FakeModel
+    mod.T5Tokenizer = _FakeTokenizer
+    mod.PreTrainedTokenizerFast = _FakeTokenizer
     monkeypatch.setitem(sys.modules, "transformers", mod)
 
     yield
@@ -115,21 +127,21 @@ def _install_fake_transformers(monkeypatch) -> Iterator[None]:
 
 @pytest.fixture(autouse=True)
 def _stub_model_registry(tmp_path, monkeypatch):
-
     model_dir = tmp_path / "fake_model_dir"
     model_dir.mkdir(parents=True, exist_ok=True)
     (model_dir / "config.json").write_text("{}", encoding="utf-8")
 
     from sylphy.core import model_registry as reg
+
     monkeypatch.setattr(reg, "resolve_model", lambda name: model_dir, raising=True)
     yield
 
 
-
 @pytest.fixture(autouse=True)
 def _stub_constants(monkeypatch):
+    import sys
+    import types
 
-    import sys, types
     residues = list("ACDEFGHIKLMNPQRSTVWY")
     pos = {aa: i for i, aa in enumerate(residues)}
     mod_name = "protein_representation.misc.constants"

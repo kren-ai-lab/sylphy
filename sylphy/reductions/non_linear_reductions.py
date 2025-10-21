@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from typing import Optional, Union, Any, Type
+import inspect
 import logging
 import traceback
-import inspect
+from typing import Any, Optional, Type, Union
+
 import numpy as np
 import pandas as pd
-
-from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding, MDS, SpectralEmbedding
-from sklearn.decomposition import DictionaryLearning, MiniBatchDictionaryLearning
-from clustpy.partition import DipExt
 import umap.umap_ as umap
+from clustpy.partition import DipExt
+from sklearn.decomposition import DictionaryLearning, MiniBatchDictionaryLearning
+from sklearn.manifold import MDS, TSNE, Isomap, LocallyLinearEmbedding, SpectralEmbedding
 
-from .reduction_methods import Reductions, ReturnType, Preprocess
+from .reduction_methods import Preprocess, Reductions, ReturnType
 
 
 class NonLinearReductions(Reductions):
@@ -59,16 +59,17 @@ class NonLinearReductions(Reductions):
         return cls(**k)
 
     def _apply_model(
-        self,
-        model,
-        method_name: str,
-        n_components: Optional[int] = None
+        self, model, method_name: str, n_components: Optional[int] = None
     ) -> Union[np.ndarray, pd.DataFrame, None]:
         try:
             params = getattr(model, "get_params", lambda: {})()
             self.__logger__.info("Applying %s with params=%s", method_name, params)
             transformed = model.fit_transform(self.dataset)
-            k = n_components if n_components is not None else getattr(model, "n_components", transformed.shape[1])
+            k = (
+                n_components
+                if n_components is not None
+                else getattr(model, "n_components", transformed.shape[1])
+            )
             self.__logger__.info("%s successful. Output shape=%s", method_name, transformed.shape)
             return self.generate_dataset_post_reduction(transformed, k)
         except Exception as e:

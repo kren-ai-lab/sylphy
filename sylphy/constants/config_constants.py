@@ -1,7 +1,7 @@
 # config_constants.py
 import threading
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 
 # Thread-safe creation of cache directories
 _LOCK = threading.RLock()
@@ -12,6 +12,7 @@ class CachePaths:
     """
     Helper to manage sylphy cache layout and ensure directories exist.
     """
+
     cache_root: Path
     tool_name: str = "sylphy"
 

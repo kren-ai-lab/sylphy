@@ -460,7 +460,8 @@ class UtilsLib:
             return Path(env).expanduser()
 
         try:
-            from sylphy._siteconfig import CACHE_DIR  
+            from sylphy._siteconfig import CACHE_DIR
+
             if CACHE_DIR:
                 return Path(CACHE_DIR).expanduser()
         except Exception:
@@ -468,6 +469,7 @@ class UtilsLib:
 
         try:
             from platformdirs import user_cache_dir
+
             base = Path(user_cache_dir("sylphy"))
         except Exception:
             base = Path.home() / ".cache" / "sylphy"

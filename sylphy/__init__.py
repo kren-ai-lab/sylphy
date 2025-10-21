@@ -18,7 +18,7 @@ Re-exports core registry/config symbols at the top-level so that users can:
 try:
     __version__ = _metadata.version("sylphy")
 except _metadata.PackageNotFoundError:  # local dev / not installed
-    __version__ = "0.0.0-dev"
+    __version__ = "0.0.1-dev"
 
 # Public core API (re-export)
 from .core import (  # noqa: E402

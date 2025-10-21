@@ -75,7 +75,9 @@ cli = [
 dev = [
     "build>=1.0.0",
     "mypy>=1.8.0",
-    "ruff>=0.4.0",
+    "pytest>=8.4.2",
+    "ruff>=0.14.0",
+    "taskipy>=1.13.0",
     "twine>=5.0.0",
 ]
 embeddings = [
@@ -128,8 +130,11 @@ target-version = "py313"
 [tool.ruff.lint]
 select = ["F", "W", "E", "I", "A", "B", "N"]
 
-[dependency-groups]
-dev = [
-    "pytest>=8.4.2",
-    "ruff>=0.14.0",
-]
+[tool.taskipy.tasks]
+sort-imports = "ruff check --fix --select I sylphy/ tests/"
+format = "task sort-imports && ruff format sylphy/ tests/"
+lint = "ruff check sylphy/ tests/"
+lint-fix = "ruff check --fix sylphy/ tests/"
+test = "pytest -q"
+test-v = "pytest -v"
+test-cov = "pytest --cov=sylphy --cov-report=html"

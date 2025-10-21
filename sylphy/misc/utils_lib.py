@@ -453,3 +453,22 @@ class UtilsLib:
             raise
 
         return dest
+
+    def get_cache_dir() -> Path:
+        env = os.getenv("SYLPHY_CACHE_DIR")
+        if env:
+            return Path(env).expanduser()
+
+        try:
+            from sylphy._siteconfig import CACHE_DIR  
+            if CACHE_DIR:
+                return Path(CACHE_DIR).expanduser()
+        except Exception:
+            pass
+
+        try:
+            from platformdirs import user_cache_dir
+            base = Path(user_cache_dir("sylphy"))
+        except Exception:
+            base = Path.home() / ".cache" / "sylphy"
+        return base

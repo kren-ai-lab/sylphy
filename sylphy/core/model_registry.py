@@ -205,6 +205,7 @@ def _download_huggingface(ref: str, revision: Optional[str], dst: Path) -> None:
         ref,
         revision=revision,
         local_dir=str(dst),
+        local_dir_use_symlinks=False,
         # token=os.getenv("HF_TOKEN")  # Uncomment if you want to force auth via env
     )
 

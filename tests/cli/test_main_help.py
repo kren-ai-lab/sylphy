@@ -7,6 +7,7 @@ from sylphy.cli.main import app
 
 
 def test_main_help_lists_subcommands():
+    """Verify main CLI help displays all subcommands."""
     runner = CliRunner()
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0

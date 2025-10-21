@@ -15,6 +15,7 @@ from sylphy.sequence_encoder import (
 
 
 def test_factory_known_aliases(toy_df):
+    """Verify factory creates correct encoder for all known aliases."""
     cases: dict[str, type] = {
         "ordinal": OrdinalEncoder,
         "one_hot": OneHotEncoder,
@@ -34,5 +35,6 @@ def test_factory_known_aliases(toy_df):
 
 
 def test_factory_unknown_raises():
+    """Verify factory raises ValueError for unknown encoder names."""
     with pytest.raises(ValueError):
         create_encoder("nope", dataset=pd.DataFrame({"sequence": ["AAA"]}))

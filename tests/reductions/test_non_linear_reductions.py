@@ -22,6 +22,7 @@ except Exception:
 
 
 def test_isomap_and_spectral(X_small):
+    """Verify Isomap and SpectralEmbedding produce expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z_iso = nr.apply_isomap(n_components=2, n_neighbors=3)
     Z_spec = nr.apply_spectral(n_components=2, random_state=0)
@@ -30,8 +31,8 @@ def test_isomap_and_spectral(X_small):
 
 
 def test_lle_basic(X_small):
+    """Verify LocallyLinearEmbedding produces expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
-    # Avoid kwargs that may not be supported by certain sklearn versions
     Z = nr.apply_lle(n_components=2, n_neighbors=4)
     assert Z is not None and Z.shape == (X_small.shape[0], 2)
 

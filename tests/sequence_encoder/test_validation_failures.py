@@ -6,10 +6,10 @@ from sylphy.sequence_encoder import OrdinalEncoder
 
 
 def test_missing_sequence_column_sets_status_false():
-    df = pd.DataFrame({"seq": ["AAA"]})  # wrong column name
+    """Verify encoder sets status=False when sequence column is missing."""
+    df = pd.DataFrame({"seq": ["AAA"]})
     enc = OrdinalEncoder(dataset=df, sequence_column="sequence", max_length=3, debug=True)
     assert enc.status is False
-    # run_process should no-op but not crash
     enc.run_process()
     assert hasattr(enc, "coded_dataset")
     assert enc.coded_dataset.empty

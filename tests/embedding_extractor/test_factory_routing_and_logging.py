@@ -1,10 +1,5 @@
 from __future__ import annotations
 
-"""
-Factory routing: ensure model name routes to the correct backend class.
-No brittle assumptions about logger names.
-"""
-
 import pandas as pd
 import pytest
 
@@ -29,24 +24,14 @@ from sylphy.embedding_extractor.prot5_based import Prot5Based
     ],
 )
 def test_factory_selects_backend(model_name, cls):
+    """Verify factory routes model names to the correct backend class."""
     df = pd.DataFrame({"sequence": ["AAAA"]})
-    inst = EmbeddingFactory(
-        model_name=model_name,
-        dataset=df,
-        column_seq="sequence",
-        name_device="cpu",
-        debug=True,
-        debug_mode=20,
-    )
+    inst = EmbeddingFactory(model_name=model_name, dataset=df, column_seq="sequence", name_device="cpu")
     assert isinstance(inst, cls)
 
 
 def test_factory_unknown_raises():
+    """Verify factory raises ValueError for unknown model names."""
     df = pd.DataFrame({"sequence": ["AAAA"]})
     with pytest.raises(ValueError):
-        EmbeddingFactory(
-            model_name="unknown/model",
-            dataset=df,
-            column_seq="sequence",
-            name_device="cpu",
-        )
+        EmbeddingFactory(model_name="unknown/model", dataset=df, column_seq="sequence", name_device="cpu")

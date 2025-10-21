@@ -23,9 +23,10 @@ def test_physicochemical_reads_cached_file(monkeypatch, tmp_path):
     class _Cfg:
         cache_paths = _CachePaths()
 
-    from sylphy.core import config as cfg_mod
+    # Patch get_config where it's imported in the encoder module
+    from sylphy.sequence_encoder import physicochemical_encoder
 
-    monkeypatch.setattr(cfg_mod, "get_config", lambda: _Cfg(), raising=True)
+    monkeypatch.setattr(physicochemical_encoder, "get_config", lambda: _Cfg(), raising=True)
 
     # Build the exact filepath the encoder will use:
     # <data>/<type_descriptor>/<basename(BASE_URL_AAINDEX)>
@@ -67,9 +68,10 @@ def test_physicochemical_raises_on_unknown_property(monkeypatch, tmp_path):
     class _Cfg:
         cache_paths = _CachePaths()
 
-    from sylphy.core import config as cfg_mod
+    # Patch get_config where it's imported in the encoder module
+    from sylphy.sequence_encoder import physicochemical_encoder
 
-    monkeypatch.setattr(cfg_mod, "get_config", lambda: _Cfg(), raising=True)
+    monkeypatch.setattr(physicochemical_encoder, "get_config", lambda: _Cfg(), raising=True)
 
     # Prepare a valid aaindex CSV with a different property name
     cache_dir = Path(_Cfg().cache_paths.data()) / "aaindex"

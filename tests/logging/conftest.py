@@ -7,24 +7,14 @@ import pytest
 
 from sylphy.logging import reset_logging
 
-PKG_LOGGER_NAME = "sylphy"
-
 
 @pytest.fixture(autouse=True)
 def clean_env_and_reset(tmp_path, monkeypatch) -> Iterator[None]:
-    """
-    Clean logging-related env vars and reset our logger before each test.
-    This keeps tests hermetic and prevents handler duplication across tests.
-    """
-    # Unset all SYLPHY_LOG_* variables
+    """Reset logger and clear environment variables between tests."""
     for key in list(os.environ.keys()):
         if key.startswith("SYLPHY_LOG_"):
             monkeypatch.delenv(key, raising=False)
 
-    # Ensure no handlers are left from a previous test
-    reset_logging(PKG_LOGGER_NAME)
-
+    reset_logging("sylphy")
     yield
-
-    # Cleanup at teardown as well (paranoia)
-    reset_logging(PKG_LOGGER_NAME)
+    reset_logging("sylphy")

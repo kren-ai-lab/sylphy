@@ -6,14 +6,13 @@ from sylphy.sequence_encoder import KMersEncoders
 
 
 def test_kmers_tfidf_basic():
+    """Verify k-mer encoder produces TF-IDF features for extracted k-mers."""
     df = pd.DataFrame({"sequence": ["ABCDE", "BCDEF", "CDEFG"]})
     enc = KMersEncoders(dataset=df, size_kmer=3, debug=True)
     enc.run_process()
     X = enc.coded_dataset
-    # Has at least some k-mer columns and preserves 'sequence'
+
     assert "sequence" in X.columns
-    # A few typical 3-mers should appear capitalized
     expected = {"ABC", "BCD", "CDE", "DEF"}
-    assert expected & set(X.columns)  # non-empty intersection
-    # Features are float-like (tf-idf)
+    assert expected & set(X.columns)
     assert X.drop(columns=["sequence"]).to_numpy().dtype.kind in ("f", "d")

@@ -6,7 +6,7 @@ from sylphy.sequence_encoder import FFTEncoder
 
 
 def test_fft_encoder_half_spectrum_and_padding():
-    # 3 numeric columns + sequence
+    """Verify FFT encoder produces half-spectrum magnitude with zero-padding."""
     df = pd.DataFrame(
         {
             "p_0": [1.0, 0.0],

@@ -9,57 +9,10 @@ from sylphy.constants.tool_constants import BASE_URL_AAINDEX
 from sylphy.sequence_encoder import PhysicochemicalEncoder
 
 
-def test_physicochemical_reads_cached_file(monkeypatch, tmp_path):
-    """
-    Avoid network: create the cached AAIndex CSV that the encoder expects.
-    The encoder should load from cache and not attempt to download.
-    """
+@pytest.fixture
+def mock_cache(monkeypatch, tmp_path):
+    """Redirect AAIndex cache to a temporary directory."""
 
-    # Point `get_config().cache_paths.data()` to a temp directory
-    class _CachePaths:
-        def data(self):  # matches usage in encoder
-            return str(tmp_path / "data")
-
-    class _Cfg:
-        cache_paths = _CachePaths()
-
-    from sylphy.core import config as cfg_mod
-
-    monkeypatch.setattr(cfg_mod, "get_config", lambda: _Cfg(), raising=True)
-
-    # Build the exact filepath the encoder will use:
-    # <data>/<type_descriptor>/<basename(BASE_URL_AAINDEX)>
-    type_descriptor = "aaindex"
-    filename = Path(BASE_URL_AAINDEX).name  # e.g., "aaindex_encoders.csv"
-    cache_dir = Path(_Cfg().cache_paths.data()) / type_descriptor
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    filepath = cache_dir / filename
-
-    # Minimal CSV: residue column and one property column
-    content = "res,ANDN920101\nA,1.0\nC,2.0\nD,3.0\n"
-    filepath.write_text(content, encoding="utf-8")
-
-    df = pd.DataFrame({"sequence": ["ACD", "DA"]})
-    enc = PhysicochemicalEncoder(
-        dataset=df,
-        sequence_column="sequence",
-        max_length=5,
-        type_descriptor=type_descriptor,
-        name_property="ANDN920101",
-        debug=True,
-    )
-    enc.run_process()
-    X = enc.coded_dataset
-    # shape = max_length features + sequence
-    assert X.shape == (2, 5 + 1)
-    # First sequence "ACD" → values [1.0, 2.0, 3.0, 0, 0]
-    row0 = X.iloc[0, :5].tolist()
-    assert row0[:3] == [1.0, 2.0, 3.0]
-    assert row0[3:] == [0.0, 0.0]
-
-
-def test_physicochemical_raises_on_unknown_property(monkeypatch, tmp_path):
-    # Same cache stubbing as above
     class _CachePaths:
         def data(self):
             return str(tmp_path / "data")
@@ -67,12 +20,36 @@ def test_physicochemical_raises_on_unknown_property(monkeypatch, tmp_path):
     class _Cfg:
         cache_paths = _CachePaths()
 
-    from sylphy.core import config as cfg_mod
+    from sylphy.sequence_encoder import physicochemical_encoder
 
-    monkeypatch.setattr(cfg_mod, "get_config", lambda: _Cfg(), raising=True)
+    monkeypatch.setattr(physicochemical_encoder, "get_config", lambda: _Cfg(), raising=True)
+    return tmp_path / "data"
 
-    # Prepare a valid aaindex CSV with a different property name
-    cache_dir = Path(_Cfg().cache_paths.data()) / "aaindex"
+
+def test_physicochemical_reads_cached_file(mock_cache):
+    """Verify encoder loads from cached AAIndex file without network access."""
+    cache_dir = mock_cache / "aaindex"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    filepath = cache_dir / Path(BASE_URL_AAINDEX).name
+
+    filepath.write_text("res,ANDN920101\nA,1.0\nC,2.0\nD,3.0\n", encoding="utf-8")
+
+    df = pd.DataFrame({"sequence": ["ACD", "DA"]})
+    enc = PhysicochemicalEncoder(
+        dataset=df,
+        sequence_column="sequence",
+        max_length=5,
+        type_descriptor="aaindex",
+        name_property="ANDN920101",
+    )
+    enc.run_process()
+
+    assert enc.coded_dataset.shape == (2, 6)
+    assert enc.coded_dataset.iloc[0, :5].tolist() == [1.0, 2.0, 3.0, 0.0, 0.0]
+
+
+def test_physicochemical_raises_on_unknown_property(mock_cache):
+    cache_dir = mock_cache / "aaindex"
     cache_dir.mkdir(parents=True, exist_ok=True)
     (cache_dir / Path(BASE_URL_AAINDEX).name).write_text("res,PROP\nA,1\n", encoding="utf-8")
 

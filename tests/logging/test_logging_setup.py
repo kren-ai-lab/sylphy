@@ -1,11 +1,5 @@
 from __future__ import annotations
 
-"""
-Tests for sylphy.logging: idempotency, console/file behavior, JSON mode,
-rotation, context injection, and global controls. These tests are resilient
-to different internal implementations (e.g., with or without console handler).
-"""
-
 import json
 import logging
 import sys
@@ -29,14 +23,7 @@ def _count_handlers(logger: logging.Logger) -> int:
 
 
 def _find_console_handler(logger: logging.Logger) -> Optional[logging.Handler]:
-    """
-    Return the *actual* console handler (stdout/stderr), excluding file handlers.
-
-    Notes
-    -----
-    `FileHandler` subclasses `StreamHandler`, so we must explicitly exclude it.
-    We also verify that the handler's stream is either `sys.stdout` or `sys.stderr`.
-    """
+    """Find actual console handler (stdout/stderr), excluding file handlers."""
     for h in logger.handlers:
         if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler):
             stream = getattr(h, "stream", None)
@@ -46,10 +33,6 @@ def _find_console_handler(logger: logging.Logger) -> Optional[logging.Handler]:
 
 
 def _read_console(capsys) -> Tuple[str, str, str]:
-    """
-    Read both stdout and stderr from pytest's capture and return:
-    (stdout_text, stderr_text, stdout+stderr concatenated).
-    """
     cap = capsys.readouterr()
     both = (cap.out or "") + (cap.err or "")
     return cap.out, cap.err, both

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -54,7 +55,7 @@ class KMersEncoders(Encoders):
             vectorizer = TfidfVectorizer(
                 analyzer="word",
                 token_pattern=r"(?u)\b\w+\b",
-                dtype="float32",
+                dtype=np.float32,
             )
             X = vectorizer.fit_transform(self.dataset["kmer_sequence"])
 

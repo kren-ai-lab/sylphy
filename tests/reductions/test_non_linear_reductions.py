@@ -21,6 +21,7 @@ except Exception:
     HAS_CLUSTPY = False
 
 
+@pytest.mark.filterwarnings("ignore:Graph is not fully connected:UserWarning")
 def test_isomap_and_spectral(X_small):
     """Verify Isomap and SpectralEmbedding produce expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
@@ -38,7 +39,9 @@ def test_lle_basic(X_small):
 
 
 @pytest.mark.skipif(not HAS_UMAP, reason="umap not installed")
+@pytest.mark.filterwarnings("ignore:n_jobs value.*overridden:UserWarning")
 def test_umap_if_available(X_small):
+    """Verify UMAP produces expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z = nr.apply_umap(n_components=2, n_neighbors=3, min_dist=0.1, random_state=0)
     assert Z is not None and Z.shape == (X_small.shape[0], 2)
@@ -46,8 +49,8 @@ def test_umap_if_available(X_small):
 
 @pytest.mark.skipif(not HAS_CLUSTPY, reason="clustpy not installed")
 def test_dipext_if_available(X_small):
+    """Verify DipExt produces expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z = nr.apply_dip_ext(n_components=2)
-    # DipExt may reduce differently; just assert it returns something 2D if provided
     if Z is not None:
         assert hasattr(Z, "shape") and Z.shape[0] == X_small.shape[0]

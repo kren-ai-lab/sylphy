@@ -12,18 +12,18 @@ Adjust if your backend defines different semantics.
 """
 
 import pandas as pd
+
 from sylphy.embedding_extractor import ESMBasedEmbedding
 
+
 def make_toy_df():
-    return pd.DataFrame({
-        "id": [1, 2, 3, 4],
-        "sequence": [
-            "MKT",
-            "ACDEFGHIKLMNPQRST",
-            "GGGSSSPPP",
-            "MPEPTIDESEQX"
-        ],
-    }).set_index("id")
+    return pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4],
+            "sequence": ["MKT", "ACDEFGHIKLMNPQRST", "GGGSSSPPP", "MPEPTIDESEQX"],
+        }
+    ).set_index("id")
+
 
 def run_case(backend, *, layers, layer_agg="mean", pool="mean", tag=""):
     """
@@ -33,13 +33,14 @@ def run_case(backend, *, layers, layer_agg="mean", pool="mean", tag=""):
     backend.run_process(
         max_length=512,
         batch_size=4,
-        layers=layers,        # "last" | "last4" | 0 | 1 | [ints]
+        layers=layers,  # "last" | "last4" | 0 | 1 | [ints]
         layer_agg=layer_agg,  # "mean" | "sum" | "concat"
-        pool=pool,            # "mean" | "cls" | "none" (depending on your base)
+        pool=pool,  # "mean" | "cls" | "none" (depending on your base)
     )
     print(f"[OK][{tag}] Shape = {backend.coded_dataset.shape}")
     print(backend.coded_dataset.head(2))
     backend.export_encoder(f"./emb_esm2_{tag}.csv", file_format="csv")
+
 
 def main():
     df = make_toy_df()
@@ -51,7 +52,7 @@ def main():
         name_model="facebook/esm2_t6_8M_UR50D",
         name_tokenizer="facebook/esm2_t6_8M_UR50D",
         name_device="cuda",
-        precision="fp16",     # set "fp32" if you prefer
+        precision="fp16",  # set "fp32" if you prefer
         oom_backoff=True,
         debug=False,
     )
@@ -73,5 +74,7 @@ def main():
 
     # Concatenation
     run_case(esm2, layers="last4", layer_agg="concat", pool="mean", tag="last4_concat")
+
+
 if __name__ == "__main__":
     main()

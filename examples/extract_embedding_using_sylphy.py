@@ -1,26 +1,29 @@
-import pandas as pd
 import sys
+
+import pandas as pd
 import torch
 
 from sylphy.embedding_extractor import (
-    ESMBasedEmbedding,   
-    Prot5Based,          
     BertBasedEmbedding,
+    ESMBasedEmbedding,
     MistralBasedEmbedding,
+    Prot5Based,
 )
+
 
 def run_backend(backend, name_out):
     backend.run_process(
-        max_length=512,         
-        batch_size=4,           
-        layers="last",         
-        layer_agg="mean",      
-        pool="mean",           
+        max_length=512,
+        batch_size=4,
+        layers="last",
+        layer_agg="mean",
+        pool="mean",
     )
     print(f"[OK] Shape = {backend.coded_dataset.shape}")
     print(backend.coded_dataset.head(2))
     backend.export_encoder(f"{name_out}", file_format="csv")
     torch.cuda.empty_cache()
+
 
 def main():
     df_train = pd.read_excel(sys.argv[1])
@@ -32,11 +35,11 @@ def main():
     esm2 = ESMBasedEmbedding(
         dataset=df_train,
         column_seq="seq",
-        name_model="facebook/esm2_t6_8M_UR50D",   
+        name_model="facebook/esm2_t6_8M_UR50D",
         name_tokenizer="facebook/esm2_t6_8M_UR50D",
-        name_device="cuda",       # "cuda" o "cpu"
-        precision="fp16",         # "fp32" | "fp16" | "bf16"
-        oom_backoff=True,         
+        name_device="cuda",  # "cuda" o "cpu"
+        precision="fp16",  # "fp32" | "fp16" | "bf16"
+        oom_backoff=True,
         debug=False,
     )
     run_backend(esm2, f"{path_export}esm2_embedding/train_dataset.csv")
@@ -44,11 +47,11 @@ def main():
     esm2 = ESMBasedEmbedding(
         dataset=df_test,
         column_seq="seq",
-        name_model="facebook/esm2_t6_8M_UR50D",   
+        name_model="facebook/esm2_t6_8M_UR50D",
         name_tokenizer="facebook/esm2_t6_8M_UR50D",
-        name_device="cuda",       # "cuda" o "cpu"
-        precision="fp16",         # "fp32" | "fp16" | "bf16"
-        oom_backoff=True,         
+        name_device="cuda",  # "cuda" o "cpu"
+        precision="fp16",  # "fp32" | "fp16" | "bf16"
+        oom_backoff=True,
         debug=False,
     )
     run_backend(esm2, f"{path_export}esm2_embedding/test_dataset.csv")
@@ -127,6 +130,7 @@ def main():
         debug=False,
     )
     run_backend(mistral, f"{path_export}mistral_embedding/test_dataset.csv")
+
 
 if __name__ == "__main__":
     main()

@@ -110,6 +110,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["F", "W", "E", "I", "A", "B", "N"]
+ignore = ["N802", "N803", "N806"]
 
 [tool.taskipy.tasks]
 sort-imports = "ruff check --fix --select I sylphy/ tests/"

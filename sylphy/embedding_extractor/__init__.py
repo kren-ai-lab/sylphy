@@ -57,9 +57,9 @@ def __getattr__(name: str) -> Any:
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
         if name == "create_embedding":
-            from .embedding_factory import EmbeddingFactory as _F  # lazy alias
+            from .embedding_factory import EmbeddingFactory  # lazy import
 
-            return _F
+            return EmbeddingFactory
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
     mod_name, attr = spec
     module = import_module(mod_name, package=__name__)
@@ -74,4 +74,6 @@ def __dir__():
 
 # Optional typing-only exposure (keeps runtime lazy)
 if TYPE_CHECKING:  # pragma: no cover
-    from .embedding_factory import EmbeddingFactory as create_embedding
+    from .embedding_factory import EmbeddingFactory
+
+    create_embedding = EmbeddingFactory

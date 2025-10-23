@@ -11,9 +11,6 @@ try:
 except Exception:  # pragma: no cover
     user_log_dir = None  # type: ignore
 
-# Track configured roots to avoid handler duplication across repeated calls.
-_CONFIGURED_ROOTS: set[str] = set()
-
 # Import lightweight constants/helpers (avoid cycles)
 from sylphy.constants.logging_constants import (
     LOG_DEFAULT_BACKUPS,  # 3
@@ -28,6 +25,9 @@ from sylphy.constants.logging_constants import (
     env_log_level,
     env_log_stderr,
 )
+
+# Track configured roots to avoid handler duplication across repeated calls.
+_CONFIGURED_ROOTS: set[str] = set()
 
 # ---------- helpers ----------
 

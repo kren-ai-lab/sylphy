@@ -358,8 +358,10 @@ class UtilsLib:
             base = Path(restrict_to).expanduser().resolve()
             try:
                 folder.relative_to(base)
-            except Exception:
-                raise ValueError(f"Refusing to delete outside of restricted base: {base} (target: {folder})")
+            except Exception as exc:
+                raise ValueError(
+                    f"Refusing to delete outside of restricted base: {base} (target: {folder})"
+                ) from exc
 
         if not folder.exists():
             if missing_ok:

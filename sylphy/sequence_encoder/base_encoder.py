@@ -122,7 +122,7 @@ class Encoders:
             self.status = False
             self.message = f"[ERROR] Failed during revision steps: {e}"
             self.__logger__.exception(self.message)
-            raise RuntimeError(self.message)
+            raise RuntimeError(self.message) from e
 
     def check_allowed_alphabet(self) -> None:
         """Keep only sequences composed of the selected alphabet."""
@@ -140,9 +140,9 @@ class Encoders:
             self.dataset = self.dataset[self.dataset["is_canon"]].copy()
             removed = before - len(self.dataset)
             self.__logger__.info("Filtered sequences outside alphabet: %d removed.", removed)
-        except Exception:
+        except Exception as exc:
             self.__logger__.exception("[ERROR] Failed during alphabet validation.")
-            raise RuntimeError("Failed during alphabet validation.")
+            raise RuntimeError("Failed during alphabet validation.") from exc
 
     def process_length_sequences(self) -> None:
         """Filter out sequences longer than `max_length`."""
@@ -153,9 +153,9 @@ class Encoders:
             self.dataset = self.dataset[self.dataset["is_valid_length"] == 1].copy()
             removed = before - len(self.dataset)
             self.__logger__.info("Filtered long sequences: %d removed.", removed)
-        except Exception:
+        except Exception as exc:
             self.__logger__.exception("[ERROR] Failed during length validation.")
-            raise RuntimeError("Failed during length validation.")
+            raise RuntimeError("Failed during length validation.") from exc
 
     # ----------------------------
     # IO

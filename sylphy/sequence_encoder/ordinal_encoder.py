@@ -76,4 +76,4 @@ class OrdinalEncoder(Encoders):
             self.status = False
             self.message = f"[ERROR] Ordinal encoding failed: {e}"
             self.__logger__.exception(self.message)
-            raise RuntimeError(self.message)
+            raise RuntimeError(self.message) from e

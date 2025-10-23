@@ -106,7 +106,7 @@ include = [
 
 [tool.ruff]
 line-length = 110
-target-version = "py313"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["F", "W", "E", "I", "A", "B", "N"]

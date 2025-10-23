@@ -1,8 +1,6 @@
 # sylphy/__init__.py
 from __future__ import annotations
 
-from importlib import metadata as _metadata
-
 """
 Sylphy public package surface.
 
@@ -14,11 +12,7 @@ Re-exports core registry/config symbols at the top-level so that users can:
     pr.get_config()
 """
 
-# Version
-try:
-    __version__ = _metadata.version("sylphy")
-except _metadata.PackageNotFoundError:  # local dev / not installed
-    __version__ = "0.1.0"
+__version__ = "0.1.0"
 
 # Public core API (re-export)
 from .core import (  # noqa: E402

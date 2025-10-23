@@ -64,4 +64,4 @@ class FrequencyEncoder(Encoders):
             self.status = False
             self.message = f"[ERROR] Failed to encode sequences: {e}"
             self.__logger__.exception(self.message)
-            raise RuntimeError(self.message)
+            raise RuntimeError(self.message) from e

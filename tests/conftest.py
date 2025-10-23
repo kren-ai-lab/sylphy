@@ -1,4 +1,5 @@
 """Shared fake modules and fixtures for all test suites."""
+
 from __future__ import annotations
 
 import sys

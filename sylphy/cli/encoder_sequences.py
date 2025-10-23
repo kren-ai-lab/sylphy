@@ -23,7 +23,10 @@ import typer
 
 app = typer.Typer(
     name="encode-sequences",
-    help="Encode sequences with one-hot, ordinal, frequency, k-mers, physicochemical (AAIndex/group_based) or FFT.",
+    help=(
+        "Encode sequences with one-hot, ordinal, frequency, k-mers, "
+        "physicochemical (AAIndex/group_based) or FFT."
+    ),
     no_args_is_help=True,
 )
 
@@ -32,6 +35,57 @@ ENCODER_CHOICES = ("one_hot", "ordinal", "frequency", "kmers", "physicochemical"
 DESCRIPTOR_CHOICES = ("aaindex", "group_based")
 EXPORT_CHOICES = ("csv", "npy", "npz", "parquet")
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+ENCODER_OPTION = typer.Option(
+    "physicochemical",
+    "--encoder",
+    "-e",
+    help=f"Encoder backend. One of: {', '.join(ENCODER_CHOICES)}.",
+    show_default=True,
+)
+INPUT_DATA_OPTION = typer.Option(..., "--input-data", "-i", help="CSV file with sequences.")
+SEQUENCE_ID_OPTION = typer.Option(
+    "sequence", "--sequence-identifier", "-s", help="Sequence column name."
+)
+MAX_LENGTH_OPTION = typer.Option(
+    1024, "--max-length", "-m", help="Max sequence length (when applicable)."
+)
+ALLOW_EXTENDED_OPTION = typer.Option(
+    False, "--allow-extended/--no-allow-extended", help="Enable extended alphabet (B, Z, X, U, O)."
+)
+ALLOW_UNKNOWN_OPTION = typer.Option(
+    False, "--allow-unknown/--no-allow-unknown", help="Allow 'X' when extended alphabet is not enabled."
+)
+TYPE_DESCRIPTOR_OPTION = typer.Option(
+    "aaindex",
+    "--type-descriptor",
+    "-t",
+    help=(
+        "Descriptor space for physicochemical encoders (and FFT pre-step). "
+        f"One of: {', '.join(DESCRIPTOR_CHOICES)}."
+    ),
+    show_default=True,
+)
+NAME_PROPERTY_OPTION = typer.Option(
+    "ANDN920101",
+    "--name-property",
+    "-n",
+    help="Property/column name in the descriptor table (AAIndex key or group_based label).",
+    show_default=True,
+)
+SIZE_KMER_OPTION = typer.Option(3, "--size-kmer", "-k", help="k for TF-IDF k-mers (kmers backend).")
+OUTPUT_OPTION = typer.Option(..., "--output", "-o", help="Output file path (extension can be omitted).")
+FORMAT_OUTPUT_OPTION = typer.Option(
+    "csv",
+    "--format-output",
+    "-f",
+    help=f"Output format. One of: {', '.join(EXPORT_CHOICES)}.",
+    show_default=True,
+)
+DEBUG_OPTION = typer.Option(False, "--debug/--no-debug", help="Enable verbose logs within encoders.")
+LOG_LEVEL_OPTION = typer.Option(
+    "INFO", "--log-level", help=f"Log level: {', '.join(LOG_LEVELS)}.", show_default=True
+)
 
 
 def _level_from_str(name: str) -> int:
@@ -86,55 +140,23 @@ def _ensure_ext(path: Path, fmt: str) -> Path:
 @app.command("run")
 def run(
     # encoder / pipeline
-    encoder: str = typer.Option(
-        "physicochemical",
-        "--encoder",
-        "-e",
-        help=f"Encoder backend. One of: {', '.join(ENCODER_CHOICES)}.",
-        show_default=True,
-    ),
+    encoder: str = ENCODER_OPTION,
     # dataset options
-    input_data: Path = typer.Option(..., "--input-data", "-i", help="CSV file with sequences."),
-    sequence_identifier: str = typer.Option(
-        "sequence", "--sequence-identifier", "-s", help="Sequence column name."
-    ),
-    max_length: int = typer.Option(1024, "--max-length", "-m", help="Max sequence length (when applicable)."),
-    allow_extended: bool = typer.Option(
-        False, "--allow-extended/--no-allow-extended", help="Enable extended alphabet (B, Z, X, U, O)."
-    ),
-    allow_unknown: bool = typer.Option(
-        False, "--allow-unknown/--no-allow-unknown", help="Allow 'X' when extended alphabet is not enabled."
-    ),
+    input_data: Path = INPUT_DATA_OPTION,
+    sequence_identifier: str = SEQUENCE_ID_OPTION,
+    max_length: int = MAX_LENGTH_OPTION,
+    allow_extended: bool = ALLOW_EXTENDED_OPTION,
+    allow_unknown: bool = ALLOW_UNKNOWN_OPTION,
     # backend-specific
-    type_descriptor: Optional[str] = typer.Option(
-        "aaindex",
-        "--type-descriptor",
-        "-t",
-        help=f"Descriptor space for physicochemical encoders (and FFT pre-step). One of: {', '.join(DESCRIPTOR_CHOICES)}.",
-        show_default=True,
-    ),
-    name_property: str = typer.Option(
-        "ANDN920101",
-        "--name-property",
-        "-n",
-        help="Property/column name in the descriptor table (AAIndex key or group_based label).",
-        show_default=True,
-    ),
-    size_kmer: int = typer.Option(3, "--size-kmer", "-k", help="k for TF-IDF k-mers (kmers backend)."),
+    type_descriptor: Optional[str] = TYPE_DESCRIPTOR_OPTION,
+    name_property: str = NAME_PROPERTY_OPTION,
+    size_kmer: int = SIZE_KMER_OPTION,
     # output
-    output: Path = typer.Option(..., "--output", "-o", help="Output file path (extension can be omitted)."),
-    format_output: str = typer.Option(
-        "csv",
-        "--format-output",
-        "-f",
-        help=f"Output format. One of: {', '.join(EXPORT_CHOICES)}.",
-        show_default=True,
-    ),
+    output: Path = OUTPUT_OPTION,
+    format_output: str = FORMAT_OUTPUT_OPTION,
     # logging
-    debug: bool = typer.Option(False, "--debug/--no-debug", help="Enable verbose logs within encoders."),
-    log_level: str = typer.Option(
-        "INFO", "--log-level", help=f"Log level: {', '.join(LOG_LEVELS)}.", show_default=True
-    ),
+    debug: bool = DEBUG_OPTION,
+    log_level: str = LOG_LEVEL_OPTION,
 ) -> None:
     """Encode sequences and export feature matrices using Sylphy's encoders.
 
@@ -231,7 +253,7 @@ def run(
 
     except typer.BadParameter as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from None
     except Exception as e:
         typer.secho(f"Unexpected error: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e

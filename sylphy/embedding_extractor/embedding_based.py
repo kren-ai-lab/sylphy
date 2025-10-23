@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 import os
-from abc import ABC
 from pathlib import Path
 from typing import List, Literal, Optional, Sequence, Tuple, Union
 
@@ -21,7 +20,7 @@ LayerAgg = Literal["mean", "sum", "concat"]
 LayerSpec = Union[str, int, Sequence[int]]
 
 
-class EmbeddingBased(ABC):
+class EmbeddingBased:
     """
     Base class for embedding extraction from protein sequences.
 
@@ -163,7 +162,7 @@ class EmbeddingBased(ABC):
             self.status = False
             self.message = f"[ERROR] Failed to load tokenizer/model: {e}"
             self.__logger__.exception(self.message)
-            raise RuntimeError(self.message)
+            raise RuntimeError(self.message) from e
 
     # ---------------------------------------------------------------------
     # Readiness helpers
@@ -504,7 +503,7 @@ class EmbeddingBased(ABC):
             self.status = False
             self.message = f"[ERROR] run_process failed: {e}"
             self.__logger__.exception(self.message)
-            raise RuntimeError(self.message)
+            raise RuntimeError(self.message) from e
 
     def export_encoder(self, path: str, file_format: Literal["csv", "npy", "npz", "parquet"] = "csv") -> None:
         """Persist the encoded matrix to disk."""

@@ -38,6 +38,104 @@ LAYER_AGG_CHOICES = ("mean", "sum", "concat")
 EXPORT_CHOICES = ("csv", "npy", "npz", "parquet")
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
+MODEL_OPTION = typer.Option(
+    "facebook/esm2_t6_8M_UR50D",
+    "--model",
+    "-m",
+    help="Model identifier (HF ref or registry key), e.g. 'facebook/esm2_t6_8M_UR50D'.",
+    show_default=True,
+)
+DEVICE_OPTION = typer.Option(
+    "cuda",
+    "--device",
+    "-d",
+    help=f"Inference device. One of: {', '.join(DEVICE_CHOICES)}.",
+    show_default=True,
+)
+PRECISION_OPTION = typer.Option(
+    "fp32",
+    "--precision",
+    "-p",
+    help=f"AMP precision on CUDA. One of: {', '.join(PRECISION_CHOICES)}.",
+    show_default=True,
+)
+BATCH_SIZE_OPTION = typer.Option(
+    8,
+    "--batch-size",
+    "-b",
+    min=1,
+    help="Batch size for inference.",
+    show_default=True,
+)
+MAX_LENGTH_OPTION = typer.Option(
+    1024,
+    "--max-length",
+    "-L",
+    min=1,
+    help="Max tokens per sequence (truncation at tokenizer level).",
+    show_default=True,
+)
+OOM_BACKOFF_OPTION = typer.Option(
+    True,
+    "--oom-backoff/--no-oom-backoff",
+    help="Auto-reduce batch size on CUDA OOM and retry.",
+    show_default=True,
+)
+LAYERS_OPTION = typer.Option(
+    "last",
+    "--layers",
+    help=(
+        "Layer selection: 'last' | 'last4' | 'all' | an integer index. Multiple indices can be "
+        "provided as comma-separated (e.g., '0,3,6')."
+    ),
+    show_default=True,
+)
+LAYER_AGG_OPTION = typer.Option(
+    "mean",
+    "--layer-agg",
+    help=f"Aggregation across selected layers. One of: {', '.join(LAYER_AGG_CHOICES)}.",
+    show_default=True,
+)
+POOL_OPTION = typer.Option(
+    "mean",
+    "--pool",
+    help=f"Token pooling strategy. One of: {', '.join(POOL_CHOICES)}.",
+    show_default=True,
+)
+INPUT_DATA_OPTION = typer.Option(..., "--input-data", "-i", help="Input CSV with sequences.")
+SEQUENCE_ID_OPTION = typer.Option(
+    "sequence",
+    "--sequence-identifier",
+    "-s",
+    help="Column in CSV that contains amino acid sequences.",
+    show_default=True,
+)
+OUTPUT_OPTION = typer.Option(
+    ...,
+    "--output",
+    "-o",
+    help="Output file path for embeddings (extension can be omitted).",
+)
+FORMAT_OUTPUT_OPTION = typer.Option(
+    "csv",
+    "--format-output",
+    "-f",
+    help=f"Export format. One of: {', '.join(EXPORT_CHOICES)}.",
+    show_default=True,
+)
+DEBUG_OPTION = typer.Option(
+    False,
+    "--debug/--no-debug",
+    help="Enable verbose logs for this command.",
+    show_default=True,
+)
+LOG_LEVEL_OPTION = typer.Option(
+    "INFO",
+    "--log-level",
+    help=f"Library log level: {', '.join(LOG_LEVELS)}.",
+    show_default=True,
+)
+
 
 # ---- Small helpers -----------------------------------------------------------
 def _level_from_str(name: str) -> int:
@@ -90,109 +188,24 @@ def _ensure_ext(path: Path, fmt: str) -> Path:
 @app.command("run")
 def run(
     # Model & backend
-    model: str = typer.Option(
-        "facebook/esm2_t6_8M_UR50D",
-        "--model",
-        "-m",
-        help="Model identifier (HF ref or registry key), e.g. 'facebook/esm2_t6_8M_UR50D'.",
-        show_default=True,
-    ),
-    device: str = typer.Option(
-        "cuda",
-        "--device",
-        "-d",
-        help=f"Inference device. One of: {', '.join(DEVICE_CHOICES)}.",
-        show_default=True,
-    ),
-    precision: str = typer.Option(
-        "fp32",
-        "--precision",
-        "-p",
-        help=f"AMP precision on CUDA. One of: {', '.join(PRECISION_CHOICES)}.",
-        show_default=True,
-    ),
-    batch_size: int = typer.Option(
-        8,
-        "--batch-size",
-        "-b",
-        min=1,
-        help="Batch size for inference.",
-        show_default=True,
-    ),
-    max_length: int = typer.Option(
-        1024,
-        "--max-length",
-        "-L",
-        min=1,
-        help="Max tokens per sequence (truncation at tokenizer level).",
-        show_default=True,
-    ),
-    oom_backoff: bool = typer.Option(
-        True,
-        "--oom-backoff/--no-oom-backoff",
-        help="Auto-reduce batch size on CUDA OOM and retry.",
-        show_default=True,
-    ),
+    model: str = MODEL_OPTION,
+    device: str = DEVICE_OPTION,
+    precision: str = PRECISION_OPTION,
+    batch_size: int = BATCH_SIZE_OPTION,
+    max_length: int = MAX_LENGTH_OPTION,
+    oom_backoff: bool = OOM_BACKOFF_OPTION,
     # Layer/Pooling controls (handled by EmbeddingBased) :contentReference[oaicite:2]{index=2}
-    layers: str = typer.Option(
-        "last",
-        "--layers",
-        help="Layer selection: 'last' | 'last4' | 'all' | an integer index. "
-        "Multiple indices can be provided as comma-separated (e.g., '0,3,6').",
-        show_default=True,
-    ),
-    layer_agg: str = typer.Option(
-        "mean",
-        "--layer-agg",
-        help=f"Aggregation across selected layers. One of: {', '.join(LAYER_AGG_CHOICES)}.",
-        show_default=True,
-    ),
-    pool: str = typer.Option(
-        "mean",
-        "--pool",
-        help=f"Token pooling strategy. One of: {', '.join(POOL_CHOICES)}.",
-        show_default=True,
-    ),
+    layers: str = LAYERS_OPTION,
+    layer_agg: str = LAYER_AGG_OPTION,
+    pool: str = POOL_OPTION,
     # IO
-    input_data: Path = typer.Option(
-        ...,
-        "--input-data",
-        "-i",
-        help="Input CSV with sequences.",
-    ),
-    sequence_identifier: str = typer.Option(
-        "sequence",
-        "--sequence-identifier",
-        "-s",
-        help="Column in CSV that contains amino acid sequences.",
-        show_default=True,
-    ),
-    output: Path = typer.Option(
-        ...,
-        "--output",
-        "-o",
-        help="Output file path for embeddings (extension can be omitted).",
-    ),
-    format_output: str = typer.Option(
-        "csv",
-        "--format-output",
-        "-f",
-        help=f"Export format. One of: {', '.join(EXPORT_CHOICES)}.",
-        show_default=True,
-    ),
+    input_data: Path = INPUT_DATA_OPTION,
+    sequence_identifier: str = SEQUENCE_ID_OPTION,
+    output: Path = OUTPUT_OPTION,
+    format_output: str = FORMAT_OUTPUT_OPTION,
     # Logging
-    debug: bool = typer.Option(
-        False,
-        "--debug/--no-debug",
-        help="Enable verbose logs for this command.",
-        show_default=True,
-    ),
-    log_level: str = typer.Option(
-        "INFO",
-        "--log-level",
-        help=f"Library log level: {', '.join(LOG_LEVELS)}.",
-        show_default=True,
-    ),
+    debug: bool = DEBUG_OPTION,
+    log_level: str = LOG_LEVEL_OPTION,
 ) -> None:
     """Extract embeddings and export them to disk using the chosen format.
 
@@ -213,7 +226,8 @@ def run(
       -m Rostlab/prot_t5_xl_uniref50 -i data/demo.csv -o results/emb_t5.npy -f npy -d cuda -p bf16
 
     sylphy get-embedding run \\
-      -m ElnaggarLab/ankh2-ext1 -i data/demo.csv -o results/emb_ankh -f csv --layers all --layer-agg sum --pool cls
+      -m ElnaggarLab/ankh2-ext1 -i data/demo.csv -o results/emb_ankh \\
+      -f csv --layers all --layer-agg sum --pool cls
     """
     try:
         # Cheap validations first (keep startup fast)
@@ -242,13 +256,10 @@ def run(
             except ValueError:
                 raise typer.BadParameter(
                     "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | comma-separated integers."
-                )
+                ) from None
 
-        # Import the factory only here (avoid heavy imports at module import time)
-        # Factory chooses backend based on model name. :contentReference[oaicite:5]{index=5}
-        from sylphy.embedding_extractor import (
-            create_embedding,  # lazy alias to EmbeddingFactory :contentReference[oaicite:6]{index=6}
-        )
+        # Lazy import: factory chooses backend based on model name.
+        from sylphy.embedding_extractor import create_embedding
 
         embedder = create_embedding(
             model_name=model,
@@ -261,7 +272,7 @@ def run(
             debug_mode=lvl,
         )
 
-        # Run the unified embedding pipeline (loads model/tokenizer internally if needed) :contentReference[oaicite:7]{index=7}
+        # Run the unified embedding pipeline (loads model/tokenizer on demand)
         embedder.run_process(
             max_length=max_length,
             batch_size=batch_size,
@@ -270,7 +281,7 @@ def run(
             pool=pool_v,  # "mean" | "cls" | "eos"
         )
 
-        # Ensure output extension and export (supports csv/npy/npz/parquet) :contentReference[oaicite:8]{index=8}
+        # Ensure output extension and export (supports csv/npy/npz/parquet)
         final_output = _ensure_ext(output, fmt_v)
         try:
             embedder.export_encoder(str(final_output), file_format=fmt_v)
@@ -282,7 +293,7 @@ def run(
 
     except typer.BadParameter as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from None
     except Exception as e:
         typer.secho(f"Unexpected error: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e

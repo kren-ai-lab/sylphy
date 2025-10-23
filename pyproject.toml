@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Protein sequence representation: encoders, embeddings, and reductions."
 readme = "README.md"
 license = "GPL-3.0-only"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 authors = [
     { name = "Kren AI Lab", email = "krenai@umag.cl" },
 ]
@@ -32,77 +32,74 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "appdirs>=1.4.4",
-    "huggingface-hub>=0.20",
-    "joblib>=1.3",
-    "numpy>=1.24",
-    "pandas>=2.0",
-    "rich>=13.0",
-    "scikit-learn>=1.3",
-    "typer>=0.9",
+    "appdirs>=1.4.4,<2.0",
+    "huggingface-hub>=0.36.0,<1.0",
+    "joblib>=1.5.2,<2.0",
+    "numpy>=2.3.4,<3.0",
+    "pandas>=2.3.3,<3.0",
+    "rich>=14.2.0,<15.0",
+    "scikit-learn>=1.7.2,<2.0",
+    "typer>=0.20.0,<1.0",
 ]
 
 [project.optional-dependencies]
 all = [
-    "accelerate>=0.29",
-    "biopython>=1.80",
-    "biotite>=0.38.0",
-    "clustpy>=0.0.2",
-    "esm>=3.0; platform_system!='Windows'",
-    "fastparquet>=2024.5.0",
-    "igraph>=0.11.0",
-    "pyarrow>=14.0.0; platform_python_implementation!='PyPy'",
-    "rich>=13.0",
-    "safetensors>=0.4",
-    "sentencepiece>=0.1.99",
-    "torch>=2.1",
-    "transformers>=4.40",
-    "tslearn>=0.6.0",
-    "umap-learn>=0.5.5",
+    "accelerate>=1.11,<2.0",
+    "biopython>=1.85,<2.0",
+    "biotite>=1.5.0,<2.0",
+    "clustpy>=0.0.2,<1.0",
+    "esm>=3.0.3,<4.0; platform_system!='Windows'",
+    "fastparquet>=2024.11.0",
+    "igraph>=1.0.0,<2.0",
+    "pyarrow>=21.0.0; platform_python_implementation!='PyPy'",
+    "safetensors>=0.6.2,<1.0",
+    "sentencepiece>=0.2.1,<1.0",
+    "torch>=2.9.0,<3.0",
+    "transformers>=4.57.1,<5.0",
+    "tslearn>=0.6.3,<1.0",
+    "umap-learn>=0.5.9,<1.0",
 ]
 bio = [
-    "biopython>=1.80",
-    "biotite>=0.38.0",
-]
-cli = [
-    "rich>=13.0",
+    "biopython>=1.85,<2.0",
+    "biotite>=1.5.0,<2.0",
 ]
 dev = [
-    "build>=1.0.0",
-    "mypy>=1.8.0",
-    "pytest>=8.4.2",
-    "ruff>=0.14.0",
-    "taskipy>=1.13.0",
-    "twine>=5.0.0",
+    "build~=1.3.0",
+    "mypy~=1.18.0",
+    "pytest~=8.4.2",
+    "ruff~=0.14.0",
+    "taskipy~=1.14.0",
+    "twine~=6.0.0",
 ]
 embeddings = [
-    "accelerate>=0.29",
-    "esm>=3.0; platform_system!='Windows'",
-    "safetensors>=0.4",
-    "sentencepiece>=0.1.99",
-    "torch>=2.1",
-    "transformers>=4.40",
+    "accelerate>=1.11,<2.0",
+    "esm>=3.0,<4.0; platform_system!='Windows'",
+    "safetensors>=0.6.2,<1.0",
+    "sentencepiece>=0.2.1,<1.0",
+    "torch>=2.9.0,<3.0",
+    "transformers>=4.57.1,<5.0",
 ]
 graph = [
-    "igraph>=0.11.0",
+    "igraph>=1.0.0,<2.0",
 ]
 parquet = [
-    "fastparquet>=2024.5.0",
-    "pyarrow>=14.0.0; platform_python_implementation!='PyPy'",
+    "fastparquet>=2024.11.0",
+    "pyarrow>=21.0.0; platform_python_implementation!='PyPy'",
 ]
 reductions = [
-    "clustpy>=0.0.2",
-    "tslearn>=0.6.0",
-    "umap-learn>=0.5.5",
+    "clustpy>=0.0.2,<1.0",
+    "tslearn>=0.6.3,<1.0",
+    "umap-learn>=0.5.9,<1.0",
 ]
 tests = [
-    "pytest-cov>=5.0.0",
-    "pytest>=8.4.1",
+    "pytest-cov~=7.0.0",
+    "pytest~=8.4.2",
 ]
 
 [project.scripts]

@@ -73,6 +73,4 @@ class BertBasedEmbedding(EmbeddingBased):
         if not batch:
             raise ValueError("Input batch is empty.")
         self.ensure_loaded()
-        if not self._is_ready():
-            raise RuntimeError("Model/tokenizer not loaded. Call ensure_loaded() before embedding.")
         return self._forward_hidden_states(batch, max_length=max_length)

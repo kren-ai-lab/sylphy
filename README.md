@@ -197,7 +197,13 @@ sylphy encode-sequences run \
 
 ## Configuration and Cache
 
-Model weights and intermediate files are cached locally (following OS-specific appdirs).
+Model weights and intermediate files are cached locally following OS-specific conventions:
+
+- **Linux**: `~/.cache/sylphy` (or `$XDG_CACHE_HOME/sylphy`)
+- **macOS**: `~/Library/Caches/sylphy`
+- **Windows**: `%LOCALAPPDATA%\sylphy\Cache`
+
+### Programmatic Configuration
 
 ```python
 from sylphy import get_config, set_cache_root, temporary_cache_root
@@ -209,6 +215,14 @@ set_cache_root("/data/sylphy_cache")
 
 with temporary_cache_root("/tmp/sylphy_cache"):
     ...
+```
+
+### Environment Variable
+
+Override the default cache directory with `SYLPHY_CACHE_ROOT`:
+
+```bash
+export SYLPHY_CACHE_ROOT=/custom/path/to/cache
 ```
 
 ---

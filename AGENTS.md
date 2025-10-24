@@ -60,8 +60,9 @@ pip install -e .
 
 ### CLI Usage
 ```bash
-# Show help
+# Show help and version
 sylphy --help
+sylphy --version
 
 # Extract embeddings
 sylphy get-embedding run \
@@ -77,6 +78,14 @@ sylphy encode-sequences run \
   --input-data data/sequences.csv \
   --sequence-identifier sequence \
   --output out/onehot.csv
+
+# Manage cache
+sylphy cache ls          # List cached files
+sylphy cache stats       # Show cache statistics
+sylphy cache path        # Show cache directory path
+sylphy cache prune       # Prune cache
+sylphy cache rm          # Remove files by pattern/age
+sylphy cache clear       # Clear entire cache
 ```
 
 ## Architecture
@@ -177,7 +186,7 @@ FFT encoders expect numeric input. Common workflow:
 ### CLI Structure
 
 The CLI uses Typer with subcommands:
-- `sylphy cache` → cache management (list, stats, prune, remove)
+- `sylphy cache` → cache management (ls, stats, prune, rm, clear, path)
 - `sylphy encode-sequences` → classical sequence encoders
 - `sylphy get-embedding` → embedding extraction
 

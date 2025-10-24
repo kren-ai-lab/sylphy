@@ -1,316 +1,305 @@
+# Sylphy 🧬
 
-# Sylphy 🧬 — Protein Representation Toolkit
+**Lightweight Python toolkit for protein sequence representation** — transform sequences into numerical formats for
+machine learning and bioinformatics.
 
-**Sylphy** is a lightweight Python toolkit that transforms **protein sequences** into numerical representations for machine learning and bioinformatics workflows.
+Three core components:
 
-It unifies three core components:
+- **Classical encoders** — one-hot, ordinal, frequency, k-mers, physicochemical, FFT
+- **Embedding extraction** — ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C
+- **Dimensionality reduction** — PCA, UMAP, t-SNE, and more
 
-* **Classical sequence encoders** — one-hot, ordinal, frequency, k-mers (TF-IDF), physicochemical, and FFT.
-* **Embedding extraction** — from state-of-the-art pretrained models (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C).
-* **Dimensionality reduction** — linear and non-linear methods for downstream visualization and clustering.
+> **Design:** Minimal API • Lazy loading • No side effects
 
-> ✳️ **Design philosophy:** minimal public API, lazy loading of heavy dependencies, no side effects on import, fully testable and configurable.
-
----
-
-## Table of Contents
-
-* [Installation](#installation)
-* [Quickstart](#quickstart)
-
-  * [Logging](#logging)
-  * [Sequence Encoders](#sequence-encoders)
-  * [Embedding Extraction](#embedding-extraction)
-  * [Dimensionality Reduction](#dimensionality-reduction)
-* [Command-Line Interface (CLI)](#command-line-interface-cli)
-* [Configuration and Cache](#configuration-and-cache)
-* [Model Registry](#model-registry)
-* [Public API](#public-api)
-* [Development and Testing](#development-and-testing)
-* [License](#license)
-* [Acknowledgements](#acknowledgements)
-* [Contact](#contact)
-
----
-
-## Installation
-
-### Requirements
-
-* Python **3.10+**
-* Optional GPU acceleration (PyTorch + CUDA)
-
-### From Source
-
-```bash
-git clone https://github.com/KREN-AI-Lab/sylphy.git
-cd sylphy
-pip install -e .
-```
----
-
-## Quickstart
-
-### Logging
-
-All modules share a unified, hierarchical logger. Configure once at startup:
-
-```python
-from sylphy import setup_logger
-
-setup_logger(name="sylphy", level="INFO")
-```
-
-Optional environment variable:
-
-```bash
-export SYLPHY_LOG_FILE=/tmp/sylphy.log
-```
-
----
-
-### Sequence Encoders
+## Quick Example
 
 ```python
 import pandas as pd
-from sylphy.sequence_encoder import create_encoder
+from sylphy.embedding_extractor import create_embedding
 
-df = pd.DataFrame({"sequence": ["ACD", "WYYVV", "KLMNPQ", "GGG"]})
-
-encoder = create_encoder(
-    "one_hot",                  # "ordinal", "kmers", "frequency", "physicochemical", "fft"
-    dataset=df,
-    sequence_column="sequence",
-    max_length=1024,
-    debug=True,
-)
-
-encoder.run_process()
-X = encoder.coded_dataset
-encoder.export_encoder("onehot.csv")
-```
-
-**FFT** encoders expect a numeric input matrix. A common workflow is:
-
-```python
-from sylphy.sequence_encoder import create_encoder
-
-phys = create_encoder("physicochemical", dataset=df, name_property="ANDN920101")
-phys.run_process()
-
-fft = create_encoder("fft", dataset=phys.coded_dataset, sequence_column="sequence")
-fft.run_process()
-fft.coded_dataset.head()
-```
-
----
-
-### Embedding Extraction
-
-Heavy dependencies (PyTorch, Transformers) are loaded lazily.
-
-```python
-import pandas as pd
-from sylphy.embedding_extraction import create_embedding
-
-df = pd.DataFrame({"sequence": ["MKT...", "GAVL...", "PPPP..."]})
+# Extract embeddings from protein sequences
+df = pd.DataFrame({"sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
 
 embedder = create_embedding(
-    model_name="facebook/esm2_t6_8M_UR50D",  # also: ProtT5, ProtBERT, Mistral-Prot, Ankh2, ESM-C
+    model_name="facebook/esm2_t6_8M_UR50D",
     dataset=df,
     column_seq="sequence",
     name_device="cuda",
-    precision="fp16",
-    oom_backoff=True,
-    debug=True,
+    precision="fp16"
 )
 
-embedder.run_process(max_length=1024, batch_size=8, pool="mean")  # "mean" | "cls" | "eos"
-embeddings = embedder.coded_dataset
+embedder.run_process(batch_size=8, pool="mean")
+embeddings = embedder.coded_dataset  # pandas DataFrame with embeddings
 embedder.export_encoder("embeddings.parquet")
 ```
 
-**Supported model families:**
-`("esm2", "ankh2", "prot_t5", "prot_bert", "mistral_prot", "esmc")`
-
----
-
-### Dimensionality Reduction
-
-```python
-import numpy as np
-from sylphy.reductions import reduce_dimensionality
-
-# Suppose X is an (N, D) matrix
-model, X_reduced = reduce_dimensionality(
-    method="pca",            # e.g. "truncated_svd", "umap", "isomap"
-    dataset=X,
-    return_type="numpy",
-    n_components=2,
-    random_state=0,
-)
-
-print(X_reduced.shape)
-```
-
----
-
-## Command-Line Interface (CLI)
-
-After installation, the CLI provides a single entrypoint:
+## Installation
 
 ```bash
-sylphy --help
+# From source
+git clone https://github.com/kren-ai-lab/sylphy.git
+cd sylphy
+pip install -e .
+```
+
+**Requirements:** Python 3.11+ • Optional: CUDA for GPU acceleration
+
+## Usage
+
+### Sequence Encoders
+
+Transform sequences using classical encoding methods:
+
+```python
+from sylphy.sequence_encoder import create_encoder
+
+encoder = create_encoder(
+    "one_hot",  # or: ordinal, kmers, frequency, physicochemical, fft
+    dataset=df,
+    sequence_column="sequence",
+    max_length=1024
+)
+
+encoder.run_process()
+encoded = encoder.coded_dataset
+encoder.export_encoder("encoded.csv")
+```
+
+**FFT encoding** requires numeric input (use a two-stage pipeline):
+
+```python
+# Stage 1: physicochemical properties
+phys = create_encoder("physicochemical", dataset=df, name_property="ANDN920101")
+phys.run_process()
+
+# Stage 2: FFT on numeric matrix
+fft = create_encoder("fft", dataset=phys.coded_dataset)
+fft.run_process()
 ```
 
 ### Embedding Extraction
 
+Extract embeddings from pretrained protein language models:
+
+```python
+from sylphy.embedding_extractor import create_embedding
+
+embedder = create_embedding(
+    model_name="facebook/esm2_t6_8M_UR50D",
+    dataset=df,
+    column_seq="sequence",
+    name_device="cuda",
+    precision="fp16",  # fp32, fp16, or bf16
+    oom_backoff=True  # auto-reduce batch size on OOM
+)
+
+embedder.run_process(
+    max_length=1024,
+    batch_size=16,
+    pool="mean"  # mean, cls, or eos
+)
+```
+
+**Supported models:** ESM2 • Ankh2 • ProtT5 • ProtBERT • Mistral-Prot • ESM-C
+
+### Dimensionality Reduction
+
+Reduce high-dimensional embeddings for visualization:
+
+```python
+from sylphy.reductions import reduce_dimensionality
+
+model, reduced = reduce_dimensionality(
+    method="umap",  # pca, truncated_svd, umap, tsne, isomap, etc.
+    dataset=embeddings,
+    n_components=2,
+    random_state=42,
+    return_type="numpy"  # numpy or pandas
+)
+```
+
+## Command-Line Interface
+
 ```bash
+# Extract embeddings
 sylphy get-embedding run \
   --model facebook/esm2_t6_8M_UR50D \
-  --input-data data/sequences.csv \
+  --input-data sequences.csv \
   --sequence-identifier sequence \
-  --output out/emb_esm2.parquet \
-  --device cuda --precision fp16 --batch-size 16 --pool mean
-```
+  --output embeddings.parquet \
+  --device cuda --precision fp16 --batch-size 16
 
-### Sequence Encoding
-
-```bash
-# One-hot encoding
+# Encode sequences
 sylphy encode-sequences run \
   --encoder one_hot \
-  --input-data data/sequences.csv \
+  --input-data sequences.csv \
   --sequence-identifier sequence \
-  --output out/onehot.csv
+  --output encoded.csv
 
-# Physicochemical + FFT (two-stage)
-sylphy encode-sequences run \
-  --encoder fft \
-  --input-data data/sequences.csv \
-  --sequence-identifier sequence \
-  --name-property ANDN920101 \
-  --output out/physchem_fft.csv
+# Manage cache
+sylphy cache ls        # List cached files
+sylphy cache stats     # Cache statistics
+sylphy cache prune     # Prune cache (remove old files or reduce size)
+sylphy cache rm        # Remove files by pattern or age
+sylphy cache clear     # Clear entire cache
+
+# Version info
+sylphy --version
 ```
 
----
+## Configuration
 
-## Configuration and Cache
+### Cache Management
 
-Model weights and intermediate files are cached locally following OS-specific conventions:
+Models and intermediate files are cached at:
 
-- **Linux**: `~/.cache/sylphy` (or `$XDG_CACHE_HOME/sylphy`)
-- **macOS**: `~/Library/Caches/sylphy`
-- **Windows**: `%LOCALAPPDATA%\sylphy\Cache`
+- **Linux:** `~/.cache/sylphy`
+- **macOS:** `~/Library/Caches/sylphy`
+- **Windows:** `%LOCALAPPDATA%\sylphy`
 
-### Programmatic Configuration
+**Programmatic control:**
 
 ```python
 from sylphy import get_config, set_cache_root, temporary_cache_root
 
+# View current cache location
 cfg = get_config()
 print(cfg.cache_paths.cache_root)
 
-set_cache_root("/data/sylphy_cache")
+# Change cache directory
+set_cache_root("/custom/cache/path")
 
-with temporary_cache_root("/tmp/sylphy_cache"):
-    ...
+# Temporary override
+with temporary_cache_root("/tmp/cache"):
+    # operations use temporary cache
+    pass
 ```
 
-### Environment Variable
-
-Override the default cache directory with `SYLPHY_CACHE_ROOT`:
+**Environment variables:**
 
 ```bash
-export SYLPHY_CACHE_ROOT=/custom/path/to/cache
+export SYLPHY_CACHE_ROOT=/custom/cache     # Override cache location
+export SYLPHY_DEVICE=cuda                  # Force device (cpu/cuda)
+export SYLPHY_LOG_FILE=/tmp/sylphy.log     # Enable file logging
+export SYLPHY_SEED=42                      # Random seed
 ```
 
----
+### Model Registry
 
-## Model Registry
+Register custom models and aliases:
 
-Sylphy includes a minimal registry to manage model aliases, local overrides, and resolution.
+```python
+from sylphy import ModelSpec, register_model, register_alias, resolve_model
+
+# Register a model
+register_model(ModelSpec(
+    name="esm2_small",
+    provider="huggingface",
+    ref="facebook/esm2_t6_8M_UR50D"
+))
+
+# Create alias
+register_alias("my_model", "esm2_small")
+
+# Resolve to path
+path = resolve_model("my_model")
+```
+
+Override model paths via environment:
+
+```bash
+export SYLPHY_MODEL_ESM2_SMALL=/path/to/local/model
+```
+
+### Logging
+
+Optional unified logging configuration:
+
+```python
+from sylphy.logging import setup_logger
+
+setup_logger(name="sylphy", level="INFO")  # DEBUG, INFO, WARNING, ERROR
+```
+
+## Examples
+
+The `examples/` directory contains complete working examples:
+
+- **`1_quick_start_encoders.ipynb`** — Jupyter notebook demonstrating all classical encoders
+- **`2_simple_demo_embedding_extractor.py`** — Extract embeddings using all supported model families
+- **`3_quick_start_reduction_process.ipynb`** — Dimensionality reduction workflows
+- **`4_demo_embedding_different_layers.py`** — Layer selection and aggregation strategies
+- **`encoder_sequences_using_sylphy.py`** — Batch encoding with multiple encoder types
+- **`extract_embedding_using_sylphy.py`** — Production-ready embedding extraction script
+
+Run examples:
+
+```bash
+# Python scripts
+python examples/2_simple_demo_embedding_extractor.py
+
+# Jupyter notebooks
+jupyter notebook examples/1_quick_start_encoders.ipynb
+```
+
+## Development
+
+```bash
+# Install with dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest                # All tests (offline, mocked)
+pytest -v             # Verbose
+pytest --cov=sylphy   # With coverage
+
+# Code quality
+ruff check sylphy/    # Lint
+ruff format sylphy/   # Format
+mypy sylphy/          # Type check
+
+# Using taskipy shortcuts
+uv run task test      # Run tests
+uv run task format    # Format code
+uv run task lint-fix  # Lint and auto-fix
+```
+
+**Architecture:**
+
+- Fully typed with annotations
+- NumPy-style docstrings
+- Factory pattern for all components
+- Lazy imports for heavy dependencies
+- Offline tests with mocked PyTorch/HF
+
+## API Reference
+
+Main imports:
 
 ```python
 from sylphy import (
-    ModelSpec, register_model, register_alias, resolve_model, list_registered_models
-)
-
-register_model(ModelSpec(name="esm2_t6", provider="huggingface", ref="facebook/esm2_t6_8M_UR50D"))
-register_alias("esm2_small", "esm2_t6")
-
-path = resolve_model("esm2_small")
-print(path)
-print(list_registered_models(include_aliases=True))
-```
-
-> To override a model path:
-> set `SYLPHY_MODEL_<UPPERCASE_NAME>` as an environment variable
-> (e.g. `SYLPHY_MODEL_ESM2_SMALL=/models/esm2_t6`).
-
----
-
-## Public API
-
-```python
-from sylphy import (
-    # Logging
-    setup_logger, get_logger,
-
-    # Config
+    # Configuration / registry
     get_config, set_cache_root, temporary_cache_root,
-    ModelSpec, register_model, register_alias, resolve_model,
-
-    # Sequence encoders
-    create_encoder, OneHotEncoder, OrdinalEncoder, KMersEncoder,
-    PhysicochemicalEncoder, FFTEncoder, FrequencyEncoder,
-
-    # Embeddings
-    create_embedding, EmbeddingBased, SUPPORTED_FAMILIES,
-
-    # Reductions
-    reduce_dimensionality, LinearReduction, NonLinearReductions,
+    ModelSpec, register_model, resolve_model,
 )
+from sylphy.sequence_encoder import create_encoder
+from sylphy.embedding_extractor import create_embedding
+from sylphy.reductions import reduce_dimensionality
+from sylphy.logging import setup_logger, get_logger
 ```
 
-Subpackages also expose curated surfaces:
-
-* `sylphy.sequence_encoder`
-* `sylphy.embedding_extraction`
-* `sylphy.reductions`
-
----
-
-## Development and Testing
-
-```bash
-pip install -e .
-pytest -q
-```
-
-The test suite runs **offline** (mocked HF and torch).
-Coding style: fully type-annotated, NumPy-style docstrings, no side effects on import.
-
-For reproducibility, set `random_state=0` in all stochastic reducers.
-
----
+See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
 
 ## License
 
-Licensed under **GPL-3.0-only**.
-See the `LICENSE` file for details.
-
----
+**GPL-3.0-only** — See [LICENSE](LICENSE) for details.
 
 ## Acknowledgements
 
-* Protein language models rely on the **Hugging Face ecosystem** and, optionally, **Meta’s ESM-C SDK**.
-* Non-linear reducers (UMAP, Isomap, t-SNE) use **scikit-learn** and **ClustPy**.
-* Developed by the **KREN AI Lab** (University of Magallanes, Chile).
+Built with:
 
----
+- **Hugging Face** Transformers ecosystem
+- **Meta** ESM-C SDK
+- **scikit-learn** • **PyTorch** • **UMAP** • **ClustPy**
 
-## Contact
-
-Maintained by **KREN AI Lab**
-📧 [krenai@umag.cl](mailto:krenai@umag.cl)
+Developed by **KREN AI Lab** at Universidad de Magallanes, Chile.

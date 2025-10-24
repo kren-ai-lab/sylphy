@@ -78,7 +78,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
     ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor]:
         if not batch:
             raise ValueError("Input batch is empty.")
-        self.load_model_tokenizer()
+        self.ensure_loaded()
 
         enc = self.tokenizer(
             batch,

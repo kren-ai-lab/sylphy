@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import typer
 
+from sylphy import __version__
 from sylphy.cli.cache import app as cache_app
 from sylphy.cli.encoder_sequences import app as encoder_sequence_app
 from sylphy.cli.get_embeddings import app as embedding_extractor_app
@@ -12,6 +13,28 @@ app = typer.Typer(
     add_completion=False,
     help="Tools to numerically represent protein sequences (encoders, embeddings, reductions, cache).",
 )
+
+
+def version_callback(value: bool) -> None:
+    """Show version and exit."""
+    if value:
+        typer.echo(f"sylphy version {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        None,
+        "--version",
+        "-v",
+        callback=version_callback,
+        is_eager=True,
+        help="Show version and exit.",
+    ),
+) -> None:
+    """Sylphy CLI main callback."""
+    pass
 
 # Cache management
 app.add_typer(

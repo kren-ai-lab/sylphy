@@ -35,14 +35,60 @@ embedder.export_encoder("embeddings.parquet")
 
 ## Installation
 
+**Recommended:** Use a virtual environment to isolate dependencies:
+
 ```bash
-# From source
-git clone https://github.com/kren-ai-lab/sylphy.git
-cd sylphy
-pip install -e .
+# Create virtual environment
+python -m venv venv
+
+# Activate (Linux/macOS)
+source venv/bin/activate
 ```
 
-**Requirements:** Python 3.11+ • Optional: CUDA for GPU acceleration
+Download the latest `.whl` file from [Releases](https://github.com/ProteinEngineering-PESB2/sylphy_library/releases):
+
+```bash
+# Basic installation
+pip install sylphy-<version>-py3-none-any.whl
+
+# With optional variants
+pip install sylphy-<version>-py3-none-any.whl[embeddings,parquet]
+```
+
+The basic installation includes classical sequence encoders and core utilities. For additional features, install optional variants:
+
+### Installation Variants
+
+| Variant          | Description                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`embeddings`** | Adds PyTorch, Transformers, and ESM-C SDK for protein language model embedding extraction (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C).              |
+| **`parquet`**    | Enables Parquet file format support via PyArrow and FastParquet for efficient storage and loading of large datasets.                                         |
+| **`reductions`** | Adds UMAP and ClustPy for advanced non-linear dimensionality reduction methods. **Requires a C++ compiler and Python development headers** to build ClustPy. |
+| **`all`**        | Installs all optional dependencies (embeddings + parquet + reductions). **Requires compilation tools** for ClustPy.                                          |
+| **`tests`**      | Installs pytest and pytest-cov for running the test suite with coverage reports.                                                                             |
+| **`dev`**        | Development tools including pytest, mypy, ruff, taskipy, and build utilities for contributing to Sylphy.                                                     |
+
+**Example installations:**
+
+```bash
+# Embeddings + Parquet support
+pip install sylphy-<version>-py3-none-any.whl[embeddings,parquet]
+
+# Full installation with all features
+pip install sylphy-<version>-py3-none-any.whl[all]
+```
+
+**Requirements:**
+- Python 3.11–3.12
+- Optional: CUDA for GPU-accelerated embedding extraction
+- For `reductions` variant: C++ compiler and Python development headers
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install build-essential python3-dev
+
+  # Fedora/RHEL
+  sudo dnf install gcc gcc-c++ python3-devel
+  ```
 
 ## Usage
 
@@ -244,27 +290,52 @@ jupyter notebook examples/1_quick_start_encoders.ipynb
 
 ## Development
 
+### Setup
+
+Clone the repository and install in editable mode:
+
 ```bash
-# Install with dev dependencies
+git clone https://github.com/kren-ai-lab/sylphy.git
+cd sylphy
+
+# Install with development dependencies
 pip install -e ".[dev]"
 
+# Or install with all features for testing
+pip install -e ".[all,dev]"
+```
+
+**Note:** The `-e` flag installs in editable mode, meaning changes to the source code take effect immediately without reinstalling.
+
+### Testing
+
+```bash
 # Run tests
 pytest                # All tests (offline, mocked)
 pytest -v             # Verbose
 pytest --cov=sylphy   # With coverage
 
-# Code quality
+# Using taskipy shortcuts
+uv run task test      # Run tests (quiet)
+uv run task test-v    # Run tests (verbose)
+uv run task test-cov  # Run tests with coverage report
+```
+
+### Code Quality
+
+```bash
+# Linting and formatting
 ruff check sylphy/    # Lint
 ruff format sylphy/   # Format
 mypy sylphy/          # Type check
 
 # Using taskipy shortcuts
-uv run task test      # Run tests
-uv run task format    # Format code
+uv run task lint      # Lint check
 uv run task lint-fix  # Lint and auto-fix
+uv run task format    # Format code
 ```
 
-**Architecture:**
+### Architecture
 
 - Fully typed with annotations
 - NumPy-style docstrings

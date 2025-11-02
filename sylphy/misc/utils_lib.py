@@ -15,6 +15,8 @@ import pandas as pd
 from sklearn.metrics import pairwise_distances
 from sklearn.utils import shuffle
 
+from sylphy.types import FileFormat
+
 _LOG = logging.getLogger("sylphy.misc.utils")
 
 
@@ -104,7 +106,7 @@ class UtilsLib:
 
         # Per-label sampling
         if per_label:
-            parts = []
+            parts: list[pd.DataFrame] = []
             for lab in use_labels:
                 subset = df[df[label_name] == lab]
                 k = n_samples if replace else min(n_samples, len(subset))
@@ -142,7 +144,7 @@ class UtilsLib:
                     alloc[lab] = new_v
                     diff += -1 if diff > 0 else 1
 
-        parts = []
+        parts: list[pd.DataFrame] = []
         for lab, k in alloc.items():
             if k <= 0:
                 continue
@@ -387,7 +389,7 @@ class UtilsLib:
         path: str | Path,
         *,
         base_message: str = "Encoded data",
-        file_format: Literal["csv", "npy", "npz", "parquet"] | None = None,
+        file_format: FileFormat | None = None,
         overwrite: bool = True,
     ) -> Path:
         """

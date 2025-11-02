@@ -320,7 +320,8 @@ def cmd_ls(
 def cmd_stats() -> None:
     mgr = CacheManager()
     files, total = mgr.du()
-    newest = oldest = None
+    newest: CacheEntry | None = None
+    oldest: CacheEntry | None = None
     for e in mgr.iter_entries(recursive=True):
         if e.is_dir:
             continue

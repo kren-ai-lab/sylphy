@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -10,6 +9,7 @@ from scipy.fft import fft
 
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
+from sylphy.types import FileFormat
 
 
 class FFTEncoder:
@@ -97,12 +97,13 @@ class FFTEncoder:
 
     def export_encoder(
         self,
-        df_encoder: pd.DataFrame,
         path: str | Path,
-        file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
+        file_format: FileFormat = "csv",
+        *,
+        df_encoder: pd.DataFrame | None = None,
     ) -> None:
         UtilsLib.export_data(
-            df_encoded=df_encoder,
+            df_encoded=df_encoder if df_encoder is not None else self.coded_dataset,
             path=path,
             base_message="FFT encoder output",
             file_format=file_format,

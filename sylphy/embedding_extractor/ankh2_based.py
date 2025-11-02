@@ -6,6 +6,8 @@ import logging
 import torch
 from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
 
+from sylphy.types import PrecisionType
+
 from .embedding_based import EmbeddingBased
 
 
@@ -21,7 +23,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
         debug: bool = False,
         debug_mode: int = logging.INFO,
         *,
-        precision: str = "fp32",
+        precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
     ) -> None:
         super().__init__(
@@ -60,9 +62,11 @@ class Ankh2BasedEmbedding(EmbeddingBased):
                 self.__logger__.debug("pad_token_id set to: %s", self.tokenizer.pad_token_id)
 
             self.__logger__.info("Loading Ankh2 encoder from: %s on device=%s", local_dir, self.device)
-            self.model = T5EncoderModel.from_pretrained(local_dir, trust_remote_code=True).to(self.device)
+            model = T5EncoderModel.from_pretrained(local_dir, trust_remote_code=True)
+            model.to(self.device)
+            self.model = model
 
-            self.model.eval()
+            model.eval()
         except Exception as e:
             self.status = False
             self.message = f"Failed to load Ankh2 tokenizer/model: {e}"
@@ -79,7 +83,12 @@ class Ankh2BasedEmbedding(EmbeddingBased):
             raise ValueError("Input batch is empty.")
         self.ensure_loaded()
 
-        enc = self.tokenizer(
+        tokenizer = self.tokenizer
+        model = self.model
+        if tokenizer is None or model is None:
+            raise RuntimeError("Tokenizer/model not loaded.")
+
+        enc = tokenizer(
             batch,
             return_tensors="pt",
             truncation=True,
@@ -92,24 +101,24 @@ class Ankh2BasedEmbedding(EmbeddingBased):
         amp_dtype = self._amp_dtype()
         use_amp = (self.device.type == "cuda") and (amp_dtype is not None)
 
-        if self.use_encoder_only and hasattr(self.model, "encoder"):
+        if self.use_encoder_only and hasattr(model, "encoder"):
             if use_amp:
                 with torch.autocast(device_type="cuda", dtype=amp_dtype):
-                    out = self.model.encoder(input_ids=enc["input_ids"], output_hidden_states=True)
+                    out = model.encoder(input_ids=enc["input_ids"], output_hidden_states=True)
             else:
-                out = self.model.encoder(input_ids=enc["input_ids"], output_hidden_states=True)
+                out = model.encoder(input_ids=enc["input_ids"], output_hidden_states=True)
         else:
             if use_amp:
                 with torch.autocast(device_type="cuda", dtype=amp_dtype):
-                    out = self.model(**enc, output_hidden_states=True)
+                    out = model(**enc, output_hidden_states=True)
             else:
-                out = self.model(**enc, output_hidden_states=True)
+                out = model(**enc, output_hidden_states=True)
 
         hs = (
             out.hidden_states if getattr(out, "hidden_states", None) is not None else (out.last_hidden_state,)
         )
         attn = enc.get("attention_mask", None)
         if attn is None:
-            pad_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else 0
+            pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else 0
             attn = enc["input_ids"].ne(pad_id).to(hs[0].dtype)
         return hs, attn

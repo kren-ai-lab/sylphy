@@ -17,8 +17,11 @@ Design goals:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import typer
+
+from sylphy.types import FileFormat
 
 app = typer.Typer(
     name="encode-sequences",
@@ -43,12 +46,8 @@ ENCODER_OPTION = typer.Option(
     show_default=True,
 )
 INPUT_DATA_OPTION = typer.Option(..., "--input-data", "-i", help="CSV file with sequences.")
-SEQUENCE_ID_OPTION = typer.Option(
-    "sequence", "--sequence-identifier", "-s", help="Sequence column name."
-)
-MAX_LENGTH_OPTION = typer.Option(
-    1024, "--max-length", "-m", help="Max sequence length (when applicable)."
-)
+SEQUENCE_ID_OPTION = typer.Option("sequence", "--sequence-identifier", "-s", help="Sequence column name.")
+MAX_LENGTH_OPTION = typer.Option(1024, "--max-length", "-m", help="Max sequence length (when applicable).")
 ALLOW_EXTENDED_OPTION = typer.Option(
     False, "--allow-extended/--no-allow-extended", help="Enable extended alphabet (B, Z, X, U, O)."
 )
@@ -168,7 +167,7 @@ def run(
     try:
         # Cheap validations (no heavy imports yet)
         enc_choice = _validate_choice(encoder, ENCODER_CHOICES, "encoder")
-        fmt_choice = _validate_choice(format_output, EXPORT_CHOICES, "format-output")
+        fmt_choice = cast(FileFormat, _validate_choice(format_output, EXPORT_CHOICES, "format-output"))
         if enc_choice == "physicochemical" or enc_choice == "fft":
             _validate_choice(type_descriptor or "aaindex", DESCRIPTOR_CHOICES, "type-descriptor")
 
@@ -183,6 +182,8 @@ def run(
 
         # --- FFT pipeline (physicochemical -> FFT) ---
         if enc_choice == "fft":
+            from sylphy.sequence_encoder.fft_encoder import FFTEncoder
+
             phys = create_encoder(
                 "physicochemical",
                 dataset=df,
@@ -199,21 +200,23 @@ def run(
             if phys.coded_dataset is None or phys.coded_dataset.empty:
                 raise RuntimeError("Physicochemical step produced empty features.")
 
-            fft = create_encoder(
-                "fft",
-                dataset=phys.coded_dataset,
-                sequence_column=sequence_identifier,
-                debug=debug,
-                debug_mode=level,
+            fft = cast(
+                FFTEncoder,
+                create_encoder(
+                    "fft",
+                    dataset=phys.coded_dataset,
+                    sequence_column=sequence_identifier,
+                    debug=debug,
+                    debug_mode=level,
+                ),
             )
             fft.run_process()
 
-            # Some implementations expect (data, path); others only (path).
-            # Keep the more specific signature used for FFT if your encoder requires the dataset:
-            try:
-                fft.export_encoder(fft.coded_dataset, str(final_output), file_format=fmt_choice)
-            except TypeError:
-                fft.export_encoder(str(final_output), file_format=fmt_choice)
+            fft.export_encoder(
+                str(final_output),
+                file_format=fmt_choice,
+                df_encoder=fft.coded_dataset,
+            )
 
             typer.echo(f"[fft] Saved to: {final_output}")
             return
@@ -241,12 +244,7 @@ def run(
         enc = create_encoder(enc_choice, **kwargs_common)
         enc.run_process()
 
-        # Export with ensured extension; support both possible method signatures
-        try:
-            enc.export_encoder(str(final_output), file_format=fmt_choice)
-        except TypeError:
-            # Older/export variants that expect (data, path)
-            enc.export_encoder(enc.coded_dataset, str(final_output), file_format=fmt_choice)
+        enc.export_encoder(str(final_output), file_format=fmt_choice)
 
         typer.echo(f"[{enc_choice}] Saved to: {final_output}")
 

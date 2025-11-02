@@ -94,9 +94,7 @@ class LinearReduction(Reductions):
         model = self._init_with_seed(PCA, kwargs)
         return self._apply_model(model, "PCA", kwargs.get("n_components"))
 
-    def apply_incremental_pca(
-        self, **kwargs
-    ) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
+    def apply_incremental_pca(self, **kwargs) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(IncrementalPCA, kwargs)
         return self._apply_model(model, "IncrementalPCA", kwargs.get("n_components"))
 
@@ -118,9 +116,7 @@ class LinearReduction(Reductions):
         model = self._init_with_seed(TruncatedSVD, kwargs)
         return self._apply_model(model, "TruncatedSVD", kwargs.get("n_components"))
 
-    def apply_factor_analysis(
-        self, **kwargs
-    ) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
+    def apply_factor_analysis(self, **kwargs) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(FactorAnalysis, kwargs)
         return self._apply_model(model, "FactorAnalysis", kwargs.get("n_components"))
 

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Literal
 
 import pandas as pd
 
 from sylphy.constants import residues
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
+from sylphy.types import FileFormat
 
 
 class Encoders:
@@ -162,10 +162,14 @@ class Encoders:
     # IO
     # ----------------------------
 
+    def run_process(self) -> None:
+        """Subclasses must implement their encoding routine."""
+        raise NotImplementedError("Encoders subclasses must implement run_process().")
+
     def export_encoder(
         self,
         path: str | Path,
-        file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
+        file_format: FileFormat = "csv",
     ) -> None:
         """Persist the encoded matrix to disk."""
         UtilsLib.export_data(

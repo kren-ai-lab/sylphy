@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from sylphy.logging import add_context, get_logger
+from sylphy.types import PrecisionType
 
 from .ankh2_based import Ankh2BasedEmbedding
 from .bert_based import BertBasedEmbedding
@@ -32,7 +33,7 @@ def EmbeddingFactory(  # noqa: N802
     dataset,
     column_seq: str,
     name_device: str = "cuda",
-    precision: str = "fp32",
+    precision: PrecisionType = "fp32",
     oom_backoff: bool = True,
     debug: bool = False,
     debug_mode: int = logging.INFO,

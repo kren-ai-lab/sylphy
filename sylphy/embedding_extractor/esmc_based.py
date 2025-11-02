@@ -11,6 +11,8 @@ from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
 from tqdm import tqdm
 
+from sylphy.types import PrecisionType
+
 from .embedding_based import EmbeddingBased, LayerAgg, LayerSpec, Pool  # types & semantics
 
 
@@ -34,9 +36,12 @@ class ESMCBasedEmbedding(EmbeddingBased):
         column_seq: str | None = "sequence",
         debug: bool = False,
         debug_mode: int = logging.INFO,
-        precision: str = "fp32",
+        precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
     ) -> None:
+        if dataset is None:
+            raise ValueError("dataset must be provided")
+
         super().__init__(
             dataset=dataset,
             name_device=name_device,
@@ -83,7 +88,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
             load_ref = local_dir if local_dir else self.name_model
             self.__logger__.info("Loading ESM-C from: %s on device=%s", load_ref, self.device)
             mdl = ESMC.from_pretrained(load_ref)
-            mdl = mdl.to(self.device)  # move to device
+            mdl.to(self.device)  # move to device
             mdl.eval()
             self.model = mdl
             self.status = True
@@ -94,18 +99,6 @@ class ESMCBasedEmbedding(EmbeddingBased):
             self.message = f"Failed to load ESM-C model: {e}"
             self.__logger__.error(self.message)
             raise
-
-    @staticmethod
-    def _pool_tokens(x: torch.Tensor, pool: Pool) -> torch.Tensor:
-        # ESM-C outputs do not provide attention masks in the same way;
-        # we assume full length (padded/truncated upstream if needed).
-        if pool == "mean":
-            return x.mean(dim=1)
-        if pool == "cls":
-            return x[:, 0, :]
-        if pool == "eos":
-            return x[:, -1, :]
-        raise ValueError(f"Unknown token pool '{pool}'")
 
     @torch.no_grad()
     def _embed_one(
@@ -190,9 +183,11 @@ class ESMCBasedEmbedding(EmbeddingBased):
             self.oom_backoff,
         )
 
-        current_bs = max(1, int(batch_size))
+        current_bs: int = int(batch_size)
+        if current_bs < 1:
+            current_bs = 1
         out_vecs: list[np.ndarray] = []
-        i = 0
+        i: int = 0
 
         while i < len(sequences):
             chunk = sequences[i : i + current_bs]
@@ -202,6 +197,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
                     emb, hs = self._embed_one(seq, return_hidden_states=True)
 
                     if self._has_hidden_states(hs):  # hidden states available
+                        assert hs is not None
                         n_layers = len(hs)
                         select = EmbeddingBased._parse_layers(layers, n_layers)
                         chosen = [hs[j] for j in select]  # each (1,L,H)
@@ -211,9 +207,11 @@ class ESMCBasedEmbedding(EmbeddingBased):
                             stacked = torch.stack(chosen, dim=0).sum(dim=0)
                         else:  # mean (default)
                             stacked = torch.stack(chosen, dim=0).mean(dim=0)
-                        pooled = self._pool_tokens(stacked, pool=pool).squeeze(0)  # (H')
+                        dummy_attn = torch.ones(stacked.shape[:2], dtype=stacked.dtype, device=stacked.device)
+                        pooled = self._pool_tokens(stacked, dummy_attn, pool).squeeze(0)  # (H')
                     elif emb is not None:
-                        pooled = self._pool_tokens(emb, pool=pool).squeeze(0)  # (H)
+                        dummy_attn = torch.ones(emb.shape[:2], dtype=emb.dtype, device=emb.device)
+                        pooled = self._pool_tokens(emb, dummy_attn, pool).squeeze(0)  # (H)
                     else:
                         # Skip if neither emb nor hs are available
                         continue
@@ -234,7 +232,9 @@ class ESMCBasedEmbedding(EmbeddingBased):
                 is_oom = ("CUDA out of memory" in str(e)) or ("CUBLAS_STATUS_ALLOC_FAILED" in str(e))
                 if not (self.oom_backoff and is_oom and current_bs > 1 and self.device.type == "cuda"):
                     raise
-                new_bs = max(1, current_bs // 2)
+                new_bs = current_bs // 2
+                if new_bs < 1:
+                    new_bs = 1
                 self.__logger__.warning("OOM at idx %d. Reducing batch size %d → %d.", i, current_bs, new_bs)
                 current_bs = new_bs
                 if torch.cuda.is_available():
@@ -253,7 +253,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
 
         mat = np.stack(out_vecs, axis=0)  # (N, H')
         headers = [f"p_{k + 1}" for k in range(mat.shape[1])]
-        df_emb = pd.DataFrame(mat, columns=headers, index=self.dataset.index)
+        df_emb = pd.DataFrame(mat, columns=pd.Index(headers), index=self.dataset.index)
         df_emb[self.column_seq] = self.dataset[self.column_seq].values
         self.__logger__.info("ESM-C embedding completed. Shape: %s", df_emb.shape)
         return df_emb

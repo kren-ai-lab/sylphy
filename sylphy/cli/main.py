@@ -36,6 +36,7 @@ def main(
     """Sylphy CLI main callback."""
     pass
 
+
 # Cache management
 app.add_typer(
     cache_app,

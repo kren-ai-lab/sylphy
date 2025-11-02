@@ -55,9 +55,7 @@ def _env_bool(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _resolve_log_file(
-    default_name: str = "sylphy.log", explicit_path: Path | None = None
-) -> Path | None:
+def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | None = None) -> Path | None:
     """
     Decide log file path without importing heavy modules at import time.
 

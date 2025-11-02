@@ -245,9 +245,6 @@ class EmbeddingBased:
         if (self.model is None) or (self.requires_tokenizer and self.tokenizer is None):
             raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
 
-        if self.tokenizer is None:
-            raise RuntimeError("Tokenizer not loaded.")
-
         tokenizer = self.tokenizer
         model = self.model
         if tokenizer is None or model is None:

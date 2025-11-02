@@ -116,7 +116,7 @@ class UtilsLib:
                     _LOG.warning("Skipping label '%s' (no rows).", lab)
                     continue
                 sampled = subset.sample(n=k, replace=replace, random_state=random_state)
-                parts.append(cast(pd.DataFrame, sampled))
+                parts.append(sampled)
                 _LOG.info("Sampled %d rows for label '%s'.", k, lab)
             out = pd.concat(parts, axis=0).reset_index(drop=True)
             _LOG.info("Total sampled rows (per_label): %d", len(out))
@@ -156,7 +156,7 @@ class UtilsLib:
             if k <= 0:
                 continue
             sampled = subset.sample(n=k, replace=replace, random_state=random_state)
-            parts.append(cast(pd.DataFrame, sampled))
+            parts.append(sampled)
             _LOG.info("Sampled %d rows for label '%s' (global mode).", k, lab)
 
         out = pd.concat(parts, axis=0).reset_index(drop=True)

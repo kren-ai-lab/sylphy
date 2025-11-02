@@ -45,14 +45,33 @@ ENCODER_OPTION = typer.Option(
     help=f"Encoder backend. One of: {', '.join(ENCODER_CHOICES)}.",
     show_default=True,
 )
-INPUT_DATA_OPTION = typer.Option(..., "--input-data", "-i", help="CSV file with sequences.")
-SEQUENCE_ID_OPTION = typer.Option("sequence", "--sequence-identifier", "-s", help="Sequence column name.")
-MAX_LENGTH_OPTION = typer.Option(1024, "--max-length", "-m", help="Max sequence length (when applicable).")
+INPUT_DATA_OPTION = typer.Option(
+    ...,
+    "--input-data",
+    "-i",
+    help="CSV file with sequences.",
+)
+SEQUENCE_ID_OPTION = typer.Option(
+    "sequence",
+    "--sequence-identifier",
+    "-s",
+    help="Sequence column name.",
+)
+MAX_LENGTH_OPTION = typer.Option(
+    1024,
+    "--max-length",
+    "-m",
+    help="Max sequence length (when applicable).",
+)
 ALLOW_EXTENDED_OPTION = typer.Option(
-    False, "--allow-extended/--no-allow-extended", help="Enable extended alphabet (B, Z, X, U, O)."
+    False,
+    "--allow-extended/--no-allow-extended",
+    help="Enable extended alphabet (B, Z, X, U, O).",
 )
 ALLOW_UNKNOWN_OPTION = typer.Option(
-    False, "--allow-unknown/--no-allow-unknown", help="Allow 'X' when extended alphabet is not enabled."
+    False,
+    "--allow-unknown/--no-allow-unknown",
+    help="Allow 'X' when extended alphabet is not enabled.",
 )
 TYPE_DESCRIPTOR_OPTION = typer.Option(
     "aaindex",
@@ -71,8 +90,18 @@ NAME_PROPERTY_OPTION = typer.Option(
     help="Property/column name in the descriptor table (AAIndex key or group_based label).",
     show_default=True,
 )
-SIZE_KMER_OPTION = typer.Option(3, "--size-kmer", "-k", help="k for TF-IDF k-mers (kmers backend).")
-OUTPUT_OPTION = typer.Option(..., "--output", "-o", help="Output file path (extension can be omitted).")
+SIZE_KMER_OPTION = typer.Option(
+    3,
+    "--size-kmer",
+    "-k",
+    help="k for TF-IDF k-mers (kmers backend).",
+)
+OUTPUT_OPTION = typer.Option(
+    ...,
+    "--output",
+    "-o",
+    help="Output file path (extension can be omitted).",
+)
 FORMAT_OUTPUT_OPTION = typer.Option(
     "csv",
     "--format-output",
@@ -80,9 +109,16 @@ FORMAT_OUTPUT_OPTION = typer.Option(
     help=f"Output format. One of: {', '.join(EXPORT_CHOICES)}.",
     show_default=True,
 )
-DEBUG_OPTION = typer.Option(False, "--debug/--no-debug", help="Enable verbose logs within encoders.")
+DEBUG_OPTION = typer.Option(
+    False,
+    "--debug/--no-debug",
+    help="Enable verbose logs within encoders.",
+)
 LOG_LEVEL_OPTION = typer.Option(
-    "INFO", "--log-level", help=f"Log level: {', '.join(LOG_LEVELS)}.", show_default=True
+    "INFO",
+    "--log-level",
+    help=f"Log level: {', '.join(LOG_LEVELS)}.",
+    show_default=True,
 )
 
 

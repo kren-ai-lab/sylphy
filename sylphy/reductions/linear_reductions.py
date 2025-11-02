@@ -22,6 +22,7 @@ from sklearn.decomposition import (
 
 from .reduction_methods import Preprocess, Reductions, ReturnType
 
+
 class _SupportsFitTransform(Protocol):
     def fit_transform(self, dataset: np.ndarray | pd.DataFrame) -> np.ndarray: ...
 

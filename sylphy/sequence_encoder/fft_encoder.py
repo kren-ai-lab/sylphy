@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Literal, Optional
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -9,6 +9,7 @@ from scipy.fft import fft
 
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
+from sylphy.types import FileFormat
 
 
 class FFTEncoder:
@@ -43,7 +44,7 @@ class FFTEncoder:
         self.max_length = len(self.dataset.columns)
         self.init_process()
 
-        self.coded_dataset: Optional[pd.DataFrame] = None
+        self.coded_dataset: pd.DataFrame | None = None
 
     def __get_near_pow(self) -> None:
         self.__logger__.info("Computing nearest power-of-two for padding.")
@@ -56,7 +57,7 @@ class FFTEncoder:
         if pad > 0:
             padding_df = pd.DataFrame(
                 data=np.zeros((self.dataset.shape[0], pad), dtype=float),
-                columns=[f"p_{i + self.max_length}" for i in range(pad)],
+                columns=pd.Index([f"p_{i + self.max_length}" for i in range(pad)]),
                 index=self.dataset.index,
             )
             self.dataset = pd.concat([self.dataset, padding_df], axis=1)
@@ -66,10 +67,10 @@ class FFTEncoder:
         self.__get_near_pow()
         self.__complete_zero_padding()
 
-    def __create_row(self, index: int) -> List[float]:
+    def __create_row(self, index: int) -> list[float]:
         return self.dataset.iloc[index].tolist()
 
-    def __apply_fft(self, index: int) -> List[float]:
+    def __apply_fft(self, index: int) -> list[float]:
         try:
             row = self.__create_row(index)
             yf = fft(row)
@@ -82,7 +83,7 @@ class FFTEncoder:
         try:
             self.__logger__.info("Encoding dataset with FFT.")
             matrix = [self.__apply_fft(i) for i in self.dataset.index]
-            header = [f"p_{i}" for i in range(len(matrix[0]))]
+            header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.sequence_list
             self.__logger__.info("FFT encoding complete. Output shape: %s", self.coded_dataset.shape)
@@ -96,12 +97,17 @@ class FFTEncoder:
 
     def export_encoder(
         self,
-        df_encoder: pd.DataFrame,
-        path: str,
-        file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
+        path: str | Path,
+        file_format: FileFormat = "csv",
+        *,
+        df_encoder: pd.DataFrame | None = None,
     ) -> None:
+        data = df_encoder if df_encoder is not None else self.coded_dataset
+        if data is None:
+            raise ValueError("No encoded FFT dataset available for export.")
+
         UtilsLib.export_data(
-            df_encoded=df_encoder,
+            df_encoded=data,
             path=path,
             base_message="FFT encoder output",
             file_format=file_format,

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import sys
+from typing import Any, cast
+
 import pandas as pd
-from transformers import AutoModel as _FakeModel
 
 from sylphy.embedding_extractor import EmbeddingFactory
 
 
 def test_cuda_oom_backoff_retries_and_succeeds():
     """Verify OOM backoff halves batch size when encountering simulated CUDA OOM errors."""
+    transformers_mod = cast(Any, sys.modules["transformers"])
+    _FakeModel = transformers_mod.AutoModel
     _FakeModel.OOM_THRESHOLD = 2
     _FakeModel.FORWARD_CALLS = 0
 

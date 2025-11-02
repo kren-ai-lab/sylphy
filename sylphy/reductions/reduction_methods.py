@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Literal, Optional, Union
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -46,11 +46,11 @@ class Reductions:
 
     def __init__(
         self,
-        dataset: Union[np.ndarray, pd.DataFrame],
+        dataset: np.ndarray | pd.DataFrame,
         *,
         return_type: ReturnType = "numpy",
         preprocess: Preprocess = "none",
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
         debug: bool = True,
         debug_mode: int = logging.INFO,
         name_logging: str = "Reductions",
@@ -85,7 +85,7 @@ class Reductions:
         )
 
         # Apply optional preprocessing in-place
-        self._scaler = None
+        self._scaler: StandardScaler | MinMaxScaler | RobustScaler | None = None
         self._apply_preprocess()
 
     # -----------------------------
@@ -104,19 +104,22 @@ class Reductions:
             raise ValueError(f"Unknown preprocess option '{self.preprocess}'.")
 
         self.__logger__.info("Applying preprocess: %s", self.preprocess)
-        self.dataset = self._scaler.fit_transform(self.dataset).astype(np.float32, copy=False)
+        scaler = self._scaler
+        if scaler is None:
+            return
+        self.dataset = scaler.fit_transform(self.dataset).astype(np.float32, copy=False)
 
     # -----------------------------
     # Output helpers
     # -----------------------------
-    def _make_headers(self, n_components: int) -> List[str]:
+    def _make_headers(self, n_components: int) -> list[str]:
         return [f"p_{i + 1}" for i in range(n_components)]
 
     def generate_dataset_post_reduction(
         self,
-        transform_values: Union[np.ndarray, List[List[float]]],
-        n_components: Optional[int] = None,
-    ) -> Union[np.ndarray, pd.DataFrame]:
+        transform_values: np.ndarray | list[list[float]],
+        n_components: int | None = None,
+    ) -> np.ndarray | pd.DataFrame:
         """
         Build the final reduced output.
 
@@ -140,7 +143,7 @@ class Reductions:
             else:
                 headers = self._make_headers(n_components)
                 self.__logger__.info("Prepared pandas DataFrame with %d components.", n_components)
-                return pd.DataFrame(data=transform_array, columns=headers)
+                return pd.DataFrame(data=transform_array, columns=pd.Index(headers))
 
         except Exception as e:
             self.__logger__.error("Failed to build post-reduction output: %s", e)

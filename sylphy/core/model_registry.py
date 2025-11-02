@@ -5,7 +5,6 @@ import os
 from dataclasses import replace
 from pathlib import Path
 from threading import RLock
-from typing import Dict, List, Optional, Tuple
 
 from sylphy.constants.tool_constants import _ENV_PREFIX
 from sylphy.logging import get_logger
@@ -37,7 +36,7 @@ class ModelDownloadError(ModelRegistryError):
 # Registry storage
 # ----------------------------
 
-_REGISTRY: Dict[str, ModelSpec] = {}
+_REGISTRY: dict[str, ModelSpec] = {}
 
 
 def register_model(spec: ModelSpec) -> None:
@@ -77,7 +76,7 @@ def clear_registry() -> None:
         logger.debug("Registry cleared")
 
 
-def list_registered_models(include_aliases: bool = False) -> List[str]:
+def list_registered_models(include_aliases: bool = False) -> list[str]:
     """
     List registered model names.
 
@@ -111,7 +110,7 @@ def get_model_spec(name: str) -> ModelSpec:
 # ----------------------------
 
 
-def _env_override_path(name: str) -> Optional[Path]:
+def _env_override_path(name: str) -> Path | None:
     """
     Environment variable override for local model path.
 
@@ -181,14 +180,14 @@ def resolve_model(name: str) -> Path:
         raise ModelDownloadError(f"Failed to resolve model '{name}': {e}") from e
 
 
-def _split_org_model(ref: str) -> Tuple[str, str]:
+def _split_org_model(ref: str) -> tuple[str, str]:
     if "/" not in ref:
         raise ValueError(f"Hugging Face ref must be 'org/model', got '{ref}'")
     org, model = ref.split("/", 1)
     return org, model
 
 
-def _download_huggingface(ref: str, revision: Optional[str], dst: Path) -> None:
+def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
     """
     Download a model snapshot into `dst` using huggingface_hub with a local cache.
     """

@@ -18,6 +18,7 @@ def test_fft_encoder_half_spectrum_and_padding():
     enc = FFTEncoder(dataset=df, sequence_column="sequence", debug=True)
     enc.run_process()
     X = enc.coded_dataset
+    assert X is not None
     # Next power of two >= 3 is 4 → half-spectrum = 2
     n_features = X.drop(columns=["sequence"]).shape[1]
     assert n_features == 2

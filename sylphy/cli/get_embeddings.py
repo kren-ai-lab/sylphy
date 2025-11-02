@@ -21,8 +21,11 @@ Backends are selected by the factory from the model name. See:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import typer
+
+from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
 
 app = typer.Typer(
     name="get-embedding",
@@ -232,10 +235,10 @@ def run(
     try:
         # Cheap validations first (keep startup fast)
         device_v = _validate_choice(device, DEVICE_CHOICES, "device")
-        precision_v = _validate_choice(precision, PRECISION_CHOICES, "precision")
-        pool_v = _validate_choice(pool, POOL_CHOICES, "pool")
-        layer_agg_v = _validate_choice(layer_agg, LAYER_AGG_CHOICES, "layer-agg")
-        fmt_v = _validate_choice(format_output, EXPORT_CHOICES, "format-output")
+        precision_v = cast(PrecisionType, _validate_choice(precision, PRECISION_CHOICES, "precision"))
+        pool_v = cast(PoolType, _validate_choice(pool, POOL_CHOICES, "pool"))
+        layer_agg_v = cast(LayerAggType, _validate_choice(layer_agg, LAYER_AGG_CHOICES, "layer-agg"))
+        fmt_v = cast(FileFormat, _validate_choice(format_output, EXPORT_CHOICES, "format-output"))
         lvl = _level_from_str(log_level)
 
         # CSV → DataFrame (lazy pandas)
@@ -283,11 +286,7 @@ def run(
 
         # Ensure output extension and export (supports csv/npy/npz/parquet)
         final_output = _ensure_ext(output, fmt_v)
-        try:
-            embedder.export_encoder(str(final_output), file_format=fmt_v)
-        except TypeError:
-            # Backward-compat signature (some older backends expect (data, path))
-            embedder.export_encoder(embedder.coded_dataset, str(final_output), file_format=fmt_v)
+        embedder.export_encoder(str(final_output), file_format=fmt_v)
 
         typer.echo(f"Embeddings saved to: {final_output}")
 

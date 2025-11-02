@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
 
+import pandas as pd
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
+
+from sylphy.types import PrecisionType
 
 from .embedding_based import EmbeddingBased
 
@@ -16,13 +18,16 @@ class MistralBasedEmbedding(EmbeddingBased):
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "RaphaelMourad/Mistral-Prot-v1-134M",
         name_tokenizer: str = "RaphaelMourad/Mistral-Prot-v1-134M",
-        dataset: Optional[object] = None,
-        column_seq: Optional[str] = "sequence",
+        dataset: pd.DataFrame | None = None,
+        column_seq: str | None = "sequence",
         debug: bool = False,
         debug_mode: int = logging.INFO,
-        precision: str = "fp32",
+        precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
     ) -> None:
+        if dataset is None:
+            raise ValueError("dataset must be provided")
+
         super().__init__(
             dataset=dataset,
             name_device=name_device,
@@ -45,16 +50,19 @@ class MistralBasedEmbedding(EmbeddingBased):
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
 
             self.__logger__.info("Loading Mistral tokenizer from: %s", local_dir)
-            self.tokenizer = AutoTokenizer.from_pretrained(
+            tokenizer = AutoTokenizer.from_pretrained(
                 local_dir, do_lower_case=False, use_fast=True, trust_remote_code=False
             )
-            if getattr(self.tokenizer, "pad_token_id", None) is None:
-                self.tokenizer.add_special_tokens({"pad_token": "<pad>"})
-                self.__logger__.debug("pad_token_id set to: %s", self.tokenizer.pad_token_id)
+            if getattr(tokenizer, "pad_token_id", None) is None:
+                tokenizer.add_special_tokens({"pad_token": "<pad>"})
+                self.__logger__.debug("pad_token_id set to: %s", tokenizer.pad_token_id)
+            self.tokenizer = tokenizer
 
             self.__logger__.info("Loading Mistral model from: %s on device=%s", local_dir, self.device)
-            self.model = AutoModel.from_pretrained(local_dir, trust_remote_code=False).to(self.device)
-            self.model.eval()
+            model = AutoModel.from_pretrained(local_dir, trust_remote_code=False)
+            model.to(self.device)
+            self.model = model
+            model.eval()
         except Exception as e:
             self.status = False
             self.message = f"Failed to load Mistral tokenizer/model: {e}"
@@ -64,9 +72,9 @@ class MistralBasedEmbedding(EmbeddingBased):
     @torch.no_grad()
     def embedding_batch(
         self,
-        batch: List[str],
+        batch: list[str],
         max_length: int = 1024,
-    ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor]:
+    ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         if not batch:
             raise ValueError("Input batch is empty.")
         self.ensure_loaded()

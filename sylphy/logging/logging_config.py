@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable
 
 try:
     from appdirs import user_log_dir
@@ -55,9 +55,7 @@ def _env_bool(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _resolve_log_file(
-    default_name: str = "sylphy.log", explicit_path: Optional[Path] = None
-) -> Optional[Path]:
+def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | None = None) -> Path | None:
     """
     Decide log file path without importing heavy modules at import time.
 
@@ -110,7 +108,7 @@ class _JsonFormatter(logging.Formatter):
         super().__init__()
         self._use_utc = use_utc
 
-    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:  # type: ignore[override]
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         # ISO-ish time; respect UTC flag
         if self._use_utc:
             import time
@@ -119,7 +117,7 @@ class _JsonFormatter(logging.Formatter):
             return time.strftime("%Y-%m-%dT%H:%M:%S", ct)
         return super().formatTime(record, datefmt=datefmt)
 
-    def format(self, record: logging.LogRecord) -> str:  # type: ignore[override]
+    def format(self, record: logging.LogRecord) -> str:
         payload = {
             "time": self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S"),
             "level": record.levelname,
@@ -161,7 +159,7 @@ class _JsonFormatter(logging.Formatter):
 
         # Exception info, if any
         if record.exc_info:
-            payload["exc"] = self.formatException(record.exc_info)  # type: ignore[arg-type]
+            payload["exc"] = self.formatException(record.exc_info)
         if record.stack_info:
             payload["stack"] = self.formatStack(record.stack_info)
 
@@ -169,7 +167,7 @@ class _JsonFormatter(logging.Formatter):
 
 
 def _make_stream_handler(
-    level: int, fmt: str, *, use_json: bool, use_utc: bool, datefmt: Optional[str]
+    level: int, fmt: str, *, use_json: bool, use_utc: bool, datefmt: str | None
 ) -> logging.Handler:
     h = logging.StreamHandler()
     h.setLevel(level)
@@ -188,7 +186,7 @@ def _make_file_handler(
     *,
     use_json: bool,
     use_utc: bool,
-    datefmt: Optional[str],
+    datefmt: str | None,
     max_bytes: int,
     backups: int,
 ) -> logging.Handler:
@@ -221,18 +219,18 @@ def setup_logger(
     *,
     with_console: bool | None = None,
     with_file: bool = True,
-    file_path: Optional[Path] = None,
+    file_path: Path | None = None,
     fmt_console: str = "[%(levelname)s] %(message)s",
     fmt_file: str = "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    datefmt_console: Optional[str] = None,
-    datefmt_file: Optional[str] = "%Y-%m-%d %H:%M:%S",
-    use_json: Optional[bool] = None,
-    use_utc: Optional[bool] = None,
-    max_bytes: Optional[int] = None,
-    backups: Optional[int] = None,
+    datefmt_console: str | None = None,
+    datefmt_file: str | None = "%Y-%m-%d %H:%M:%S",
+    use_json: bool | None = None,
+    use_utc: bool | None = None,
+    max_bytes: int | None = None,
+    backups: int | None = None,
     propagate: bool = False,
     force_reconfigure: bool = False,
-    extra_filters: Optional[Iterable[logging.Filter]] = None,
+    extra_filters: Iterable[logging.Filter] | None = None,
 ) -> logging.Logger:
     """
     Configure and return the package root logger.
@@ -377,7 +375,7 @@ class _ContextFilter(logging.Filter):
         super().__init__()
         self._ctx = static_context
 
-    def filter(self, record: logging.LogRecord) -> bool:  # type: ignore[override]
+    def filter(self, record: logging.LogRecord) -> bool:
         for k, v in self._ctx.items():
             setattr(record, k, v)
         return True

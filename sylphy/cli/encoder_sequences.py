@@ -17,9 +17,11 @@ Design goals:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import cast
 
 import typer
+
+from sylphy.types import FileFormat
 
 app = typer.Typer(
     name="encode-sequences",
@@ -43,18 +45,33 @@ ENCODER_OPTION = typer.Option(
     help=f"Encoder backend. One of: {', '.join(ENCODER_CHOICES)}.",
     show_default=True,
 )
-INPUT_DATA_OPTION = typer.Option(..., "--input-data", "-i", help="CSV file with sequences.")
+INPUT_DATA_OPTION = typer.Option(
+    ...,
+    "--input-data",
+    "-i",
+    help="CSV file with sequences.",
+)
 SEQUENCE_ID_OPTION = typer.Option(
-    "sequence", "--sequence-identifier", "-s", help="Sequence column name."
+    "sequence",
+    "--sequence-identifier",
+    "-s",
+    help="Sequence column name.",
 )
 MAX_LENGTH_OPTION = typer.Option(
-    1024, "--max-length", "-m", help="Max sequence length (when applicable)."
+    1024,
+    "--max-length",
+    "-m",
+    help="Max sequence length (when applicable).",
 )
 ALLOW_EXTENDED_OPTION = typer.Option(
-    False, "--allow-extended/--no-allow-extended", help="Enable extended alphabet (B, Z, X, U, O)."
+    False,
+    "--allow-extended/--no-allow-extended",
+    help="Enable extended alphabet (B, Z, X, U, O).",
 )
 ALLOW_UNKNOWN_OPTION = typer.Option(
-    False, "--allow-unknown/--no-allow-unknown", help="Allow 'X' when extended alphabet is not enabled."
+    False,
+    "--allow-unknown/--no-allow-unknown",
+    help="Allow 'X' when extended alphabet is not enabled.",
 )
 TYPE_DESCRIPTOR_OPTION = typer.Option(
     "aaindex",
@@ -73,8 +90,18 @@ NAME_PROPERTY_OPTION = typer.Option(
     help="Property/column name in the descriptor table (AAIndex key or group_based label).",
     show_default=True,
 )
-SIZE_KMER_OPTION = typer.Option(3, "--size-kmer", "-k", help="k for TF-IDF k-mers (kmers backend).")
-OUTPUT_OPTION = typer.Option(..., "--output", "-o", help="Output file path (extension can be omitted).")
+SIZE_KMER_OPTION = typer.Option(
+    3,
+    "--size-kmer",
+    "-k",
+    help="k for TF-IDF k-mers (kmers backend).",
+)
+OUTPUT_OPTION = typer.Option(
+    ...,
+    "--output",
+    "-o",
+    help="Output file path (extension can be omitted).",
+)
 FORMAT_OUTPUT_OPTION = typer.Option(
     "csv",
     "--format-output",
@@ -82,9 +109,16 @@ FORMAT_OUTPUT_OPTION = typer.Option(
     help=f"Output format. One of: {', '.join(EXPORT_CHOICES)}.",
     show_default=True,
 )
-DEBUG_OPTION = typer.Option(False, "--debug/--no-debug", help="Enable verbose logs within encoders.")
+DEBUG_OPTION = typer.Option(
+    False,
+    "--debug/--no-debug",
+    help="Enable verbose logs within encoders.",
+)
 LOG_LEVEL_OPTION = typer.Option(
-    "INFO", "--log-level", help=f"Log level: {', '.join(LOG_LEVELS)}.", show_default=True
+    "INFO",
+    "--log-level",
+    help=f"Log level: {', '.join(LOG_LEVELS)}.",
+    show_default=True,
 )
 
 
@@ -148,7 +182,7 @@ def run(
     allow_extended: bool = ALLOW_EXTENDED_OPTION,
     allow_unknown: bool = ALLOW_UNKNOWN_OPTION,
     # backend-specific
-    type_descriptor: Optional[str] = TYPE_DESCRIPTOR_OPTION,
+    type_descriptor: str | None = TYPE_DESCRIPTOR_OPTION,
     name_property: str = NAME_PROPERTY_OPTION,
     size_kmer: int = SIZE_KMER_OPTION,
     # output
@@ -169,7 +203,7 @@ def run(
     try:
         # Cheap validations (no heavy imports yet)
         enc_choice = _validate_choice(encoder, ENCODER_CHOICES, "encoder")
-        fmt_choice = _validate_choice(format_output, EXPORT_CHOICES, "format-output")
+        fmt_choice = cast(FileFormat, _validate_choice(format_output, EXPORT_CHOICES, "format-output"))
         if enc_choice == "physicochemical" or enc_choice == "fft":
             _validate_choice(type_descriptor or "aaindex", DESCRIPTOR_CHOICES, "type-descriptor")
 
@@ -184,6 +218,8 @@ def run(
 
         # --- FFT pipeline (physicochemical -> FFT) ---
         if enc_choice == "fft":
+            from sylphy.sequence_encoder.fft_encoder import FFTEncoder
+
             phys = create_encoder(
                 "physicochemical",
                 dataset=df,
@@ -200,21 +236,23 @@ def run(
             if phys.coded_dataset is None or phys.coded_dataset.empty:
                 raise RuntimeError("Physicochemical step produced empty features.")
 
-            fft = create_encoder(
-                "fft",
-                dataset=phys.coded_dataset,
-                sequence_column=sequence_identifier,
-                debug=debug,
-                debug_mode=level,
+            fft = cast(
+                FFTEncoder,
+                create_encoder(
+                    "fft",
+                    dataset=phys.coded_dataset,
+                    sequence_column=sequence_identifier,
+                    debug=debug,
+                    debug_mode=level,
+                ),
             )
             fft.run_process()
 
-            # Some implementations expect (data, path); others only (path).
-            # Keep the more specific signature used for FFT if your encoder requires the dataset:
-            try:
-                fft.export_encoder(fft.coded_dataset, str(final_output), file_format=fmt_choice)
-            except TypeError:
-                fft.export_encoder(str(final_output), file_format=fmt_choice)
+            fft.export_encoder(
+                str(final_output),
+                file_format=fmt_choice,
+                df_encoder=fft.coded_dataset,
+            )
 
             typer.echo(f"[fft] Saved to: {final_output}")
             return
@@ -242,12 +280,7 @@ def run(
         enc = create_encoder(enc_choice, **kwargs_common)
         enc.run_process()
 
-        # Export with ensured extension; support both possible method signatures
-        try:
-            enc.export_encoder(str(final_output), file_format=fmt_choice)
-        except TypeError:
-            # Older/export variants that expect (data, path)
-            enc.export_encoder(enc.coded_dataset, str(final_output), file_format=fmt_choice)
+        enc.export_encoder(str(final_output), file_format=fmt_choice)
 
         typer.echo(f"[{enc_choice}] Saved to: {final_output}")
 

@@ -1,10 +1,10 @@
 # core/config.py
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from threading import RLock
-from typing import Generator
 
 from sylphy.constants.config_constants import CachePaths
 from sylphy.constants.tool_configs import ToolConfig

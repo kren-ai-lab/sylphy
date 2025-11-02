@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional
 
 import pandas as pd
 
@@ -18,8 +17,8 @@ class OneHotEncoder(Encoders):
 
     def __init__(
         self,
-        dataset: Optional[pd.DataFrame] = None,
-        sequence_column: Optional[str] = "sequence",
+        dataset: pd.DataFrame | None = None,
+        sequence_column: str | None = "sequence",
         max_length: int = 1024,
         allow_extended: bool = False,
         allow_unknown: bool = False,
@@ -39,7 +38,7 @@ class OneHotEncoder(Encoders):
         self._alpha = residues(extended=self.allow_extended or self.allow_unknown)
         self._A = len(self._alpha)
 
-    def __vector_for_residue(self, residue: str) -> List[int]:
+    def __vector_for_residue(self, residue: str) -> list[int]:
         v = [0] * self._A
         try:
             pos = get_index(
@@ -53,12 +52,12 @@ class OneHotEncoder(Encoders):
             pass
         return v
 
-    def __zero_padding(self, current_length: int) -> List[int]:
+    def __zero_padding(self, current_length: int) -> list[int]:
         target = self.max_length * self._A
         return [0] * (target - current_length)
 
-    def __encode_sequence(self, sequence: str) -> List[int]:
-        coded: List[int] = []
+    def __encode_sequence(self, sequence: str) -> list[int]:
+        coded: list[int] = []
         for r in sequence:
             coded.extend(self.__vector_for_residue(r))
         if len(sequence) < self.max_length:
@@ -75,7 +74,7 @@ class OneHotEncoder(Encoders):
             matrix = [
                 self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
             ]
-            header = [f"p_{i}" for i in range(len(matrix[0]))]
+            header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
             self.__logger__.info("One-hot encoding completed with %d features.", self.coded_dataset.shape[1])

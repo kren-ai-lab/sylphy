@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any
 
 """
 Embedding Extraction
@@ -39,7 +39,7 @@ __all__ = [
     "SUPPORTED_FAMILIES",
 ]
 
-_LAZY_EXPORTS: Dict[str, Tuple[str, str]] = {
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "EmbeddingBased": (".embedding_based", "EmbeddingBased"),
     "ESMBasedEmbedding": (".esm_based", "ESMBasedEmbedding"),
     "Prot5Based": (".prot5_based", "Prot5Based"),

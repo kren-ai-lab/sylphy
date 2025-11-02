@@ -2,17 +2,22 @@
 from __future__ import annotations
 
 import datetime as dt
+import importlib
+import importlib.util
 import logging
 import os
 import shutil
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Sequence, Union
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import pairwise_distances
 from sklearn.utils import shuffle
+
+from sylphy.types import FileFormat
 
 _LOG = logging.getLogger("sylphy.misc.utils")
 
@@ -41,13 +46,13 @@ class UtilsLib:
     def random_selection(
         cls,
         df: pd.DataFrame,
-        label_name: Optional[str] = None,
-        labels: Optional[Sequence[Any]] = None,
+        label_name: str | None = None,
+        labels: Sequence[Any] | None = None,
         n_samples: int = 100,
         *,
         per_label: bool = True,
         replace: bool = False,
-        random_state: Optional[int] = 42,
+        random_state: int | None = 42,
     ) -> pd.DataFrame:
         """
         Randomly select rows from a DataFrame with optional stratification.
@@ -103,14 +108,15 @@ class UtilsLib:
 
         # Per-label sampling
         if per_label:
-            parts = []
+            parts: list[pd.DataFrame] = []
             for lab in use_labels:
-                subset = df[df[label_name] == lab]
+                subset = df.loc[df[label_name] == lab]
                 k = n_samples if replace else min(n_samples, len(subset))
                 if k == 0:
                     _LOG.warning("Skipping label '%s' (no rows).", lab)
                     continue
-                parts.append(subset.sample(n=k, replace=replace, random_state=random_state))
+                sampled = subset.sample(n=k, replace=replace, random_state=random_state)
+                parts.append(sampled)
                 _LOG.info("Sampled %d rows for label '%s'.", k, lab)
             out = pd.concat(parts, axis=0).reset_index(drop=True)
             _LOG.info("Total sampled rows (per_label): %d", len(out))
@@ -118,7 +124,7 @@ class UtilsLib:
 
         # Global proportional sampling
         # Compute desired counts per label proportional to their frequency
-        counts = df[df[label_name].isin(use_labels)][label_name].value_counts().sort_index()
+        counts = df.loc[df[label_name].isin(use_labels), label_name].value_counts().sort_index()
         total = counts.sum()
         if total == 0:
             _LOG.warning("No rows matched the requested labels; returning empty frame.")
@@ -141,15 +147,16 @@ class UtilsLib:
                     alloc[lab] = new_v
                     diff += -1 if diff > 0 else 1
 
-        parts = []
+        parts: list[pd.DataFrame] = []
         for lab, k in alloc.items():
             if k <= 0:
                 continue
-            subset = df[df[label_name] == lab]
+            subset = df.loc[df[label_name] == lab]
             k = k if replace else min(k, len(subset))
             if k <= 0:
                 continue
-            parts.append(subset.sample(n=k, replace=replace, random_state=random_state))
+            sampled = subset.sample(n=k, replace=replace, random_state=random_state)
+            parts.append(sampled)
             _LOG.info("Sampled %d rows for label '%s' (global mode).", k, lab)
 
         out = pd.concat(parts, axis=0).reset_index(drop=True)
@@ -190,8 +197,8 @@ class UtilsLib:
             "yule",
         ] = "euclidean",
         *,
-        metric_params: Optional[Dict[str, Any]] = None,
-        n_jobs: Optional[int] = None,
+        metric_params: dict[str, Any] | None = None,
+        n_jobs: int | None = None,
     ) -> np.ndarray:
         """
         Compute pairwise distances between rows of a numeric matrix.
@@ -258,7 +265,7 @@ class UtilsLib:
             _LOG.error("Unsupported metric '%s'.", metric)
             raise ValueError(f"Unsupported metric '{metric}'. Must be one of: {sorted(supported_metrics)}")
 
-        params: Dict[str, Any] = dict(metric_params or {})
+        params: dict[str, Any] = dict(metric_params or {})
 
         # Provide sensible defaults for metrics that require parameters.
         if metric == "mahalanobis" and "VI" not in params:
@@ -289,7 +296,7 @@ class UtilsLib:
     # IDs and filesystem helpers
     # -------------------------------------------------------------------------
     @classmethod
-    def create_jobid(cls, prefix: Optional[str] = None) -> str:
+    def create_jobid(cls, prefix: str | None = None) -> str:
         """
         Create a unique job identifier composed of an UTC timestamp and a shortened UUID.
 
@@ -315,10 +322,10 @@ class UtilsLib:
     @classmethod
     def delete_folder(
         cls,
-        path_to_folder: Union[str, Path],
+        path_to_folder: str | Path,
         *,
         missing_ok: bool = True,
-        restrict_to: Optional[Path] = None,
+        restrict_to: Path | None = None,
     ) -> bool:
         """
         Safely delete a folder tree with guardrails.
@@ -383,10 +390,10 @@ class UtilsLib:
     def export_data(
         cls,
         df_encoded: pd.DataFrame,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         base_message: str = "Encoded data",
-        file_format: Optional[Literal["csv", "npy", "npz", "parquet"]] = None,
+        file_format: FileFormat | None = None,
         overwrite: bool = True,
     ) -> Path:
         """
@@ -421,7 +428,7 @@ class UtilsLib:
         suffix = dest.suffix.lower()
         if file_format is None:
             if suffix in {".csv", ".npy", ".npz", ".parquet"}:
-                file_format = suffix.lstrip(".")  # type: ignore[assignment]
+                file_format = cast(FileFormat, suffix.lstrip("."))
             else:
                 file_format = "csv"
 
@@ -461,18 +468,50 @@ class UtilsLib:
         if env:
             return Path(env).expanduser()
 
+        siteconfig_cache = UtilsLib._siteconfig_cache_dir()
+        if siteconfig_cache is not None:
+            return siteconfig_cache
+
+        platform_cache = UtilsLib._platformdirs_cache_dir()
+        if platform_cache is not None:
+            return platform_cache
+
+        return Path.home() / ".cache" / "sylphy"
+
+    @staticmethod
+    def _siteconfig_cache_dir() -> Path | None:
         try:
-            from sylphy._siteconfig import CACHE_DIR
-
-            if CACHE_DIR:
-                return Path(CACHE_DIR).expanduser()
+            spec = importlib.util.find_spec("sylphy._siteconfig")
+            if spec is None:
+                return None
+            module = importlib.import_module("sylphy._siteconfig")
+        except ModuleNotFoundError:
+            return None
         except Exception:
-            pass
+            return None
 
+        cache_dir = getattr(module, "CACHE_DIR", None)
+        if not cache_dir:
+            return None
         try:
-            from platformdirs import user_cache_dir
-
-            base = Path(user_cache_dir("sylphy"))
+            return Path(str(cache_dir)).expanduser()
         except Exception:
-            base = Path.home() / ".cache" / "sylphy"
-        return base
+            return None
+
+    @staticmethod
+    def _platformdirs_cache_dir() -> Path | None:
+        try:
+            platformdirs = importlib.import_module("platformdirs")
+        except ModuleNotFoundError:
+            return None
+        except Exception:
+            return None
+
+        user_cache_dir = getattr(platformdirs, "user_cache_dir", None)
+        if not callable(user_cache_dir):
+            return None
+        try:
+            cache_dir = user_cache_dir("sylphy")
+            return Path(str(cache_dir))
+        except Exception:
+            return None

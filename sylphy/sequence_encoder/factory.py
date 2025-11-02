@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Set
+from typing import Any, Callable, cast
 
 from sylphy.logging import add_context, get_logger
 
@@ -30,7 +30,7 @@ _logger = logging.getLogger("sylphy.sequence_encoder.factory")
 add_context(_logger, component="sequence_encoder", facility="factory")
 
 # Canonical names for encoders
-_ALIASES: Dict[str, str] = {
+_ALIASES: dict[str, str] = {
     # one-hot
     "onehot": "one_hot",
     "one_hot": "one_hot",
@@ -52,7 +52,9 @@ _ALIASES: Dict[str, str] = {
 }
 
 # Class map
-_CLASSES = {
+EncoderInstance = Encoders | FFTEncoder
+
+_CLASSES: dict[str, type[Encoders] | type[FFTEncoder]] = {
     "one_hot": OneHotEncoder,
     "ordinal": OrdinalEncoder,
     "frequency": FrequencyEncoder,
@@ -62,7 +64,7 @@ _CLASSES = {
 }
 
 # Whitelisted kwargs per encoder (only these are forwarded)
-_ALLOWED: Dict[str, Set[str]] = {
+_ALLOWED: dict[str, set[str]] = {
     "one_hot": {
         "dataset",
         "sequence_column",
@@ -116,7 +118,7 @@ def _canonical(name: str) -> str:
     )
 
 
-def _filter_kwargs(kind: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+def _filter_kwargs(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     allowed = _ALLOWED[kind]
     filtered = {k: v for k, v in kwargs.items() if k in allowed}
     ignored = sorted(set(kwargs.keys()) - allowed)
@@ -125,7 +127,7 @@ def _filter_kwargs(kind: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
     return filtered
 
 
-def create_encoder(name: str, **kwargs: Any) -> Encoders:
+def create_encoder(name: str, **kwargs: Any) -> EncoderInstance:
     """
     Factory for sequence encoders with per-backend parameter filtering.
 
@@ -149,4 +151,5 @@ def create_encoder(name: str, **kwargs: Any) -> Encoders:
     params = _filter_kwargs(kind, kwargs)
     _logger.info("Creating encoder kind=%s class=%s kwargs=%s", kind, cls.__name__, params)
     add_context(_logger, encoder=cls.__name__)  # enrich context once we know it
-    return cls(**params)
+    constructor = cast(Callable[..., EncoderInstance], cls)
+    return constructor(**params)

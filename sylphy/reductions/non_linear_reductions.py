@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import logging
 import traceback
-from typing import Any, Optional, Type, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -28,11 +28,11 @@ class NonLinearReductions(Reductions):
 
     def __init__(
         self,
-        dataset: Union[np.ndarray, pd.DataFrame],
+        dataset: np.ndarray | pd.DataFrame,
         *,
         return_type: ReturnType = "numpy",
         preprocess: Preprocess = "none",
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
         debug: bool = True,
         debug_mode: int = logging.INFO,
     ) -> None:
@@ -50,7 +50,7 @@ class NonLinearReductions(Reductions):
     # -----------------------------
     # Helpers
     # -----------------------------
-    def _init_with_seed(self, cls: Type, kwargs: dict) -> Any:
+    def _init_with_seed(self, cls: type[Any], kwargs: dict[str, Any]) -> Any:
         sig = inspect.signature(cls.__init__)
         params = set(sig.parameters.keys())
         k = dict(kwargs)
@@ -59,8 +59,8 @@ class NonLinearReductions(Reductions):
         return cls(**k)
 
     def _apply_model(
-        self, model, method_name: str, n_components: Optional[int] = None
-    ) -> Union[np.ndarray, pd.DataFrame, None]:
+        self, model: Any, method_name: str, n_components: int | None = None
+    ) -> np.ndarray | pd.DataFrame | None:
         try:
             params = getattr(model, "get_params", lambda: {})()
             self.__logger__.info("Applying %s with params=%s", method_name, params)

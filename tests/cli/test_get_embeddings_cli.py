@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from typing import Any, cast
 
 import pandas as pd
 from typer.testing import CliRunner
@@ -47,7 +48,8 @@ def test_get_embeddings_runs_and_saves_csv(tmp_path):
 
 def test_get_embeddings_oom_backoff_succeeds(tmp_path):
     """Verify that the CLI successfully processes sequences and calls the model."""
-    _FakeModel = sys.modules["transformers"].AutoModel
+    transformers_mod = cast(Any, sys.modules["transformers"])
+    _FakeModel = transformers_mod.AutoModel
     _FakeModel.OOM_THRESHOLD = None
     _FakeModel.FORWARD_CALLS = 0
 

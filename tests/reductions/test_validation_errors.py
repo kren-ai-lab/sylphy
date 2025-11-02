@@ -10,8 +10,9 @@ from sylphy.reductions import LinearReduction
 def test_non_numeric_raises_type_error():
     """String-only frames should be rejected."""
     df = pd.DataFrame({"a": ["x", "y"], "b": ["z", "w"]})
-    with pytest.raises((TypeError, ValueError)):
+    with pytest.raises(Exception) as exc_info:
         LinearReduction(df)
+    assert isinstance(exc_info.value, (TypeError, ValueError))
 
 
 def test_1d_array_raises_value_error():

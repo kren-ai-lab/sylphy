@@ -47,6 +47,9 @@ uv run task format
 
 # Sort imports only
 uv run task sort-imports
+
+# Run type checker
+uv run task typecheck
 ```
 
 ### Building & Distribution
@@ -117,15 +120,16 @@ sylphy/
 │   ├── linear_reductions.py    # PCA, TruncatedSVD, NMF
 │   ├── non_linear_reductions.py # UMAP, Isomap, t-SNE, etc.
 │   └── factory.py              # reduce_dimensionality factory
-└── sequence_encoder/      # Classical sequence encoders
-    ├── base_encoder.py    # Common validation and preprocessing (Encoders class)
-    ├── one_hot_encoder.py # OneHotEncoder
-    ├── ordinal_encoder.py # OrdinalEncoder
-    ├── frequency_encoder.py # FrequencyEncoder
-    ├── kmers_encoder.py   # KMersEncoders (TF-IDF)
-    ├── physicochemical_encoder.py # PhysicochemicalEncoder (AAIndex properties)
-    ├── fft_encoder.py     # FFTEncoder (expects numeric input)
-    └── factory.py         # create_encoder factory
+├── sequence_encoder/      # Classical sequence encoders
+│   ├── base_encoder.py    # Common validation and preprocessing (Encoders class)
+│   ├── one_hot_encoder.py # OneHotEncoder
+│   ├── ordinal_encoder.py # OrdinalEncoder
+│   ├── frequency_encoder.py # FrequencyEncoder
+│   ├── kmers_encoder.py   # KMersEncoders (TF-IDF)
+│   ├── physicochemical_encoder.py # PhysicochemicalEncoder (AAIndex properties)
+│   ├── fft_encoder.py     # FFTEncoder (expects numeric input)
+│   └── factory.py         # create_encoder factory
+└── types.py               # Type definitions (PrecisionType, PoolType, LayerAggType, FileFormat)
 ```
 
 ### Key Design Patterns
@@ -243,7 +247,8 @@ tests/
 - `embeddings`: `torch`, `transformers`, `sentencepiece`, `esm` (ESM-C)
 - `reductions`: `umap-learn`, `clustpy`
 - `parquet`: `pyarrow`, `fastparquet`
-- `dev`: `pytest`, `mypy`, `ruff`, `taskipy`
+- `dev`: `pyrefly`, `pytest`, `ruff`, `taskipy`, `build`, `twine`
+- `tests`: `pytest`, `pytest-cov`
 - `all`: all optional dependencies
 
 Install with:
@@ -286,13 +291,24 @@ pip install -e ".[embeddings,reductions,parquet]"
 
 ## Environment Variables
 
+### Core Configuration
 - `SYLPHY_CACHE_ROOT`: override the default cache directory for model weights and intermediate files
   - If not set, defaults to OS-specific cache directories:
     - Linux: `~/.cache/sylphy` (or `$XDG_CACHE_HOME/sylphy`)
     - macOS: `~/Library/Caches/sylphy`
     - Windows: `%LOCALAPPDATA%\sylphy\Cache`
-- `SYLPHY_LOG_FILE`: path for log file output
 - `SYLPHY_MODEL_<NAME>`: override model path (e.g., `SYLPHY_MODEL_ESM2_SMALL`)
 - `SYLPHY_DEVICE`: force device selection (`cpu` or `cuda`), overrides auto-detection
 - `SYLPHY_SEED`: set random seed for reproducibility (default: `42`)
+
+### Logging Configuration
+- `SYLPHY_LOG_FILE`: path for log file output
+- `SYLPHY_LOG_LEVEL`: logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`)
+- `SYLPHY_LOG_JSON`: enable JSON-formatted logs (`true`/`false`, `1`/`0`)
+- `SYLPHY_LOG_STDERR`: log to stderr instead of stdout (`true`/`false`, `1`/`0`)
+- `SYLPHY_LOG_UTC`: use UTC timestamps in logs (`true`/`false`, `1`/`0`)
+- `SYLPHY_LOG_MAX_BYTES`: max bytes per log file before rotation (default: 10MB)
+- `SYLPHY_LOG_BACKUPS`: number of backup log files to keep (default: 3)
+
+### External Dependencies
 - `HF_HOME`, `TRANSFORMERS_CACHE`: HuggingFace cache location

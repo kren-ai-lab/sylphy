@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Literal
 
 Provider = Literal["huggingface", "other"]
 
@@ -35,9 +35,9 @@ class ModelSpec:
     name: str
     provider: Provider
     ref: str
-    subdir: Optional[str] = None
-    revision: Optional[str] = None
-    alias_of: Optional[str] = None
+    subdir: str | None = None
+    revision: str | None = None
+    alias_of: str | None = None
 
     def is_alias(self) -> bool:
         """Return True if this spec is an alias entry."""

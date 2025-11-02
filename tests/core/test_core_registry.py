@@ -91,8 +91,11 @@ def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path):
 
     def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None):
         calls["n"] += 1
-        Path(local_dir).mkdir(parents=True, exist_ok=True)
-        (Path(local_dir) / "config.json").write_text(json.dumps({"ref": ref}))
+        if local_dir is None:
+            raise AssertionError("local_dir should be provided in snapshot_download mock.")
+        dest = Path(local_dir)
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "config.json").write_text(json.dumps({"ref": ref}))
 
     hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import types
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -27,8 +28,11 @@ def test_hf_revision_path_is_used(monkeypatch, tmp_path):
 
     def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None):
         calls["n"] += 1
-        Path(local_dir).mkdir(parents=True, exist_ok=True)
-        (Path(local_dir) / "marker.txt").write_text("ok")
+        if local_dir is None:
+            raise AssertionError("local_dir should be provided in snapshot_download mock.")
+        dest = Path(local_dir)
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "marker.txt").write_text("ok")
 
     hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
@@ -63,7 +67,7 @@ def test_env_override_nonexistent_raises(monkeypatch, tmp_path):
 
 
 def test_unsupported_provider_wraps_in_download_error():
-    register_model(ModelSpec(name="bad", provider="weird", ref="x/y"))
+    register_model(ModelSpec(name="bad", provider=cast(Any, "weird"), ref="x/y"))
     with pytest.raises(ModelDownloadError):
         resolve_model("bad")
 
@@ -83,7 +87,7 @@ def test_cache_layout_helpers_agree_with_resolve(monkeypatch):
             # args[0] is ref; we still need local_dir from kwargs; keep no-op if missing
             pass
         if local_dir:
-            Path(local_dir).mkdir(parents=True, exist_ok=True)
+            Path(str(local_dir)).mkdir(parents=True, exist_ok=True)
 
     hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)

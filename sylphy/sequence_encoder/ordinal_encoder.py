@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional
 
 import pandas as pd
 
@@ -18,8 +17,8 @@ class OrdinalEncoder(Encoders):
 
     def __init__(
         self,
-        dataset: Optional[pd.DataFrame] = None,
-        sequence_column: Optional[str] = "sequence",
+        dataset: pd.DataFrame | None = None,
+        sequence_column: str | None = "sequence",
         max_length: int = 1024,
         allow_extended: bool = False,
         allow_unknown: bool = False,
@@ -38,11 +37,11 @@ class OrdinalEncoder(Encoders):
         )
         self._alpha = residues(extended=self.allow_extended or self.allow_unknown)
 
-    def __zero_padding(self, current_length: int) -> List[int]:
+    def __zero_padding(self, current_length: int) -> list[int]:
         return [0] * (self.max_length - current_length)
 
-    def __encode_sequence(self, sequence: str) -> List[int]:
-        coded: List[int] = []
+    def __encode_sequence(self, sequence: str) -> list[int]:
+        coded: list[int] = []
         for r in sequence:
             try:
                 coded.append(
@@ -68,7 +67,7 @@ class OrdinalEncoder(Encoders):
             matrix = [
                 self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
             ]
-            header = [f"p_{i}" for i in range(len(matrix[0]))]
+            header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
             self.__logger__.info("Ordinal encoding completed with %d features.", self.coded_dataset.shape[1])

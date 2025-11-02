@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Sequence
 from pathlib import Path
-from typing import List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, cast
 
 import numpy as np
 import pandas as pd
@@ -14,10 +15,11 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 from sylphy.core.model_registry import ModelSpec, register_model, resolve_model
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
+from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
 
-Pool = Literal["mean", "cls", "eos"]
-LayerAgg = Literal["mean", "sum", "concat"]
-LayerSpec = Union[str, int, Sequence[int]]
+Pool = PoolType
+LayerAgg = LayerAggType
+LayerSpec = str | int | Sequence[int]
 
 
 class EmbeddingBased:
@@ -40,19 +42,19 @@ class EmbeddingBased:
         name_model: str = "",
         name_tokenizer: str = "",
         provider: str = "huggingface",  # {"huggingface","other"}
-        revision: Optional[str] = None,
+        revision: str | None = None,
         column_seq: str = "sequence",
         debug: bool = False,
         debug_mode: int = logging.INFO,
         name_logging: str = "EmbeddingBased",  # deprecated; kept for context info
         trust_remote_code: bool = False,
-        precision: Literal["fp32", "fp16", "bf16"] = "fp32",
+        precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
     ) -> None:
         self._cache_root = UtilsLib.get_cache_dir()  # <- resuelve _siteconfig/env/platformdirs
         self._wire_cache_envs(self._cache_root)
 
-        self.dataset = dataset
+        self.dataset: pd.DataFrame = dataset
         self.column_seq = column_seq
 
         self.name_model = name_model
@@ -60,7 +62,7 @@ class EmbeddingBased:
         self.provider = provider
         self.revision = revision
 
-        self.device = torch.device(
+        self._device: Any = torch.device(
             name_device if torch.cuda.is_available() and name_device == "cuda" else "cpu"
         )
         self.trust_remote_code = trust_remote_code
@@ -78,13 +80,17 @@ class EmbeddingBased:
             model=self.name_model or "<unset>",
         )
 
-        self.tokenizer = None
-        self.model = None
+        self.tokenizer: Any | None = None
+        self.model: Any | None = None
 
         self.requires_tokenizer: bool = self.provider == "huggingface"
 
         self.status: bool = True
         self.message: str = ""
+
+    @property
+    def device(self) -> torch.device:
+        return cast(torch.device, self._device)
 
     @staticmethod
     def _wire_cache_envs(root: Path) -> None:
@@ -185,10 +191,10 @@ class EmbeddingBased:
         """
         if self._is_ready():
             return
-        if hasattr(self, "load_model_tokenizer"):
+        loader: Callable[[], None] | None = getattr(self, "load_model_tokenizer", None)  # type: ignore[attr-defined]
+        if callable(loader):
             try:
-                # type: ignore[attr-defined]
-                self.load_model_tokenizer()  # subclass-provided (e.g., ESM-C)
+                loader()  # subclass-provided (e.g., ESM-C)
             except Exception as e:
                 self.__logger__.error("load_model_tokenizer() failed: %s", e)
                 raise
@@ -201,18 +207,18 @@ class EmbeddingBased:
     # Hooks & utilities
     # ---------------------------------------------------------------------
 
-    def _pre_tokenize(self, batch: List[str]) -> List[str]:
+    def _pre_tokenize(self, batch: list[str]) -> list[str]:
         """Optional hook to adjust raw strings before tokenization (e.g., insert spaces)."""
         return [s.strip() for s in batch]
 
-    def _amp_dtype(self) -> Optional[torch.dtype]:
+    def _amp_dtype(self) -> torch.dtype | None:
         if self.precision == "fp16":
             return torch.float16
         if self.precision == "bf16":
             return torch.bfloat16
         return None
 
-    def _make_batches(self, seqs: List[str], batch_size: int) -> List[List[str]]:
+    def _make_batches(self, seqs: list[str], batch_size: int) -> list[list[str]]:
         return [seqs[i : i + batch_size] for i in range(0, len(seqs), batch_size)]
 
     # ---------------------------------------------------------------------
@@ -222,10 +228,10 @@ class EmbeddingBased:
     @torch.no_grad()
     def _forward_hidden_states(
         self,
-        sequences: List[str],
+        sequences: list[str],
         *,
         max_length: int,
-    ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor]:
+    ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         """
         Tokenize → forward pass with `output_hidden_states=True`.
 
@@ -239,8 +245,13 @@ class EmbeddingBased:
         if (self.model is None) or (self.requires_tokenizer and self.tokenizer is None):
             raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
 
+        tokenizer = self.tokenizer
+        model = self.model
+        if tokenizer is None or model is None:
+            raise RuntimeError("Model/tokenizer not loaded.")
+
         batch = self._pre_tokenize(sequences)
-        enc = self.tokenizer(
+        enc = tokenizer(
             batch,
             return_tensors="pt",
             truncation=True,
@@ -255,9 +266,9 @@ class EmbeddingBased:
 
         if use_amp:
             with torch.autocast(device_type="cuda", dtype=amp_dtype):
-                out = self.model(**enc, output_hidden_states=True)
+                out = model(**enc, output_hidden_states=True)
         else:
-            out = self.model(**enc, output_hidden_states=True)
+            out = model(**enc, output_hidden_states=True)
 
         hidden_states = out.hidden_states  # type: ignore[attr-defined]
         if hidden_states is None:
@@ -273,7 +284,7 @@ class EmbeddingBased:
     # ---------------------------------------------------------------------
 
     @staticmethod
-    def _parse_layers(spec: LayerSpec, n_layers: int) -> List[int]:
+    def _parse_layers(spec: LayerSpec, n_layers: int) -> list[int]:
         """Normalize layer spec ('last'|'all'|int|[ints]|'last4') into a sorted list of indices."""
         if isinstance(spec, int):
             return [spec]
@@ -314,8 +325,8 @@ class EmbeddingBased:
 
     @staticmethod
     def _aggregate_layers(
-        hs: Tuple[torch.Tensor, ...],  # tuple of (B, L, H)
-        select: List[int],
+        hs: tuple[torch.Tensor, ...],  # tuple of (B, L, H)
+        select: list[int],
         agg: LayerAgg,
     ) -> torch.Tensor:
         """Aggregate selected layers into a single (B, L, H*) representation."""
@@ -334,7 +345,7 @@ class EmbeddingBased:
 
     def encode_batch_layers(
         self,
-        sequences: List[str],
+        sequences: list[str],
         *,
         max_length: int = 1024,
         layers: LayerSpec = "last",
@@ -387,9 +398,10 @@ class EmbeddingBased:
 
     def release_resources(self):
         try:
-            if getattr(self, "model", None) is not None:
+            model = getattr(self, "model", None)
+            if model is not None:
                 try:
-                    self.model.to("cpu")
+                    model.to("cpu")
                 except Exception:
                     pass
             try:
@@ -449,8 +461,10 @@ class EmbeddingBased:
                 return
 
             seqs = self.dataset[self.column_seq].astype(str).tolist()
-            mats: List[np.ndarray] = []
-            bs = max(1, int(batch_size))
+            mats: list[np.ndarray] = []
+            bs: int = int(batch_size)
+            if bs < 1:
+                bs = 1
 
             for chunk in self._make_batches(seqs, bs):
                 try:
@@ -465,7 +479,9 @@ class EmbeddingBased:
                 except torch.cuda.OutOfMemoryError:
                     if not (self.oom_backoff and bs > 1 and self.device.type == "cuda"):
                         raise
-                    new_bs = max(1, bs // 2)
+                    new_bs: int = bs // 2
+                    if new_bs < 1:
+                        new_bs = 1
                     self.__logger__.warning("CUDA OOM at bs=%d. Retrying with bs=%d.", bs, new_bs)
                     bs = new_bs
                     if torch.cuda.is_available():
@@ -486,9 +502,10 @@ class EmbeddingBased:
                         mats.append(X)
 
             self.release_resources()
-            Xall = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
-            header = [f"p_{i}" for i in range(Xall.shape[1])]
-            self.coded_dataset = pd.DataFrame(Xall, columns=header, index=self.dataset.index)
+            Xall: np.ndarray = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
+            header: list[str] = [f"p_{i}" for i in range(Xall.shape[1])]
+            columns_index = pd.Index(header)
+            self.coded_dataset = pd.DataFrame(Xall, columns=columns_index, index=self.dataset.index)
             self.coded_dataset[self.column_seq] = self.dataset[self.column_seq].values
             self.status = True
             self.message = "OK"
@@ -505,7 +522,11 @@ class EmbeddingBased:
             self.__logger__.exception(self.message)
             raise RuntimeError(self.message) from e
 
-    def export_encoder(self, path: str, file_format: Literal["csv", "npy", "npz", "parquet"] = "csv") -> None:
+    def export_encoder(
+        self,
+        path: str | Path,
+        file_format: FileFormat = "csv",
+    ) -> None:
         """Persist the encoded matrix to disk."""
         UtilsLib.export_data(
             df_encoded=self.coded_dataset,

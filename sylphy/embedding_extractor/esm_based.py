@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
 
+import pandas as pd
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
+
+from sylphy.types import PrecisionType
 
 from .embedding_based import EmbeddingBased
 
@@ -16,13 +18,16 @@ class ESMBasedEmbedding(EmbeddingBased):
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "facebook/esm2_t6_8M_UR50D",
         name_tokenizer: str = "facebook/esm2_t6_8M_UR50D",
-        dataset: Optional[object] = None,
-        column_seq: Optional[str] = "sequence",
+        dataset: pd.DataFrame | None = None,
+        column_seq: str | None = "sequence",
         debug: bool = False,
         debug_mode: int = logging.INFO,
-        precision: str = "fp32",
+        precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
     ) -> None:
+        if dataset is None:
+            raise ValueError("dataset must be provided")
+
         super().__init__(
             dataset=dataset,
             name_device=name_device,
@@ -45,23 +50,26 @@ class ESMBasedEmbedding(EmbeddingBased):
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
 
             self.__logger__.info("Loading ESM tokenizer from: %s", local_dir)
-            self.tokenizer = AutoTokenizer.from_pretrained(
+            tokenizer = AutoTokenizer.from_pretrained(
                 local_dir, do_lower_case=False, use_fast=True, trust_remote_code=False
             )
-            if getattr(self.tokenizer, "pad_token_id", None) is None:
-                self.tokenizer.add_special_tokens({"pad_token": "<pad>"})
-                self.__logger__.debug("pad_token_id set to: %s", self.tokenizer.pad_token_id)
+            if getattr(tokenizer, "pad_token_id", None) is None:
+                tokenizer.add_special_tokens({"pad_token": "<pad>"})
+                self.__logger__.debug("pad_token_id set to: %s", tokenizer.pad_token_id)
+            self.tokenizer = tokenizer
 
             self.__logger__.info("Loading ESM model from: %s on device=%s", local_dir, self.device)
-            self.model = AutoModel.from_pretrained(local_dir, trust_remote_code=False).to(self.device)
-            self.model.eval()
+            model = AutoModel.from_pretrained(local_dir, trust_remote_code=False)
+            model.to(self.device)
+            self.model = model
+            model.eval()
         except Exception as e:
             self.status = False
             self.message = f"Failed to load ESM tokenizer/model: {e}"
             self.__logger__.error(self.message)
             raise
 
-    def _pre_tokenize(self, batch: List[str]) -> List[str]:
+    def _pre_tokenize(self, batch: list[str]) -> list[str]:
         vocab = getattr(self.tokenizer, "get_vocab", lambda: {})()
         has_cls = "<cls>" in vocab
         if has_cls:
@@ -71,9 +79,9 @@ class ESMBasedEmbedding(EmbeddingBased):
     @torch.no_grad()
     def embedding_batch(
         self,
-        batch: List[str],
+        batch: list[str],
         max_length: int = 1024,
-    ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor]:
+    ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         """
         Return (hidden_states, attention_mask) with shapes:
           - hidden_states: tuple of length n_layers, each (B, L, H)

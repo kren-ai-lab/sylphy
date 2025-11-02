@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import types
 from collections.abc import Iterator
+from typing import Any, cast
 
 import pytest
 import torch
@@ -85,17 +86,13 @@ class _FakeModel:
     FORWARD_CALLS: int = 0
 
     def __init__(self):
-        self._device = torch.device("cpu")
+        pass
 
     @classmethod
     def from_pretrained(cls, local_dir: str, trust_remote_code: bool = False):
         return cls()
 
     def to(self, device):
-        if isinstance(device, str):
-            self._device = torch.device(device)
-        else:
-            self._device = device
         return self
 
     def eval(self):
@@ -114,7 +111,7 @@ class _FakeModel:
         return _FakeOutput(last_hidden, hidden_states)
 
 
-_fake_tf = types.ModuleType("transformers")
+_fake_tf = cast(Any, types.ModuleType("transformers"))
 _fake_tf.AutoTokenizer = _FakeTokenizer
 _fake_tf.AutoModel = _FakeModel
 _fake_tf.AutoConfig = _FakeConfig
@@ -134,12 +131,12 @@ _fake_tf.PreTrainedTokenizerFast = PreTrainedTokenizerFast
 sys.modules["transformers"] = _fake_tf
 
 
-_fake_esm = types.ModuleType("esm")
+_fake_esm = cast(Any, types.ModuleType("esm"))
 _fake_esm.__path__ = []
 
-_fake_esm_models = types.ModuleType("esm.models")
+_fake_esm_models = cast(Any, types.ModuleType("esm.models"))
 _fake_esm_models.__path__ = []
-_fake_esm_models_esmc = types.ModuleType("esm.models.esmc")
+_fake_esm_models_esmc = cast(Any, types.ModuleType("esm.models.esmc"))
 
 
 class ESMC:
@@ -162,18 +159,19 @@ class ESMC:
         last_hidden = hidden_states[-1]
 
         class _Out:
-            last_hidden_state = last_hidden
-            hidden_states = hidden_states
+            def __init__(self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...]):
+                self.last_hidden_state = last_hidden_state
+                self.hidden_states = hidden_states
 
-        return _Out()
+        return _Out(last_hidden, hidden_states)
 
 
 _fake_esm_models_esmc.ESMC = ESMC
 
-_fake_esm_sdk = types.ModuleType("esm.sdk")
+_fake_esm_sdk = cast(Any, types.ModuleType("esm.sdk"))
 _fake_esm_sdk.__path__ = []
-_fake_esm_sdk_api = types.ModuleType("esm.sdk.api")
-_fake_esm_sdk_forge = types.ModuleType("esm.sdk.forge")
+_fake_esm_sdk_api = cast(Any, types.ModuleType("esm.sdk.api"))
+_fake_esm_sdk_forge = cast(Any, types.ModuleType("esm.sdk.forge"))
 
 
 class ESMProtein:

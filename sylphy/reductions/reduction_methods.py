@@ -85,7 +85,7 @@ class Reductions:
         )
 
         # Apply optional preprocessing in-place
-        self._scaler = None
+        self._scaler: StandardScaler | MinMaxScaler | RobustScaler | None = None
         self._apply_preprocess()
 
     # -----------------------------
@@ -104,7 +104,10 @@ class Reductions:
             raise ValueError(f"Unknown preprocess option '{self.preprocess}'.")
 
         self.__logger__.info("Applying preprocess: %s", self.preprocess)
-        self.dataset = self._scaler.fit_transform(self.dataset).astype(np.float32, copy=False)
+        scaler = self._scaler
+        if scaler is None:
+            return
+        self.dataset = scaler.fit_transform(self.dataset).astype(np.float32, copy=False)
 
     # -----------------------------
     # Output helpers
@@ -140,7 +143,7 @@ class Reductions:
             else:
                 headers = self._make_headers(n_components)
                 self.__logger__.info("Prepared pandas DataFrame with %d components.", n_components)
-                return pd.DataFrame(data=transform_array, columns=headers)
+                return pd.DataFrame(data=transform_array, columns=pd.Index(headers))
 
         except Exception as e:
             self.__logger__.error("Failed to build post-reduction output: %s", e)

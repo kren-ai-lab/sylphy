@@ -76,7 +76,7 @@ class Encoders:
         self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
         add_context(self.__logger__, component="sequence_encoder", encoder=name_logging)
 
-        self.dataset = dataset if dataset is not None else pd.DataFrame()
+        self.dataset: pd.DataFrame = dataset if dataset is not None else pd.DataFrame()
         self.sequence_column = sequence_column
         self.max_length = max_length
         self.allow_extended = allow_extended
@@ -84,7 +84,7 @@ class Encoders:
 
         self.status = True
         self.message = ""
-        self.coded_dataset = pd.DataFrame()
+        self.coded_dataset: pd.DataFrame = pd.DataFrame()
 
         if dataset is None:
             self.status = False
@@ -138,7 +138,7 @@ class Encoders:
             mask = [_ok(seq) for seq in self.dataset[self.sequence_column]]
             self.dataset["is_canon"] = mask
             before = len(self.dataset)
-            self.dataset = self.dataset[self.dataset["is_canon"]].copy()
+            self.dataset = self.dataset.loc[self.dataset["is_canon"]].copy()
             removed = before - len(self.dataset)
             self.__logger__.info("Filtered sequences outside alphabet: %d removed.", removed)
         except Exception as exc:
@@ -151,7 +151,7 @@ class Encoders:
             self.dataset["length_sequence"] = self.dataset[self.sequence_column].str.len()
             self.dataset["is_valid_length"] = (self.dataset["length_sequence"] <= self.max_length).astype(int)
             before = len(self.dataset)
-            self.dataset = self.dataset[self.dataset["is_valid_length"] == 1].copy()
+            self.dataset = self.dataset.loc[self.dataset["is_valid_length"] == 1].copy()
             removed = before - len(self.dataset)
             self.__logger__.info("Filtered long sequences: %d removed.", removed)
         except Exception as exc:

@@ -14,6 +14,8 @@ from .reduction_methods import Preprocess, ReturnType
 
 DatasetLike = np.ndarray | pd.DataFrame
 Kind = Literal["linear", "nonlinear"]
+_LINEAR_KIND: Kind = "linear"
+_NONLINEAR_KIND: Kind = "nonlinear"
 
 # -----------------------------------------------------------------------------
 # Registry
@@ -44,10 +46,16 @@ _NONLINEAR_METHODS: dict[str, str] = {
     "dipext": "apply_dip_ext",
 }
 
-_METHODS: dict[str, tuple[Kind, str]] = {
-    **{k: ("linear", v) for k, v in _LINEAR_METHODS.items()},
-    **{k: ("nonlinear", v) for k, v in _NONLINEAR_METHODS.items()},
-}
+def _build_methods() -> dict[str, tuple[Kind, str]]:
+    methods: dict[str, tuple[Kind, str]] = {}
+    for key, attr in _LINEAR_METHODS.items():
+        methods[key] = (_LINEAR_KIND, attr)
+    for key, attr in _NONLINEAR_METHODS.items():
+        methods[key] = (_NONLINEAR_KIND, attr)
+    return methods
+
+
+_METHODS: dict[str, tuple[Kind, str]] = _build_methods()
 
 # --- logging: ensure parent, then a child logger for the factory -------------
 _ = get_logger("sylphy")

@@ -35,4 +35,5 @@ def X_nonneg() -> np.ndarray:
 @pytest.fixture
 def df_small(X_small) -> pd.DataFrame:
     """Wrap X_small in a DataFrame with feature columns."""
-    return pd.DataFrame(X_small, columns=[f"f{i}" for i in range(X_small.shape[1])])
+    columns = pd.Index([f"f{i}" for i in range(X_small.shape[1])])
+    return pd.DataFrame(X_small, columns=columns)

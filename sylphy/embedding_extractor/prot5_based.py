@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Any, cast
 
 import pandas as pd
 import torch
+import torch.nn as nn
 from transformers import AutoConfig, T5EncoderModel, T5Tokenizer
 
 from sylphy.types import PrecisionType
@@ -52,14 +54,18 @@ class Prot5Based(EmbeddingBased):
 
             self.__logger__.info("Loading ProtT5 tokenizer from: %s", local_dir)
             tokenizer = T5Tokenizer.from_pretrained(local_dir, do_lower_case=False, use_fast=False)
-            if getattr(tokenizer, "pad_token_id", None) is None:
-                tokenizer.add_special_tokens({"pad_token": "<pad>"})
-                self.__logger__.debug("pad_token_id set to: %s", tokenizer.pad_token_id)
-            self.tokenizer = tokenizer
+            tokenizer_any = cast(Any, tokenizer)
+            pad_token_id: int | None = getattr(tokenizer_any, "pad_token_id", None)
+            if pad_token_id is None:
+                tokenizer_any.add_special_tokens({"pad_token": "<pad>"})
+                pad_token_id = getattr(tokenizer_any, "pad_token_id", None)
+            if pad_token_id is not None:
+                self.__logger__.debug("pad_token_id set to: %s", pad_token_id)
+            self.tokenizer = tokenizer_any
 
             self.__logger__.info("Loading ProtT5 encoder from: %s on device=%s", local_dir, self.device)
             model = T5EncoderModel.from_pretrained(local_dir)
-            model.to(self.device)
+            cast(nn.Module, model).to(self.device)
             self.model = model
             model.eval()
         except Exception as e:

@@ -119,7 +119,7 @@ class PhysicochemicalEncoder(Encoders):
             matrix = [
                 self.__encoding_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
             ]
-            header = [f"p_{i}" for i in range(len(matrix[0]))]
+            header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
             self.__logger__.info("Encoding complete. Dataset shape: %s", self.coded_dataset.shape)

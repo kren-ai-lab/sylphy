@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from sylphy.reductions import reduce_dimensionality
@@ -29,6 +30,7 @@ def test_factory_linear_pandas(df_small, caplog):
     )
     # Output checks
     assert Z is not None
+    assert isinstance(Z, pd.DataFrame)
     assert list(Z.columns) == ["p_1", "p_2"]
     assert Z.shape[0] == df_small.shape[0]
 

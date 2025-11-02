@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 import datetime as dt
+import importlib
+import importlib.util
 import logging
 import os
 import shutil
 import uuid
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -108,12 +110,13 @@ class UtilsLib:
         if per_label:
             parts: list[pd.DataFrame] = []
             for lab in use_labels:
-                subset = df[df[label_name] == lab]
+                subset = df.loc[df[label_name] == lab]
                 k = n_samples if replace else min(n_samples, len(subset))
                 if k == 0:
                     _LOG.warning("Skipping label '%s' (no rows).", lab)
                     continue
-                parts.append(subset.sample(n=k, replace=replace, random_state=random_state))
+                sampled = subset.sample(n=k, replace=replace, random_state=random_state)
+                parts.append(cast(pd.DataFrame, sampled))
                 _LOG.info("Sampled %d rows for label '%s'.", k, lab)
             out = pd.concat(parts, axis=0).reset_index(drop=True)
             _LOG.info("Total sampled rows (per_label): %d", len(out))
@@ -121,7 +124,7 @@ class UtilsLib:
 
         # Global proportional sampling
         # Compute desired counts per label proportional to their frequency
-        counts = df[df[label_name].isin(use_labels)][label_name].value_counts().sort_index()
+        counts = df.loc[df[label_name].isin(use_labels), label_name].value_counts().sort_index()
         total = counts.sum()
         if total == 0:
             _LOG.warning("No rows matched the requested labels; returning empty frame.")
@@ -148,11 +151,12 @@ class UtilsLib:
         for lab, k in alloc.items():
             if k <= 0:
                 continue
-            subset = df[df[label_name] == lab]
+            subset = df.loc[df[label_name] == lab]
             k = k if replace else min(k, len(subset))
             if k <= 0:
                 continue
-            parts.append(subset.sample(n=k, replace=replace, random_state=random_state))
+            sampled = subset.sample(n=k, replace=replace, random_state=random_state)
+            parts.append(cast(pd.DataFrame, sampled))
             _LOG.info("Sampled %d rows for label '%s' (global mode).", k, lab)
 
         out = pd.concat(parts, axis=0).reset_index(drop=True)
@@ -424,7 +428,7 @@ class UtilsLib:
         suffix = dest.suffix.lower()
         if file_format is None:
             if suffix in {".csv", ".npy", ".npz", ".parquet"}:
-                file_format = suffix.lstrip(".")  # type: ignore[assignment]
+                file_format = cast(FileFormat, suffix.lstrip("."))
             else:
                 file_format = "csv"
 
@@ -464,18 +468,50 @@ class UtilsLib:
         if env:
             return Path(env).expanduser()
 
+        siteconfig_cache = UtilsLib._siteconfig_cache_dir()
+        if siteconfig_cache is not None:
+            return siteconfig_cache
+
+        platform_cache = UtilsLib._platformdirs_cache_dir()
+        if platform_cache is not None:
+            return platform_cache
+
+        return Path.home() / ".cache" / "sylphy"
+
+    @staticmethod
+    def _siteconfig_cache_dir() -> Path | None:
         try:
-            from sylphy._siteconfig import CACHE_DIR
-
-            if CACHE_DIR:
-                return Path(CACHE_DIR).expanduser()
+            spec = importlib.util.find_spec("sylphy._siteconfig")
+            if spec is None:
+                return None
+            module = importlib.import_module("sylphy._siteconfig")
+        except ModuleNotFoundError:
+            return None
         except Exception:
-            pass
+            return None
 
+        cache_dir = getattr(module, "CACHE_DIR", None)
+        if not cache_dir:
+            return None
         try:
-            from platformdirs import user_cache_dir
-
-            base = Path(user_cache_dir("sylphy"))
+            return Path(str(cache_dir)).expanduser()
         except Exception:
-            base = Path.home() / ".cache" / "sylphy"
-        return base
+            return None
+
+    @staticmethod
+    def _platformdirs_cache_dir() -> Path | None:
+        try:
+            platformdirs = importlib.import_module("platformdirs")
+        except ModuleNotFoundError:
+            return None
+        except Exception:
+            return None
+
+        user_cache_dir = getattr(platformdirs, "user_cache_dir", None)
+        if not callable(user_cache_dir):
+            return None
+        try:
+            cache_dir = user_cache_dir("sylphy")
+            return Path(str(cache_dir))
+        except Exception:
+            return None

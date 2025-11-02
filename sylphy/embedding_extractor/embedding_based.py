@@ -5,7 +5,7 @@ import logging
 import os
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 import numpy as np
 import pandas as pd
@@ -191,10 +191,10 @@ class EmbeddingBased:
         """
         if self._is_ready():
             return
-        if hasattr(self, "load_model_tokenizer"):
+        loader: Callable[[], None] | None = getattr(self, "load_model_tokenizer", None)  # type: ignore[attr-defined]
+        if callable(loader):
             try:
-                # type: ignore[attr-defined]
-                self.load_model_tokenizer()  # subclass-provided (e.g., ESM-C)
+                loader()  # subclass-provided (e.g., ESM-C)
             except Exception as e:
                 self.__logger__.error("load_model_tokenizer() failed: %s", e)
                 raise

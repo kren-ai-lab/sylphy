@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 import torch
+import torch.nn as nn
 from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
 
 from sylphy.types import PrecisionType
@@ -63,7 +65,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
 
             self.__logger__.info("Loading Ankh2 encoder from: %s on device=%s", local_dir, self.device)
             model = T5EncoderModel.from_pretrained(local_dir, trust_remote_code=True)
-            model.to(self.device)
+            cast(nn.Module, model).to(self.device)
             self.model = model
 
             model.eval()

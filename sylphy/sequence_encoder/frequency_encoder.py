@@ -53,7 +53,7 @@ class FrequencyEncoder(Encoders):
             matrix = [
                 self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
             ]
-            header = [f"freq_{r}" for r in self._alpha]
+            header = pd.Index([f"freq_{r}" for r in self._alpha])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
             self.__logger__.info(

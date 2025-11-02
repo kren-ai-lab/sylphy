@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 
 from sylphy.reductions import LinearReduction
 
@@ -19,6 +20,7 @@ def test_pca_pandas_return(df_small):
     lr = LinearReduction(df_small, return_type="pandas", debug=True)
     model, Z = lr.apply_pca(n_components=3, random_state=0)
     assert Z is not None
+    assert isinstance(Z, pd.DataFrame)
     assert list(Z.columns) == ["p_1", "p_2", "p_3"]
     assert Z.shape[0] == df_small.shape[0]
 
@@ -37,4 +39,5 @@ def test_nmf_on_non_negative_data(X_nonneg):
     lr = LinearReduction(X_nonneg, return_type="pandas", debug=True)
     _, Z = lr.apply_nmf(n_components=2, random_state=0, init="random", max_iter=200)
     assert Z is not None
+    assert isinstance(Z, pd.DataFrame)
     assert list(Z.columns) == ["p_1", "p_2"]

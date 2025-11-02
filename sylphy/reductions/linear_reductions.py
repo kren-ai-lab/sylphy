@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import logging
 import traceback
-from typing import Any
+from typing import Any, Protocol, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,11 @@ from sklearn.decomposition import (
 )
 
 from .reduction_methods import Preprocess, Reductions, ReturnType
+
+class _SupportsFitTransform(Protocol):
+    def fit_transform(self, dataset: np.ndarray | pd.DataFrame) -> np.ndarray: ...
+
+ModelT = TypeVar("ModelT", bound=_SupportsFitTransform)
 
 
 class LinearReduction(Reductions):
@@ -56,7 +61,7 @@ class LinearReduction(Reductions):
     # -----------------------------
     # Helpers
     # -----------------------------
-    def _init_with_seed(self, cls: type[Any], kwargs: dict[str, Any]) -> Any:
+    def _init_with_seed(self, cls: type[ModelT], kwargs: dict[str, Any]) -> ModelT:
         sig = inspect.signature(cls.__init__)
         params = set(sig.parameters.keys())
         k = dict(kwargs)
@@ -66,10 +71,10 @@ class LinearReduction(Reductions):
 
     def _apply_model(
         self,
-        model: Any,
+        model: ModelT,
         method_name: str,
         n_components: int | None = None,
-    ) -> tuple[object, np.ndarray | pd.DataFrame | None]:
+    ) -> tuple[ModelT, np.ndarray | pd.DataFrame | None]:
         """Fit/transform wrapper with logging and error handling."""
         try:
             params = getattr(model, "get_params", lambda: {})()

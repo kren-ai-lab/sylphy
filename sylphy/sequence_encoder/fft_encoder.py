@@ -57,7 +57,7 @@ class FFTEncoder:
         if pad > 0:
             padding_df = pd.DataFrame(
                 data=np.zeros((self.dataset.shape[0], pad), dtype=float),
-                columns=[f"p_{i + self.max_length}" for i in range(pad)],
+                columns=pd.Index([f"p_{i + self.max_length}" for i in range(pad)]),
                 index=self.dataset.index,
             )
             self.dataset = pd.concat([self.dataset, padding_df], axis=1)
@@ -83,7 +83,7 @@ class FFTEncoder:
         try:
             self.__logger__.info("Encoding dataset with FFT.")
             matrix = [self.__apply_fft(i) for i in self.dataset.index]
-            header = [f"p_{i}" for i in range(len(matrix[0]))]
+            header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.sequence_list
             self.__logger__.info("FFT encoding complete. Output shape: %s", self.coded_dataset.shape)
@@ -102,8 +102,12 @@ class FFTEncoder:
         *,
         df_encoder: pd.DataFrame | None = None,
     ) -> None:
+        data = df_encoder if df_encoder is not None else self.coded_dataset
+        if data is None:
+            raise ValueError("No encoded FFT dataset available for export.")
+
         UtilsLib.export_data(
-            df_encoded=df_encoder if df_encoder is not None else self.coded_dataset,
+            df_encoded=data,
             path=path,
             base_message="FFT encoder output",
             file_format=file_format,

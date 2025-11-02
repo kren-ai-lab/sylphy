@@ -108,7 +108,7 @@ class _JsonFormatter(logging.Formatter):
         super().__init__()
         self._use_utc = use_utc
 
-    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:  # type: ignore[override]
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         # ISO-ish time; respect UTC flag
         if self._use_utc:
             import time
@@ -117,7 +117,7 @@ class _JsonFormatter(logging.Formatter):
             return time.strftime("%Y-%m-%dT%H:%M:%S", ct)
         return super().formatTime(record, datefmt=datefmt)
 
-    def format(self, record: logging.LogRecord) -> str:  # type: ignore[override]
+    def format(self, record: logging.LogRecord) -> str:
         payload = {
             "time": self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S"),
             "level": record.levelname,
@@ -159,7 +159,7 @@ class _JsonFormatter(logging.Formatter):
 
         # Exception info, if any
         if record.exc_info:
-            payload["exc"] = self.formatException(record.exc_info)  # type: ignore[arg-type]
+            payload["exc"] = self.formatException(record.exc_info)
         if record.stack_info:
             payload["stack"] = self.formatStack(record.stack_info)
 
@@ -375,7 +375,7 @@ class _ContextFilter(logging.Filter):
         super().__init__()
         self._ctx = static_context
 
-    def filter(self, record: logging.LogRecord) -> bool:  # type: ignore[override]
+    def filter(self, record: logging.LogRecord) -> bool:
         for k, v in self._ctx.items():
             setattr(record, k, v)
         return True

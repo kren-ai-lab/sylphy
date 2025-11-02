@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Callable, cast
 
 from sylphy.logging import add_context, get_logger
 
@@ -52,7 +52,9 @@ _ALIASES: dict[str, str] = {
 }
 
 # Class map
-_CLASSES = {
+EncoderInstance = Encoders | FFTEncoder
+
+_CLASSES: dict[str, type[Encoders] | type[FFTEncoder]] = {
     "one_hot": OneHotEncoder,
     "ordinal": OrdinalEncoder,
     "frequency": FrequencyEncoder,
@@ -125,7 +127,7 @@ def _filter_kwargs(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     return filtered
 
 
-def create_encoder(name: str, **kwargs: Any) -> Encoders:
+def create_encoder(name: str, **kwargs: Any) -> EncoderInstance:
     """
     Factory for sequence encoders with per-backend parameter filtering.
 
@@ -149,4 +151,5 @@ def create_encoder(name: str, **kwargs: Any) -> Encoders:
     params = _filter_kwargs(kind, kwargs)
     _logger.info("Creating encoder kind=%s class=%s kwargs=%s", kind, cls.__name__, params)
     add_context(_logger, encoder=cls.__name__)  # enrich context once we know it
-    return cls(**params)
+    constructor = cast(Callable[..., EncoderInstance], cls)
+    return constructor(**params)

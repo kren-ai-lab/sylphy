@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Literal, Optional
+from pathlib import Path
+from typing import List, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -97,7 +98,7 @@ class FFTEncoder:
     def export_encoder(
         self,
         df_encoder: pd.DataFrame,
-        path: str,
+        path: Union[str, Path],
         file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
     ) -> None:
         UtilsLib.export_data(

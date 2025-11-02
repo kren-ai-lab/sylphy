@@ -505,7 +505,11 @@ class EmbeddingBased:
             self.__logger__.exception(self.message)
             raise RuntimeError(self.message) from e
 
-    def export_encoder(self, path: str, file_format: Literal["csv", "npy", "npz", "parquet"] = "csv") -> None:
+    def export_encoder(
+        self,
+        path: Union[str, Path],
+        file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
+    ) -> None:
         """Persist the encoded matrix to disk."""
         UtilsLib.export_data(
             df_encoded=self.coded_dataset,

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Tuple
 
 import torch
 from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
@@ -73,9 +72,9 @@ class Ankh2BasedEmbedding(EmbeddingBased):
     @torch.no_grad()
     def embedding_batch(
         self,
-        batch: List[str],
+        batch: list[str],
         max_length: int = 1024,
-    ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor]:
+    ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         if not batch:
             raise ValueError("Input batch is empty.")
         self.ensure_loaded()

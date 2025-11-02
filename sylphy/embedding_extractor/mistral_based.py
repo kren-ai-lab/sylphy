@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
 
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
@@ -16,8 +15,8 @@ class MistralBasedEmbedding(EmbeddingBased):
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "RaphaelMourad/Mistral-Prot-v1-134M",
         name_tokenizer: str = "RaphaelMourad/Mistral-Prot-v1-134M",
-        dataset: Optional[object] = None,
-        column_seq: Optional[str] = "sequence",
+        dataset: object | None = None,
+        column_seq: str | None = "sequence",
         debug: bool = False,
         debug_mode: int = logging.INFO,
         precision: str = "fp32",
@@ -64,9 +63,9 @@ class MistralBasedEmbedding(EmbeddingBased):
     @torch.no_grad()
     def embedding_batch(
         self,
-        batch: List[str],
+        batch: list[str],
         max_length: int = 1024,
-    ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor]:
+    ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         if not batch:
             raise ValueError("Input batch is empty.")
         self.ensure_loaded()

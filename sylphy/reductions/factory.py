@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -12,13 +12,13 @@ from .linear_reductions import LinearReduction
 from .non_linear_reductions import NonLinearReductions
 from .reduction_methods import Preprocess, ReturnType
 
-DatasetLike = Union[np.ndarray, pd.DataFrame]
+DatasetLike = np.ndarray | pd.DataFrame
 Kind = Literal["linear", "nonlinear"]
 
 # -----------------------------------------------------------------------------
 # Registry
 # -----------------------------------------------------------------------------
-_LINEAR_METHODS: Dict[str, str] = {
+_LINEAR_METHODS: dict[str, str] = {
     "pca": "apply_pca",
     "incremental_pca": "apply_incremental_pca",
     "sparse_pca": "apply_sparse_pca",
@@ -32,7 +32,7 @@ _LINEAR_METHODS: Dict[str, str] = {
     "latent_dirichlet_allocation": "apply_latent_dirichlet_allocation",
 }
 
-_NONLINEAR_METHODS: Dict[str, str] = {
+_NONLINEAR_METHODS: dict[str, str] = {
     "tsne": "apply_tsne",
     "isomap": "apply_isomap",
     "mds": "apply_mds",
@@ -44,7 +44,7 @@ _NONLINEAR_METHODS: Dict[str, str] = {
     "dipext": "apply_dip_ext",
 }
 
-_METHODS: Dict[str, Tuple[Kind, str]] = {
+_METHODS: dict[str, tuple[Kind, str]] = {
     **{k: ("linear", v) for k, v in _LINEAR_METHODS.items()},
     **{k: ("nonlinear", v) for k, v in _NONLINEAR_METHODS.items()},
 }
@@ -55,7 +55,7 @@ logger = logging.getLogger("sylphy.reductions.factory")
 add_context(logger, component="reductions", facility="factory")
 
 
-def get_available_methods(kind: Optional[Kind] = None) -> List[str]:
+def get_available_methods(kind: Kind | None = None) -> list[str]:
     """
     List available method names.
 
@@ -94,12 +94,12 @@ def reduce_dimensionality(
     *,
     return_type: ReturnType = "numpy",
     preprocess: Preprocess = "none",
-    random_state: Optional[int] = None,
+    random_state: int | None = None,
     debug: bool = True,
     debug_mode: int = logging.INFO,
     logger_name: str = "sylphy.reductions.factory",
     **kwargs: Any,
-) -> Tuple[Optional[object], Optional[Union[np.ndarray, pd.DataFrame]]]:
+) -> tuple[object | None, np.ndarray | pd.DataFrame | None]:
     """
     Run a dimensionality reduction by method name via a unified factory.
 

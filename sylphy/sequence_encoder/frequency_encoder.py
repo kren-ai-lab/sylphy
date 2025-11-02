@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional
 
 import pandas as pd
 
@@ -20,7 +19,7 @@ class FrequencyEncoder(Encoders):
 
     def __init__(
         self,
-        dataset: Optional[pd.DataFrame] = None,
+        dataset: pd.DataFrame | None = None,
         sequence_column: str = "sequence",
         allow_extended: bool = False,
         allow_unknown: bool = False,
@@ -40,7 +39,7 @@ class FrequencyEncoder(Encoders):
         )
         self._alpha = list(residues(extended=self.allow_extended or self.allow_unknown))
 
-    def __encode_sequence(self, sequence: str) -> List[float]:
+    def __encode_sequence(self, sequence: str) -> list[float]:
         L = float(len(sequence)) if sequence else 1.0
         return [sequence.count(r) / L for r in self._alpha]
 

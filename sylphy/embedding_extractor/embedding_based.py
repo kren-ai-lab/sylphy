@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Sequence
 from pathlib import Path
-from typing import List, Literal, Optional, Sequence, Tuple, Union
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -17,7 +18,7 @@ from sylphy.misc.utils_lib import UtilsLib
 
 Pool = Literal["mean", "cls", "eos"]
 LayerAgg = Literal["mean", "sum", "concat"]
-LayerSpec = Union[str, int, Sequence[int]]
+LayerSpec = str | int | Sequence[int]
 
 
 class EmbeddingBased:
@@ -40,7 +41,7 @@ class EmbeddingBased:
         name_model: str = "",
         name_tokenizer: str = "",
         provider: str = "huggingface",  # {"huggingface","other"}
-        revision: Optional[str] = None,
+        revision: str | None = None,
         column_seq: str = "sequence",
         debug: bool = False,
         debug_mode: int = logging.INFO,
@@ -201,18 +202,18 @@ class EmbeddingBased:
     # Hooks & utilities
     # ---------------------------------------------------------------------
 
-    def _pre_tokenize(self, batch: List[str]) -> List[str]:
+    def _pre_tokenize(self, batch: list[str]) -> list[str]:
         """Optional hook to adjust raw strings before tokenization (e.g., insert spaces)."""
         return [s.strip() for s in batch]
 
-    def _amp_dtype(self) -> Optional[torch.dtype]:
+    def _amp_dtype(self) -> torch.dtype | None:
         if self.precision == "fp16":
             return torch.float16
         if self.precision == "bf16":
             return torch.bfloat16
         return None
 
-    def _make_batches(self, seqs: List[str], batch_size: int) -> List[List[str]]:
+    def _make_batches(self, seqs: list[str], batch_size: int) -> list[list[str]]:
         return [seqs[i : i + batch_size] for i in range(0, len(seqs), batch_size)]
 
     # ---------------------------------------------------------------------
@@ -222,10 +223,10 @@ class EmbeddingBased:
     @torch.no_grad()
     def _forward_hidden_states(
         self,
-        sequences: List[str],
+        sequences: list[str],
         *,
         max_length: int,
-    ) -> Tuple[Tuple[torch.Tensor, ...], torch.Tensor]:
+    ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         """
         Tokenize → forward pass with `output_hidden_states=True`.
 
@@ -273,7 +274,7 @@ class EmbeddingBased:
     # ---------------------------------------------------------------------
 
     @staticmethod
-    def _parse_layers(spec: LayerSpec, n_layers: int) -> List[int]:
+    def _parse_layers(spec: LayerSpec, n_layers: int) -> list[int]:
         """Normalize layer spec ('last'|'all'|int|[ints]|'last4') into a sorted list of indices."""
         if isinstance(spec, int):
             return [spec]
@@ -314,8 +315,8 @@ class EmbeddingBased:
 
     @staticmethod
     def _aggregate_layers(
-        hs: Tuple[torch.Tensor, ...],  # tuple of (B, L, H)
-        select: List[int],
+        hs: tuple[torch.Tensor, ...],  # tuple of (B, L, H)
+        select: list[int],
         agg: LayerAgg,
     ) -> torch.Tensor:
         """Aggregate selected layers into a single (B, L, H*) representation."""
@@ -334,7 +335,7 @@ class EmbeddingBased:
 
     def encode_batch_layers(
         self,
-        sequences: List[str],
+        sequences: list[str],
         *,
         max_length: int = 1024,
         layers: LayerSpec = "last",
@@ -449,7 +450,7 @@ class EmbeddingBased:
                 return
 
             seqs = self.dataset[self.column_seq].astype(str).tolist()
-            mats: List[np.ndarray] = []
+            mats: list[np.ndarray] = []
             bs = max(1, int(batch_size))
 
             for chunk in self._make_batches(seqs, bs):
@@ -507,7 +508,7 @@ class EmbeddingBased:
 
     def export_encoder(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
     ) -> None:
         """Persist the encoded matrix to disk."""

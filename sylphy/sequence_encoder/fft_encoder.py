@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import List, Literal, Optional, Union
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -44,7 +44,7 @@ class FFTEncoder:
         self.max_length = len(self.dataset.columns)
         self.init_process()
 
-        self.coded_dataset: Optional[pd.DataFrame] = None
+        self.coded_dataset: pd.DataFrame | None = None
 
     def __get_near_pow(self) -> None:
         self.__logger__.info("Computing nearest power-of-two for padding.")
@@ -67,10 +67,10 @@ class FFTEncoder:
         self.__get_near_pow()
         self.__complete_zero_padding()
 
-    def __create_row(self, index: int) -> List[float]:
+    def __create_row(self, index: int) -> list[float]:
         return self.dataset.iloc[index].tolist()
 
-    def __apply_fft(self, index: int) -> List[float]:
+    def __apply_fft(self, index: int) -> list[float]:
         try:
             row = self.__create_row(index)
             yf = fft(row)
@@ -98,7 +98,7 @@ class FFTEncoder:
     def export_encoder(
         self,
         df_encoder: pd.DataFrame,
-        path: Union[str, Path],
+        path: str | Path,
         file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
     ) -> None:
         UtilsLib.export_data(

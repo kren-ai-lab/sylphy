@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -17,8 +16,8 @@ class KMersEncoders(Encoders):
 
     def __init__(
         self,
-        dataset: Optional[pd.DataFrame] = None,
-        sequence_column: Optional[str] = "sequence",
+        dataset: pd.DataFrame | None = None,
+        sequence_column: str | None = "sequence",
         size_kmer: int = 3,
         allow_extended: bool = False,
         allow_unknown: bool = False,

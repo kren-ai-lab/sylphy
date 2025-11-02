@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Literal, Optional, Union
+from typing import Literal
 
 import pandas as pd
 
@@ -61,7 +61,7 @@ class Encoders:
 
     def __init__(
         self,
-        dataset: Optional[pd.DataFrame] = None,
+        dataset: pd.DataFrame | None = None,
         sequence_column: str = "sequence",
         max_length: int = 1024,
         allow_extended: bool = False,
@@ -164,7 +164,7 @@ class Encoders:
 
     def export_encoder(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         file_format: Literal["csv", "npy", "npz", "parquet"] = "csv",
     ) -> None:
         """Persist the encoded matrix to disk."""

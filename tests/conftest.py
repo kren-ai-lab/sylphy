@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 import types
-from typing import Dict, Iterator, List, Tuple
+from collections.abc import Iterator
 
 import pytest
 import torch
@@ -34,24 +34,24 @@ class _FakeTokenizer:
     ):
         return cls()
 
-    def add_special_tokens(self, mapping: Dict[str, str]) -> None:
+    def add_special_tokens(self, mapping: dict[str, str]) -> None:
         if "pad_token" in mapping:
             self.pad_token = mapping["pad_token"]
             self.pad_token_id = 0
 
-    def get_vocab(self) -> Dict[str, int]:
+    def get_vocab(self) -> dict[str, int]:
         return {"<cls>": 1, self.pad_token: 0, self.eos_token: 2}
 
     def __call__(
         self,
-        sequences: List[str],
+        sequences: list[str],
         return_tensors: str = "pt",
         truncation: bool = True,
         padding: bool = True,
         add_special_tokens: bool = True,
         max_length: int = 1024,
-    ) -> Dict[str, torch.Tensor]:
-        def encode(s: str) -> List[int]:
+    ) -> dict[str, torch.Tensor]:
+        def encode(s: str) -> list[int]:
             ids = [max(1, (ord(ch.upper()) - 64)) for ch in s if s and ch.strip()]
             return ids[:max_length] if truncation else ids
 
@@ -72,7 +72,7 @@ class _FakeTokenizer:
 
 class _FakeOutput:
     def __init__(
-        self, last_hidden_state: torch.Tensor, hidden_states: Tuple[torch.Tensor, ...] | None = None
+        self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...] | None = None
     ):
         self.last_hidden_state = last_hidden_state
         self.hidden_states = hidden_states or (last_hidden_state,)

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -29,9 +29,9 @@ class ESMCBasedEmbedding(EmbeddingBased):
         self,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "esmc_300m",
-        name_tokenizer: Optional[str] = None,  # ignored for ESM-C
-        dataset: Optional[pd.DataFrame] = None,
-        column_seq: Optional[str] = "sequence",
+        name_tokenizer: str | None = None,  # ignored for ESM-C
+        dataset: pd.DataFrame | None = None,
+        column_seq: str | None = "sequence",
         debug: bool = False,
         debug_mode: int = logging.INFO,
         precision: str = "fp32",
@@ -53,8 +53,8 @@ class ESMCBasedEmbedding(EmbeddingBased):
             oom_backoff=oom_backoff,
         )
         self.requires_tokenizer = False
-        self._embedding_dim: Optional[int] = None
-        self.model: Optional[ESMC] = None  # explicit type for clarity
+        self._embedding_dim: int | None = None
+        self.model: ESMC | None = None  # explicit type for clarity
 
     # -------- utilities --------
     def _has_hidden_states(self, hs) -> bool:
@@ -74,7 +74,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
     def load_model_tokenizer(self) -> None:
         try:
             # Try registry resolution; if not found, fall back to from_pretrained(name_model)
-            local_dir: Optional[str] = None
+            local_dir: str | None = None
             try:
                 local_dir = self._register_and_resolve()
             except Exception:
@@ -113,7 +113,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         sequence: str,
         *,
         return_hidden_states: bool,
-    ) -> Tuple[Optional[torch.Tensor], Optional[Sequence[torch.Tensor]]]:
+    ) -> tuple[torch.Tensor | None, Sequence[torch.Tensor] | None]:
         """
         Encode one sequence. Returns:
           - embeddings: (1, L, H) or None
@@ -151,7 +151,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         self,
         batch_size: int = 32,
         *,
-        seq_len: Optional[int] = None,
+        seq_len: int | None = None,
         layers: LayerSpec = "last",
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
@@ -178,7 +178,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         if self.column_seq not in self.dataset.columns:
             raise ValueError(f"Column '{self.column_seq}' not found in dataset.")
 
-        sequences: List[str] = self.dataset[self.column_seq].astype(str).tolist()
+        sequences: list[str] = self.dataset[self.column_seq].astype(str).tolist()
         if seq_len is not None:
             sequences = [s[:seq_len].ljust(seq_len, "X") for s in sequences]
 
@@ -191,7 +191,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         )
 
         current_bs = max(1, int(batch_size))
-        out_vecs: List[np.ndarray] = []
+        out_vecs: list[np.ndarray] = []
         i = 0
 
         while i < len(sequences):

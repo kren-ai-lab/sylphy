@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Set
+from typing import Any
 
 from sylphy.logging import add_context, get_logger
 
@@ -30,7 +30,7 @@ _logger = logging.getLogger("sylphy.sequence_encoder.factory")
 add_context(_logger, component="sequence_encoder", facility="factory")
 
 # Canonical names for encoders
-_ALIASES: Dict[str, str] = {
+_ALIASES: dict[str, str] = {
     # one-hot
     "onehot": "one_hot",
     "one_hot": "one_hot",
@@ -62,7 +62,7 @@ _CLASSES = {
 }
 
 # Whitelisted kwargs per encoder (only these are forwarded)
-_ALLOWED: Dict[str, Set[str]] = {
+_ALLOWED: dict[str, set[str]] = {
     "one_hot": {
         "dataset",
         "sequence_column",
@@ -116,7 +116,7 @@ def _canonical(name: str) -> str:
     )
 
 
-def _filter_kwargs(kind: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+def _filter_kwargs(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     allowed = _ALLOWED[kind]
     filtered = {k: v for k, v in kwargs.items() if k in allowed}
     ignored = sorted(set(kwargs.keys()) - allowed)

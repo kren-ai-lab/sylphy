@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import logging
 import os
-from typing import List, Optional
 
 import pandas as pd
 import requests
@@ -25,8 +24,8 @@ class PhysicochemicalEncoder(Encoders):
 
     def __init__(
         self,
-        dataset: Optional[pd.DataFrame] = None,
-        sequence_column: Optional[str] = None,
+        dataset: pd.DataFrame | None = None,
+        sequence_column: str | None = None,
         max_length: int = 1024,
         type_descriptor: str = "aaindex",
         name_property: str = "ANDN920101",
@@ -102,7 +101,7 @@ class PhysicochemicalEncoder(Encoders):
             self.__logger__.error("Unexpected error during residue encoding: %s", e)
             return 0.0
 
-    def __encoding_sequence(self, sequence: str) -> List[float]:
+    def __encoding_sequence(self, sequence: str) -> list[float]:
         try:
             seq = sequence.upper()
             vec = [self.__encoding_residue(r) for r in seq]

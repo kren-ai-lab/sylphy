@@ -4,7 +4,6 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, Tuple
 
 from sylphy.logging import (
     add_context,
@@ -22,7 +21,7 @@ def _count_handlers(logger: logging.Logger) -> int:
     return len(logger.handlers)
 
 
-def _find_console_handler(logger: logging.Logger) -> Optional[logging.Handler]:
+def _find_console_handler(logger: logging.Logger) -> logging.Handler | None:
     """Find actual console handler (stdout/stderr), excluding file handlers."""
     for h in logger.handlers:
         if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler):
@@ -32,7 +31,7 @@ def _find_console_handler(logger: logging.Logger) -> Optional[logging.Handler]:
     return None
 
 
-def _read_console(capsys) -> Tuple[str, str, str]:
+def _read_console(capsys) -> tuple[str, str, str]:
     cap = capsys.readouterr()
     both = (cap.out or "") + (cap.err or "")
     return cap.out, cap.err, both

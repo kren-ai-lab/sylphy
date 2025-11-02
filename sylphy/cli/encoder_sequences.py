@@ -17,7 +17,6 @@ Design goals:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -148,7 +147,7 @@ def run(
     allow_extended: bool = ALLOW_EXTENDED_OPTION,
     allow_unknown: bool = ALLOW_UNKNOWN_OPTION,
     # backend-specific
-    type_descriptor: Optional[str] = TYPE_DESCRIPTOR_OPTION,
+    type_descriptor: str | None = TYPE_DESCRIPTOR_OPTION,
     name_property: str = NAME_PROPERTY_OPTION,
     size_kmer: int = SIZE_KMER_OPTION,
     # output

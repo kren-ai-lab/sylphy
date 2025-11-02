@@ -11,10 +11,10 @@ import json
 import os
 import re
 import shutil
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple
 
 import typer
 
@@ -95,7 +95,7 @@ def _table():
         return None, None
 
 
-def _user_cache_dir(app: str, vendor: str) -> Optional[Path]:
+def _user_cache_dir(app: str, vendor: str) -> Path | None:
     """Lazy import appdirs if present."""
     try:
         from appdirs import user_cache_dir  # type: ignore
@@ -142,13 +142,13 @@ class CacheEntry:
 class CacheManager:
     """Helper to inspect and manipulate the cache directory (stdlib-only)."""
 
-    def __init__(self, cache_dir: Optional[Path] = None) -> None:
+    def __init__(self, cache_dir: Path | None = None) -> None:
         self.cache_dir = (cache_dir or _default_cache_dir()).resolve()
 
     # ---------- Inspect ----------
     def iter_entries(
         self,
-        pattern: Optional[str] = None,
+        pattern: str | None = None,
         recursive: bool = False,
         include_dirs: bool = False,
     ) -> Iterator[CacheEntry]:
@@ -170,7 +170,7 @@ class CacheManager:
             except OSError:
                 continue  # skip unreadable entries
 
-    def du(self) -> Tuple[int, int]:
+    def du(self) -> tuple[int, int]:
         files = 0
         total = 0
         for e in self.iter_entries(recursive=True):
@@ -182,10 +182,10 @@ class CacheManager:
     # ---------- Mutate ----------
     def rm(
         self,
-        pattern: Optional[str] = None,
-        older_than: Optional[timedelta] = None,
+        pattern: str | None = None,
+        older_than: timedelta | None = None,
         dry_run: bool = False,
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         now = datetime.now(timezone.utc)
         deleted = freed = 0
         for e in list(self.iter_entries(pattern=pattern, recursive=True)):
@@ -216,7 +216,7 @@ class CacheManager:
                     pass
         return count
 
-    def prune_to_max_size(self, max_bytes: int, dry_run: bool = False) -> Tuple[int, int]:
+    def prune_to_max_size(self, max_bytes: int, dry_run: bool = False) -> tuple[int, int]:
         entries = [e for e in self.iter_entries(recursive=True) if not e.is_dir]
         total = sum(e.size for e in entries)
         if total <= max_bytes:
@@ -242,7 +242,7 @@ class CacheManager:
 SORT_CHOICES = {"name", "size", "mtime"}
 
 
-def _sort_entries(entries: List[CacheEntry], sort: str, reverse: bool) -> List[CacheEntry]:
+def _sort_entries(entries: list[CacheEntry], sort: str, reverse: bool) -> list[CacheEntry]:
     key = {
         "name": lambda e: str(e.path).lower(),
         "size": lambda e: e.size,
@@ -273,12 +273,12 @@ def _callback() -> None:
 
 @app.command("ls")
 def cmd_ls(
-    pattern: Optional[str] = typer.Option(None, "--pattern", "-p", help="Glob pattern (e.g., '**/*.pt')."),
+    pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob pattern (e.g., '**/*.pt')."),
     recursive: bool = typer.Option(False, "--recursive", "-r", help="Recurse into subdirectories."),
     sort: str = typer.Option("name", "--sort", case_sensitive=False, help="Sort by: name | size | mtime"),
     reverse: bool = typer.Option(False, "--reverse", help="Reverse sort order."),
     human_readable: bool = typer.Option(True, "--human-readable/--bytes", help="Pretty sizes."),
-    limit: Optional[int] = typer.Option(None, "--limit", help="Show only first N entries."),
+    limit: int | None = typer.Option(None, "--limit", help="Show only first N entries."),
     json_out: bool = typer.Option(False, "--json", help="Output JSON instead of a table."),
 ) -> None:
     sort = sort.lower()
@@ -339,8 +339,8 @@ def cmd_stats() -> None:
 
 @app.command("rm")
 def cmd_rm(
-    pattern: Optional[str] = typer.Option(None, "--pattern", "-p", help="Glob like '**/*.tmp'."),
-    older_than: Optional[str] = typer.Option(
+    pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob like '**/*.tmp'."),
+    older_than: str | None = typer.Option(
         None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h')."
     ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
@@ -366,7 +366,7 @@ def cmd_rm(
 
 @app.command("prune")
 def cmd_prune(
-    max_size: Optional[str] = typer.Option(
+    max_size: str | None = typer.Option(
         None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB)."
     ),
     remove_empty_dirs: bool = typer.Option(

@@ -6,8 +6,9 @@ import logging
 import os
 import shutil
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Sequence, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -41,13 +42,13 @@ class UtilsLib:
     def random_selection(
         cls,
         df: pd.DataFrame,
-        label_name: Optional[str] = None,
-        labels: Optional[Sequence[Any]] = None,
+        label_name: str | None = None,
+        labels: Sequence[Any] | None = None,
         n_samples: int = 100,
         *,
         per_label: bool = True,
         replace: bool = False,
-        random_state: Optional[int] = 42,
+        random_state: int | None = 42,
     ) -> pd.DataFrame:
         """
         Randomly select rows from a DataFrame with optional stratification.
@@ -190,8 +191,8 @@ class UtilsLib:
             "yule",
         ] = "euclidean",
         *,
-        metric_params: Optional[Dict[str, Any]] = None,
-        n_jobs: Optional[int] = None,
+        metric_params: dict[str, Any] | None = None,
+        n_jobs: int | None = None,
     ) -> np.ndarray:
         """
         Compute pairwise distances between rows of a numeric matrix.
@@ -258,7 +259,7 @@ class UtilsLib:
             _LOG.error("Unsupported metric '%s'.", metric)
             raise ValueError(f"Unsupported metric '{metric}'. Must be one of: {sorted(supported_metrics)}")
 
-        params: Dict[str, Any] = dict(metric_params or {})
+        params: dict[str, Any] = dict(metric_params or {})
 
         # Provide sensible defaults for metrics that require parameters.
         if metric == "mahalanobis" and "VI" not in params:
@@ -289,7 +290,7 @@ class UtilsLib:
     # IDs and filesystem helpers
     # -------------------------------------------------------------------------
     @classmethod
-    def create_jobid(cls, prefix: Optional[str] = None) -> str:
+    def create_jobid(cls, prefix: str | None = None) -> str:
         """
         Create a unique job identifier composed of an UTC timestamp and a shortened UUID.
 
@@ -315,10 +316,10 @@ class UtilsLib:
     @classmethod
     def delete_folder(
         cls,
-        path_to_folder: Union[str, Path],
+        path_to_folder: str | Path,
         *,
         missing_ok: bool = True,
-        restrict_to: Optional[Path] = None,
+        restrict_to: Path | None = None,
     ) -> bool:
         """
         Safely delete a folder tree with guardrails.
@@ -383,10 +384,10 @@ class UtilsLib:
     def export_data(
         cls,
         df_encoded: pd.DataFrame,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         base_message: str = "Encoded data",
-        file_format: Optional[Literal["csv", "npy", "npz", "parquet"]] = None,
+        file_format: Literal["csv", "npy", "npz", "parquet"] | None = None,
         overwrite: bool = True,
     ) -> Path:
         """

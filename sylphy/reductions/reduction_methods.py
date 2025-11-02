@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Literal, Optional, Union
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -46,11 +46,11 @@ class Reductions:
 
     def __init__(
         self,
-        dataset: Union[np.ndarray, pd.DataFrame],
+        dataset: np.ndarray | pd.DataFrame,
         *,
         return_type: ReturnType = "numpy",
         preprocess: Preprocess = "none",
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
         debug: bool = True,
         debug_mode: int = logging.INFO,
         name_logging: str = "Reductions",
@@ -109,14 +109,14 @@ class Reductions:
     # -----------------------------
     # Output helpers
     # -----------------------------
-    def _make_headers(self, n_components: int) -> List[str]:
+    def _make_headers(self, n_components: int) -> list[str]:
         return [f"p_{i + 1}" for i in range(n_components)]
 
     def generate_dataset_post_reduction(
         self,
-        transform_values: Union[np.ndarray, List[List[float]]],
-        n_components: Optional[int] = None,
-    ) -> Union[np.ndarray, pd.DataFrame]:
+        transform_values: np.ndarray | list[list[float]],
+        n_components: int | None = None,
+    ) -> np.ndarray | pd.DataFrame:
         """
         Build the final reduced output.
 

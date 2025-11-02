@@ -1,8 +1,6 @@
 # tool_constants.py
 from __future__ import annotations
 
-from typing import Dict, Tuple
-
 # Environment variable prefix used across the project (e.g., SYLPHY_CACHE_ROOT)
 _ENV_PREFIX: str = "SYLPHY_"
 
@@ -11,7 +9,7 @@ BASE_URL_AAINDEX: str = "https://raw.githubusercontent.com/ProteinEngineering-PE
 BASE_URL_CLUSTERS_DESCRIPTORS: str = "https://raw.githubusercontent.com/ProteinEngineering-PESB2/data_and_info/refs/heads/main/cluster_based_encoder/cluster_encoders.csv"
 
 # Canonical amino acids (20). Keep this as the default set to avoid ambiguity.
-LIST_RESIDUES: Tuple[str, ...] = (
+LIST_RESIDUES: tuple[str, ...] = (
     "A",
     "C",
     "D",
@@ -36,10 +34,10 @@ LIST_RESIDUES: Tuple[str, ...] = (
 
 # Extended alphabet (optionally enabled via function parameters)
 # Includes: B (D/N), Z (E/Q), X (unknown), U (selenocysteine), O (pyrrolysine).
-LIST_RESIDUES_EXTENDED: Tuple[str, ...] = LIST_RESIDUES + ("B", "Z", "X", "U", "O")
+LIST_RESIDUES_EXTENDED: tuple[str, ...] = LIST_RESIDUES + ("B", "Z", "X", "U", "O")
 
 # Standard sequence-level descriptors
-LIST_DESCRIPTORS_SEQUENCE: Tuple[str, ...] = (
+LIST_DESCRIPTORS_SEQUENCE: tuple[str, ...] = (
     "length",
     "molecular_weight",
     "aliphatic_index",
@@ -73,10 +71,10 @@ LIST_DESCRIPTORS_SEQUENCE: Tuple[str, ...] = (
 )
 
 # Non-numeric fields frequently carried in encoded tables
-LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC: Tuple[str, ...] = ("sequence", "is_canon")
+LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC: tuple[str, ...] = ("sequence", "is_canon")
 
 
-def residues(extended: bool = False) -> Tuple[str, ...]:
+def residues(extended: bool = False) -> tuple[str, ...]:
     """
     Return the residue alphabet.
 
@@ -87,13 +85,13 @@ def residues(extended: bool = False) -> Tuple[str, ...]:
 
     Returns
     -------
-    Tuple[str, ...]
+    tuple[str, ...]
         Alphabet tuple.
     """
     return LIST_RESIDUES_EXTENDED if extended else LIST_RESIDUES
 
 
-def position_residues(extended: bool = False) -> Dict[str, int]:
+def position_residues(extended: bool = False) -> dict[str, int]:
     """
     Return a residue → index mapping for the selected alphabet.
 
@@ -104,7 +102,7 @@ def position_residues(extended: bool = False) -> Dict[str, int]:
 
     Returns
     -------
-    Dict[str, int]
+    dict[str, int]
         Mapping of one-letter residue to 0-based index.
     """
     alpha = residues(extended=extended)

@@ -3,7 +3,6 @@ import os
 import platform
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from .config_constants import CachePaths
 from .logging_constants import env_log_level
@@ -70,7 +69,7 @@ class ToolConfig:
 
 
 # Global singleton for convenience (simple and testable)
-_GLOBAL: Optional[ToolConfig] = None
+_GLOBAL: ToolConfig | None = None
 
 
 def get_config() -> ToolConfig:

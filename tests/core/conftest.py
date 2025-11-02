@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-import typing as t
+from collections.abc import Iterator
 
 import pytest
 
@@ -10,7 +10,7 @@ from sylphy.core.model_registry import clear_registry
 
 
 @pytest.fixture(autouse=True)
-def _isolate_env_and_registry(monkeypatch, tmp_path) -> t.Iterator[None]:
+def _isolate_env_and_registry(monkeypatch, tmp_path) -> Iterator[None]:
     """Isolate environment variables, cache, and model registry for each test."""
     for key in list(os.environ.keys()):
         if key.startswith("SYLPHY_LOG_") or key.startswith("SYLPHY_MODEL_"):

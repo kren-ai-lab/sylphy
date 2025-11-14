@@ -77,6 +77,21 @@ def EmbeddingFactory(  # noqa: N802
             oom_backoff=oom_backoff,
         )
 
+    if "ankh3" in name or name.startswith("elnaggarlab/ankh3"):
+        logger.info("Selecting Ankh2 backend", extra={"model": model_name})
+        return Ankh2BasedEmbedding(
+            dataset=dataset,
+            name_device=name_device,
+            name_model=model_name,
+            name_tokenizer=model_name,
+            column_seq=column_seq,
+            use_encoder_only=True,
+            debug=debug,
+            debug_mode=debug_mode,
+            precision=precision,
+            oom_backoff=oom_backoff,
+        )
+
     if "t5" in name or "prot_t5" in name or name.startswith("rostlab/prot_t5"):
         logger.info("Selecting ProtT5 backend", extra={"model": model_name})
         return Prot5Based(

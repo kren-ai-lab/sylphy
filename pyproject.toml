@@ -61,11 +61,12 @@ all = [
 ]
 dev = [
     "build~=1.3.0",
-    "pyrefly>=0.39.4",
-    "pytest~=8.4.2",
+    "pyrefly>=0.42.0",
+    "pytest~=9.0.0",
     "ruff~=0.14.0",
     "taskipy~=1.14.0",
     "twine~=6.2.0",
+    "ty>=0.0.2",
 ]
 embeddings = [
     "esm>=3.2.1,<4.0; platform_system!='Windows'",
@@ -83,7 +84,7 @@ reductions = [
 ]
 tests = [
     "pytest-cov~=7.0.0",
-    "pytest~=8.4.2",
+    "pytest~=9.0.0",
 ]
 
 [project.scripts]
@@ -121,3 +122,4 @@ test = "pytest -q"
 test-v = "pytest -v"
 test-cov = "pytest --cov=sylphy --cov-report=html"
 typecheck = "pyrefly check sylphy/ tests/"
+typecheck-ty = "ty check sylphy/ tests/"

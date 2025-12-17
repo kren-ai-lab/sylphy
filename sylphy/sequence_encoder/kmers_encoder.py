@@ -59,7 +59,7 @@ class KMersEncoders(Encoders):
             X = vectorizer.fit_transform(self.dataset["kmer_sequence"])
 
             feature_names = pd.Index([c.upper() for c in vectorizer.get_feature_names_out()])
-            self.coded_dataset = pd.DataFrame.sparse.from_spmatrix(
+            self.coded_dataset = pd.DataFrame.sparse.from_spmatrix(  # type: ignore[missing-attribute]
                 X,
                 index=self.dataset.index,
                 columns=feature_names,

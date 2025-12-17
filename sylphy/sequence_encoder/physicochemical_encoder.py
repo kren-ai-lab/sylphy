@@ -93,7 +93,7 @@ class PhysicochemicalEncoder(Encoders):
 
     def __encoding_residue(self, residue: str) -> float:
         try:
-            return float(self.df_properties.at[residue, self.name_property])
+            return float(self.df_properties.at[residue, self.name_property])  # type: ignore[bad-argument-type]
         except KeyError:
             self.__logger__.warning("Residue '%s' not in property table. Using 0.0", residue)
             return 0.0
@@ -117,7 +117,7 @@ class PhysicochemicalEncoder(Encoders):
         try:
             self.__logger__.info("Encoding dataset with physicochemical property: %s", self.name_property)
             matrix = [
-                self.__encoding_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
+                self.__encoding_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index  # type: ignore[bad-argument-type]
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)

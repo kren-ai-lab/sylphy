@@ -89,7 +89,7 @@ class UtilsLib:
         """
         if label_name is None:
             _LOG.info("Sampling without stratification (n=%d).", n_samples)
-            return shuffle(df, random_state=random_state).head(n_samples)
+            return shuffle(df, random_state=random_state).head(n_samples)  # type: ignore[missing-attribute]
 
         if label_name not in df.columns:
             _LOG.error("Label column '%s' not found.", label_name)
@@ -131,7 +131,7 @@ class UtilsLib:
             return df.iloc[0:0].copy()
 
         # Initial allocation
-        alloc = (counts / total * n_samples).round().astype(int)
+        alloc = (counts / total * n_samples).round().astype(int)  # type: ignore[unsupported-operation]
         # Ensure at least 1 for present labels when possible
         alloc = alloc.mask((counts > 0) & (alloc == 0), 1)
         # Adjust to match exactly n_samples

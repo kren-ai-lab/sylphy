@@ -74,6 +74,13 @@ def __dir__():
 
 # Optional typing-only exposure (keeps runtime lazy)
 if TYPE_CHECKING:  # pragma: no cover
+    from .ankh2_based import Ankh2BasedEmbedding
+    from .bert_based import BertBasedEmbedding
+    from .embedding_based import EmbeddingBased
     from .embedding_factory import EmbeddingFactory
+    from .esm_based import ESMBasedEmbedding
+    from .esmc_based import ESMCBasedEmbedding
+    from .mistral_based import MistralBasedEmbedding
+    from .prot5_based import Prot5Based
 
     create_embedding = EmbeddingFactory

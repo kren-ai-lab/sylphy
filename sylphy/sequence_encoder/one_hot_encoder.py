@@ -72,7 +72,7 @@ class OneHotEncoder(Encoders):
         try:
             self.__logger__.info("Starting one-hot encoding for %d sequences.", len(self.dataset))
             matrix = [
-                self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index
+                self.__encode_sequence(self.dataset.at[i, self.sequence_column]) for i in self.dataset.index  # type: ignore[bad-argument-type]
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)

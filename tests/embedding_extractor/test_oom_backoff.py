@@ -4,10 +4,13 @@ import sys
 from typing import Any, cast
 
 import pandas as pd
+import pytest
+import torch
 
 from sylphy.embedding_extractor import EmbeddingFactory
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_cuda_oom_backoff_retries_and_succeeds():
     """Verify OOM backoff halves batch size when encountering simulated CUDA OOM errors."""
     transformers_mod = cast(Any, sys.modules["transformers"])

@@ -38,7 +38,7 @@ classifiers = [
 ]
 dependencies = [
     "appdirs>=1.4.4,<2.0",
-    "huggingface-hub>=0.36.0,<1.0",
+    "huggingface-hub>=0.36.0,<2.0",
     "numpy>=2.3.4,<3.0",
     "pandas>=2.3.3,<3.0",
     "requests>=2.32.5,<3.0",
@@ -51,12 +51,12 @@ dependencies = [
 [project.optional-dependencies]
 all = [
     "clustpy>=0.0.2,<1.0",
-    "esm>=3.2.1,<4.0; platform_system!='Windows'",
+    "esm>=3.2.1,<4.0",
     "fastparquet>=2024.11.0",
-    "pyarrow>=22.0.0; platform_python_implementation!='PyPy'",
+    "pyarrow>=22.0.0",
     "sentencepiece>=0.2.1,<1.0",
     "torch>=2.9.0,<3.0",
-    "transformers>=4.40,<4.48.2",
+    "transformers>=4.48,<5.0",
     "umap-learn>=0.5.9,<1.0",
 ]
 dev = [
@@ -69,14 +69,14 @@ dev = [
     "ty>=0.0.2",
 ]
 embeddings = [
-    "esm>=3.2.1,<4.0; platform_system!='Windows'",
+    "esm>=3.2.1,<4.0",
     "sentencepiece>=0.2.1,<1.0",
     "torch>=2.9.0,<3.0",
-    "transformers>=4.40,<4.48.2",
+    "transformers>=4.48,<5.0",
 ]
 parquet = [
     "fastparquet>=2024.11.0",
-    "pyarrow>=22.0.0; platform_python_implementation!='PyPy'",
+    "pyarrow>=22.0.0",
 ]
 reductions = [
     "clustpy>=0.0.2,<1.0",

@@ -64,7 +64,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
                 self.__logger__.debug("pad_token_id set to: %s", self.tokenizer.pad_token_id)
 
             self.__logger__.info("Loading Ankh2 encoder from: %s on device=%s", local_dir, self.device)
-            model = T5EncoderModel.from_pretrained(local_dir, trust_remote_code=True)
+            model = T5EncoderModel.from_pretrained(local_dir, trust_remote_code=True)  # type: ignore[possibly-missing-attribute]
             cast(nn.Module, model).to(self.device)
             self.model = model
 

@@ -59,7 +59,7 @@ class BertBasedEmbedding(EmbeddingBased):
             self.tokenizer = tokenizer
 
             self.__logger__.info("Loading ProtBERT model from: %s on device=%s", local_dir, self.device)
-            model = AutoModel.from_pretrained(local_dir, trust_remote_code=False)
+            model = AutoModel.from_pretrained(local_dir, trust_remote_code=False)  # type: ignore[possibly-missing-attribute]
             model.to(self.device)
             self.model = model
             model.eval()

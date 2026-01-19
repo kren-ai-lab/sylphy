@@ -97,7 +97,7 @@ class Reductions:
         if self.preprocess == "standardize":
             self._scaler = StandardScaler(with_mean=True, with_std=True)
         elif self.preprocess == "normalize":
-            self._scaler = MinMaxScaler(feature_range=(0.0, 1.0))
+            self._scaler = MinMaxScaler(feature_range=(0.0, 1.0))  # type: ignore[bad-argument-type]
         elif self.preprocess == "robust":
             self._scaler = RobustScaler(with_centering=True, with_scaling=True)
         else:

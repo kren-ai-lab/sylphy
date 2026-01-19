@@ -53,7 +53,7 @@ class Prot5Based(EmbeddingBased):
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
 
             self.__logger__.info("Loading ProtT5 tokenizer from: %s", local_dir)
-            tokenizer = T5Tokenizer.from_pretrained(local_dir, do_lower_case=False, use_fast=False)
+            tokenizer = T5Tokenizer.from_pretrained(local_dir, do_lower_case=False, use_fast=False)  # type: ignore[possibly-missing-attribute]
             tokenizer_any = cast(Any, tokenizer)
             pad_token_id: int | None = getattr(tokenizer_any, "pad_token_id", None)
             if pad_token_id is None:
@@ -64,7 +64,7 @@ class Prot5Based(EmbeddingBased):
             self.tokenizer = tokenizer_any
 
             self.__logger__.info("Loading ProtT5 encoder from: %s on device=%s", local_dir, self.device)
-            model = T5EncoderModel.from_pretrained(local_dir)
+            model = T5EncoderModel.from_pretrained(local_dir)  # type: ignore[possibly-missing-attribute]
             cast(nn.Module, model).to(self.device)
             self.model = model
             model.eval()

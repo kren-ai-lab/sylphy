@@ -42,9 +42,9 @@ def test_frequency_invariants():
 
     feat_cols = [c for c in X.columns if c != "sequence"]
     v = (
-        X.loc[0, LIST_RESIDUES].to_numpy()
+        X.loc[0, LIST_RESIDUES].to_numpy()  # type: ignore[missing-attribute, bad-index]
         if set(LIST_RESIDUES).issubset(feat_cols)
-        else X.loc[0, feat_cols[:20]].to_numpy()
+        else X.loc[0, feat_cols[:20]].to_numpy()  # type: ignore[missing-attribute, bad-index]
     )
 
     assert len(v) == 20

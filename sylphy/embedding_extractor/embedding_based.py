@@ -160,7 +160,7 @@ class EmbeddingBased:
                 self.__logger__.debug("pad_token_id set to: %s", self.tokenizer.pad_token_id)
 
             self.__logger__.info("Loading model from: %s (device=%s)", local_dir, self.device)
-            self.model = AutoModel.from_pretrained(local_dir, trust_remote_code=self.trust_remote_code)
+            self.model = AutoModel.from_pretrained(local_dir, trust_remote_code=self.trust_remote_code)  # type: ignore[possibly-missing-attribute]
             self.model.to(self.device)
             self.model.eval()
 
@@ -289,7 +289,7 @@ class EmbeddingBased:
         if isinstance(spec, int):
             return [spec]
         if isinstance(spec, (list, tuple)):
-            return sorted(list({int(i) for i in spec}))
+            return sorted(list({int(i) for i in spec}))  # type: ignore[no-matching-overload]
         if isinstance(spec, str):
             if spec == "last":
                 return [n_layers - 1]

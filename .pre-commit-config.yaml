@@ -13,4 +13,18 @@ repos:
       - id: ruff-format
         args: [ --config=pyproject.toml ]
       - id: ruff-check
-        args: [ --fix, --select, I, F401 ]
+        args: [ --fix, --config=pyproject.toml ]
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty-check
+        entry: uv run ty check
+        language: python
+        types: [python]
+        pass_filenames: false
+      - id: pyrefly
+        name: pyrefly-check
+        entry: uv run pyrefly check
+        language: python
+        types: [python]
+        pass_filenames: false

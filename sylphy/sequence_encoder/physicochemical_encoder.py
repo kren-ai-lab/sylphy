@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import logging
 import os
+from typing import cast
 
 import pandas as pd
 import requests
@@ -117,8 +118,8 @@ class PhysicochemicalEncoder(Encoders):
         try:
             self.__logger__.info("Encoding dataset with physicochemical property: %s", self.name_property)
             matrix = [
-                self.__encoding_sequence(self.dataset.at[i, self.sequence_column])
-                for i in self.dataset.index  # type: ignore[bad-argument-type]
+                self.__encoding_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                for i in self.dataset.index
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)

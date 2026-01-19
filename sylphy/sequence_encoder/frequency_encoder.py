@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 import pandas as pd
 
@@ -51,8 +52,8 @@ class FrequencyEncoder(Encoders):
         try:
             self.__logger__.info("Starting frequency encoding (alphabet size=%d).", len(self._alpha))
             matrix = [
-                self.__encode_sequence(self.dataset.at[i, self.sequence_column])
-                for i in self.dataset.index  # type: ignore[bad-argument-type]
+                self.__encode_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                for i in self.dataset.index
             ]
             header = pd.Index([f"freq_{r}" for r in self._alpha])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)

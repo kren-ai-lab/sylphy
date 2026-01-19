@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 import pandas as pd
 
@@ -65,8 +66,8 @@ class OrdinalEncoder(Encoders):
         try:
             self.__logger__.info("Starting ordinal encoding for %d sequences.", len(self.dataset))
             matrix = [
-                self.__encode_sequence(self.dataset.at[i, self.sequence_column])
-                for i in self.dataset.index  # type: ignore[bad-argument-type]
+                self.__encode_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                for i in self.dataset.index
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)

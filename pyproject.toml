@@ -95,10 +95,10 @@ tests = [
 sylphy = "sylphy.cli.main:app"
 
 [project.urls]
-Documentation = "https://github.com/KREN-AI-Lab/sylphy#readme"
-Homepage = "https://github.com/KREN-AI-Lab/sylphy"
-Issues = "https://github.com/KREN-AI-Lab/sylphy/issues"
-Source = "https://github.com/KREN-AI-Lab/sylphy"
+Documentation = "https://github.com/kren-ai-lab/sylphy#readme"
+Homepage = "https://github.com/kren-ai-lab/sylphy"
+Issues = "https://github.com/kren-ai-lab/sylphy/issues"
+Source = "https://github.com/kren-ai-lab/sylphy"
 
 [tool.hatch.version]
 path = "sylphy/__init__.py"

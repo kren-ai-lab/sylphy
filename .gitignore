@@ -10,7 +10,7 @@ venv/
 
 # Poetry virtualenv metadata
 poetry.lock
-# .python-version  
+# .python-version
 
 # Distribution / packaging
 build/

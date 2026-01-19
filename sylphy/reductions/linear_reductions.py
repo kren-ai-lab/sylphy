@@ -26,6 +26,7 @@ from .reduction_methods import Preprocess, Reductions, ReturnType
 class _SupportsFitTransform(Protocol):
     def fit_transform(self, X: Any, y: Any = None) -> np.ndarray: ...
 
+
 ModelT = TypeVar("ModelT", bound=_SupportsFitTransform)
 
 

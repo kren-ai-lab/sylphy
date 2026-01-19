@@ -46,6 +46,7 @@ _NONLINEAR_METHODS: dict[str, str] = {
     "dipext": "apply_dip_ext",
 }
 
+
 def _build_methods() -> dict[str, tuple[Kind, str]]:
     methods: dict[str, tuple[Kind, str]] = {}
     for key, attr in _LINEAR_METHODS.items():

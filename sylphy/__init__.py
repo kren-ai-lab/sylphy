@@ -12,7 +12,7 @@ Re-exports core registry/config symbols at the top-level so that users can:
     pr.get_config()
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 # Public core API (re-export)
 from .core import (  # noqa: E402

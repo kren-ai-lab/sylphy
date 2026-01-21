@@ -1,4 +1,7 @@
 # Sylphy 🧬
+[![Release](https://img.shields.io/github/v/release/kren-ai-lab/sylphy?style=flat-square)](https://github.com/kren-ai-lab/sylphy/releases)
+[![Tests](https://img.shields.io/github/actions/workflow/status/kren-ai-lab/sylphy/tests.yml?style=flat-square)](https://github.com/kren-ai-lab/sylphy/actions/workflows/tests.yml)
+![License](https://img.shields.io/github/license/kren-ai-lab/sylphy?style=flat-square)
 
 **Lightweight Python toolkit for protein sequence representation** — transform sequences into numerical formats for
 machine learning and bioinformatics.

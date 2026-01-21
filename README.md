@@ -9,8 +9,6 @@ Three core components:
 - **Embedding extraction** — ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C
 - **Dimensionality reduction** — PCA, UMAP, t-SNE, and more
 
-> **Design:** Minimal API • Lazy loading • No side effects
-
 ## Quick Example
 
 ```python
@@ -43,6 +41,16 @@ python -m venv venv
 
 # Activate (Linux/macOS)
 source venv/bin/activate
+```
+
+Install directly from GitHub:
+
+```bash
+# Basic installation
+pip install "sylphy @ git+https://github.com/kren-ai-lab/sylphy"
+
+# With optional variants
+pip install "sylphy[embeddings,parquet] @ git+https://github.com/kren-ai-lab/sylphy"
 ```
 
 Download the latest `.whl` file from [Releases](https://github.com/ProteinEngineering-PESB2/sylphy_library/releases):

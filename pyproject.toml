@@ -42,10 +42,10 @@ dependencies = [
     "numpy>=2.3.5,<3.0",
     "pandas>=2.3.3,<3.0",
     "requests>=2.32.5,<3.0",
-    "rich>=14.2.0,<15.0",
+    "rich>=14.3.3,<15.0",
     "scikit-learn>=1.8.0,<2.0",
-    "scipy>=1.17.0,<2.0",
-    "typer>=0.21.1,<1.0",
+    "scipy>=1.17.1,<2.0",
+    "typer>=0.24.1,<1.0",
 ]
 
 [project.optional-dependencies]
@@ -55,7 +55,7 @@ all = [
     "fastparquet>=2024.11.0",
     "llvmlite>=0.46.0",
     "numba>=0.63.1",
-    "pyarrow>=22.0.0",
+    "pyarrow>=23.0.1",
     "sentencepiece>=0.2.1,<1.0",
     "torch>=2.9.0,<3.0",
     "transformers>=4.48,<5.0",
@@ -63,12 +63,12 @@ all = [
 ]
 dev = [
     "build~=1.4.0",
-    "pyrefly>=0.48.2",
+    "pyrefly>=0.55.0",
     "pytest~=9.0.2",
-    "ruff~=0.14.13",
+    "ruff~=0.15.5",
     "taskipy~=1.14.0",
     "twine~=6.2.0",
-    "ty>=0.0.12",
+    "ty>=0.0.21",
 ]
 embeddings = [
     "esm>=3.2.1,<4.0",
@@ -78,7 +78,7 @@ embeddings = [
 ]
 parquet = [
     "fastparquet>=2024.11.0",
-    "pyarrow>=22.0.0",
+    "pyarrow>=23.0.1",
 ]
 reductions = [
     "clustpy>=0.0.2,<1.0",

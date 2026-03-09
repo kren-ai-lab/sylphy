@@ -1,4 +1,7 @@
 # Sylphy 🧬
+[![Release](https://img.shields.io/github/v/release/kren-ai-lab/sylphy?style=flat-square)](https://github.com/kren-ai-lab/sylphy/releases)
+[![Tests](https://img.shields.io/github/actions/workflow/status/kren-ai-lab/sylphy/tests.yml?style=flat-square)](https://github.com/kren-ai-lab/sylphy/actions/workflows/tests.yml)
+![License](https://img.shields.io/github/license/kren-ai-lab/sylphy?style=flat-square)
 
 **Lightweight Python toolkit for protein sequence representation** — transform sequences into numerical formats for
 machine learning and bioinformatics.
@@ -8,8 +11,6 @@ Three core components:
 - **Classical encoders** — one-hot, ordinal, frequency, k-mers, physicochemical, FFT
 - **Embedding extraction** — ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C
 - **Dimensionality reduction** — PCA, UMAP, t-SNE, and more
-
-> **Design:** Minimal API • Lazy loading • No side effects
 
 ## Quick Example
 
@@ -43,6 +44,16 @@ python -m venv venv
 
 # Activate (Linux/macOS)
 source venv/bin/activate
+```
+
+Install directly from GitHub:
+
+```bash
+# Basic installation
+pip install "sylphy @ git+https://github.com/kren-ai-lab/sylphy"
+
+# With optional variants
+pip install "sylphy[embeddings,parquet] @ git+https://github.com/kren-ai-lab/sylphy"
 ```
 
 Download the latest `.whl` file from [Releases](https://github.com/ProteinEngineering-PESB2/sylphy_library/releases):

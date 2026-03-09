@@ -46,24 +46,14 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-Install directly from GitHub:
+Install with pip:
 
 ```bash
 # Basic installation
-pip install "sylphy @ git+https://github.com/kren-ai-lab/sylphy"
+pip install sylphy
 
 # With optional variants
-pip install "sylphy[embeddings,parquet] @ git+https://github.com/kren-ai-lab/sylphy"
-```
-
-Download the latest `.whl` file from [Releases](https://github.com/ProteinEngineering-PESB2/sylphy_library/releases):
-
-```bash
-# Basic installation
-pip install sylphy-<version>-py3-none-any.whl
-
-# With optional variants
-pip install sylphy-<version>-py3-none-any.whl[embeddings,parquet]
+pip install 'sylphy[embeddings,parquet]'
 ```
 
 The basic installation includes classical sequence encoders and core utilities. For additional features, install optional variants:

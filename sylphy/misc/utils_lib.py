@@ -17,6 +17,7 @@ import pandas as pd
 from sklearn.metrics import pairwise_distances
 from sklearn.utils import shuffle
 
+from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.types import FileFormat
 
 _LOG = logging.getLogger("sylphy.misc.utils")
@@ -89,7 +90,8 @@ class UtilsLib:
         """
         if label_name is None:
             _LOG.info("Sampling without stratification (n=%d).", n_samples)
-            return shuffle(df, random_state=random_state).head(n_samples)  # type: ignore[missing-attribute]
+            shuffled = cast(pd.DataFrame, shuffle(df, random_state=random_state))
+            return shuffled.head(n_samples)
 
         if label_name not in df.columns:
             _LOG.error("Label column '%s' not found.", label_name)
@@ -131,7 +133,8 @@ class UtilsLib:
             return df.iloc[0:0].copy()
 
         # Initial allocation
-        alloc = (counts / total * n_samples).round().astype(int)  # type: ignore[unsupported-operation]
+        counts_any = cast(Any, counts)
+        alloc = cast(pd.Series, (counts_any / total * n_samples).round().astype(int))
         # Ensure at least 1 for present labels when possible
         alloc = alloc.mask((counts > 0) & (alloc == 0), 1)
         # Adjust to match exactly n_samples
@@ -458,6 +461,15 @@ class UtilsLib:
             else:
                 raise ValueError(f"Unsupported file format '{file_format}'.")
         except Exception as e:
+            wrapped = wrap_optional_dependency_error(
+                e,
+                feature="Parquet export",
+                extra="parquet",
+                packages=("pyarrow", "fastparquet"),
+            )
+            if wrapped is not None:
+                _LOG.error("Failed to export %s to %s (%s): %s", base_message, dest, file_format, wrapped)
+                raise wrapped from e
             _LOG.error("Failed to export %s to %s (%s): %s", base_message, dest, file_format, e)
             raise
 

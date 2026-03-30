@@ -94,7 +94,8 @@ class PhysicochemicalEncoder(Encoders):
 
     def __encoding_residue(self, residue: str) -> float:
         try:
-            return float(self.df_properties.at[residue, self.name_property])  # type: ignore[bad-argument-type]
+            value = cast(float | int | str, self.df_properties.at[residue, self.name_property])
+            return float(value)
         except KeyError:
             self.__logger__.warning("Residue '%s' not in property table. Using 0.0", residue)
             return 0.0

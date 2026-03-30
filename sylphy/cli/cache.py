@@ -77,7 +77,7 @@ def _parse_timedelta(text: str) -> timedelta:
 def _console():
     """Return a rich Console if available, else None (lazy import)."""
     try:
-        from rich.console import Console  # type: ignore
+        from rich.console import Console
 
         return Console(stderr=False)
     except Exception:
@@ -87,8 +87,8 @@ def _console():
 def _table():
     """Return (Table, box) lazily if rich is available, else (None, None)."""
     try:
-        from rich import box  # type: ignore
-        from rich.table import Table  # type: ignore
+        from rich import box
+        from rich.table import Table
 
         return Table, box
     except Exception:
@@ -98,7 +98,7 @@ def _table():
 def _user_cache_dir(app: str, vendor: str) -> Path | None:
     """Lazy import appdirs if present."""
     try:
-        from appdirs import user_cache_dir  # type: ignore
+        from appdirs import user_cache_dir
     except Exception:
         return None
     return Path(user_cache_dir(app, vendor)).expanduser().resolve()

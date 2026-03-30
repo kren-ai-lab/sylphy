@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 from transformers import AutoConfig, T5EncoderModel, T5Tokenizer
 
+from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.types import PrecisionType
 
 from .embedding_based import EmbeddingBased
@@ -68,6 +69,19 @@ class Prot5Based(EmbeddingBased):
             cast(nn.Module, model).to(self.device)
             self.model = model
             model.eval()
+        except (ImportError, ModuleNotFoundError) as e:
+            wrapped = wrap_optional_dependency_error(
+                e,
+                feature="ProtT5 embeddings",
+                extra="embeddings",
+                packages=("sentencepiece",),
+            )
+            if wrapped is not None:
+                self.status = False
+                self.message = str(wrapped)
+                self.__logger__.error(self.message)
+                raise wrapped from e
+            raise
         except Exception as e:
             self.status = False
             self.message = f"Failed to load ProtT5 tokenizer/model: {e}"

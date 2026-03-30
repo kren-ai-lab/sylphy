@@ -20,9 +20,11 @@ def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
 def _stub_resolve_model(tmp_path, monkeypatch) -> Iterator[None]:
     """Point model resolution to a temporary directory to avoid network calls."""
     from sylphy.core import model_registry as reg
+    from sylphy.embedding_extractor import embedding_based
 
     local = tmp_path / "fake_model_dir"
     local.mkdir(parents=True, exist_ok=True)
     (local / "config.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(reg, "resolve_model", lambda name: local, raising=True)
+    monkeypatch.setattr(embedding_based, "resolve_model", lambda name: local, raising=True)
     yield

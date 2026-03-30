@@ -4,15 +4,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.logging import add_context, get_logger
 from sylphy.types import PrecisionType
-
-from .ankh2_based import Ankh2BasedEmbedding
-from .bert_based import BertBasedEmbedding
-from .esm_based import ESMBasedEmbedding
-from .esmc_based import ESMCBasedEmbedding
-from .mistral_based import MistralBasedEmbedding
-from .prot5_based import Prot5Based
 
 if TYPE_CHECKING:
     from .embedding_based import EmbeddingBased  # for type hints only
@@ -50,6 +44,8 @@ def EmbeddingFactory(  # noqa: N802
 
     if "esm2" in name or name.startswith("facebook/esm2"):
         logger.info("Selecting ESM2 backend", extra={"model": model_name})
+        from .esm_based import ESMBasedEmbedding
+
         return ESMBasedEmbedding(
             name_device=name_device,
             name_model=model_name,
@@ -64,6 +60,8 @@ def EmbeddingFactory(  # noqa: N802
 
     if "ankh2" in name or name.startswith("elnaggarlab/ankh2"):
         logger.info("Selecting Ankh2 backend", extra={"model": model_name})
+        from .ankh2_based import Ankh2BasedEmbedding
+
         return Ankh2BasedEmbedding(
             dataset=dataset,
             name_device=name_device,
@@ -79,6 +77,8 @@ def EmbeddingFactory(  # noqa: N802
 
     if "ankh3" in name or name.startswith("elnaggarlab/ankh3"):
         logger.info("Selecting Ankh2 backend", extra={"model": model_name})
+        from .ankh2_based import Ankh2BasedEmbedding
+
         return Ankh2BasedEmbedding(
             dataset=dataset,
             name_device=name_device,
@@ -94,6 +94,8 @@ def EmbeddingFactory(  # noqa: N802
 
     if "t5" in name or "prot_t5" in name or name.startswith("rostlab/prot_t5"):
         logger.info("Selecting ProtT5 backend", extra={"model": model_name})
+        from .prot5_based import Prot5Based
+
         return Prot5Based(
             name_device=name_device,
             name_model=model_name,
@@ -108,6 +110,8 @@ def EmbeddingFactory(  # noqa: N802
 
     if "bert" in name or "prot_bert" in name or name.startswith("rostlab/prot_bert"):
         logger.info("Selecting ProtBERT backend", extra={"model": model_name})
+        from .bert_based import BertBasedEmbedding
+
         return BertBasedEmbedding(
             name_device=name_device,
             name_model=model_name,
@@ -122,6 +126,8 @@ def EmbeddingFactory(  # noqa: N802
 
     if "mistral" in name or "mistral-prot" in name:
         logger.info("Selecting Mistral-Prot backend", extra={"model": model_name})
+        from .mistral_based import MistralBasedEmbedding
+
         return MistralBasedEmbedding(
             name_device=name_device,
             name_model=model_name,
@@ -136,6 +142,18 @@ def EmbeddingFactory(  # noqa: N802
 
     if "esmc" in name:
         logger.info("Selecting ESM-C backend", extra={"model": model_name})
+        try:
+            from .esmc_based import ESMCBasedEmbedding
+        except (ImportError, ModuleNotFoundError) as exc:
+            wrapped = wrap_optional_dependency_error(
+                exc,
+                feature="ESM-C embeddings",
+                extra="embeddings",
+                packages=("esm", "torch"),
+            )
+            if wrapped is not None:
+                raise wrapped from exc
+            raise
         return ESMCBasedEmbedding(
             name_device=name_device,
             name_model=model_name,  # e.g., "esmc_300m" or registry key

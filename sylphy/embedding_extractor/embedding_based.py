@@ -191,7 +191,7 @@ class EmbeddingBased:
         """
         if self._is_ready():
             return
-        loader: Callable[[], None] | None = getattr(self, "load_model_tokenizer", None)  # type: ignore[attr-defined]
+        loader: Callable[[], None] | None = getattr(self, "load_model_tokenizer", None)
         if callable(loader):
             try:
                 loader()  # subclass-provided (e.g., ESM-C)
@@ -270,13 +270,13 @@ class EmbeddingBased:
         else:
             out = model(**enc, output_hidden_states=True)
 
-        hidden_states = out.hidden_states  # type: ignore[attr-defined]
+        hidden_states = out.hidden_states
         if hidden_states is None:
-            hidden_states = (out.last_hidden_state,)  # type: ignore[attr-defined]
+            hidden_states = (out.last_hidden_state,)
 
         attn = enc.get("attention_mask", None)
         if attn is None:
-            attn = torch.ones(out.last_hidden_state.shape[:2], device=self.device)  # type: ignore[attr-defined]
+            attn = torch.ones(out.last_hidden_state.shape[:2], device=self.device)
         return hidden_states, attn
 
     # ---------------------------------------------------------------------
@@ -289,7 +289,8 @@ class EmbeddingBased:
         if isinstance(spec, int):
             return [spec]
         if isinstance(spec, (list, tuple)):
-            return sorted(list({int(i) for i in spec}))  # type: ignore[no-matching-overload]
+            layer_items = cast(Sequence[Any], spec)
+            return sorted(list({int(i) for i in layer_items}))
         if isinstance(spec, str):
             if spec == "last":
                 return [n_layers - 1]

@@ -6,10 +6,9 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.logging import add_context, get_logger
 
-from .linear_reductions import LinearReduction
-from .non_linear_reductions import NonLinearReductions
 from .reduction_methods import Preprocess, ReturnType
 
 DatasetLike = np.ndarray | pd.DataFrame
@@ -164,6 +163,8 @@ def reduce_dimensionality(
     log.info("Dispatching method='%s' (kind=%s) | preprocess=%s | kwargs=%s", key, kind, preprocess, kwargs)
 
     if kind == "linear":
+        from .linear_reductions import LinearReduction
+
         runner = LinearReduction(
             dataset=dataset,
             return_type=return_type,
@@ -177,6 +178,18 @@ def reduce_dimensionality(
         return model, transformed
 
     # Non-linear
+    try:
+        from .non_linear_reductions import NonLinearReductions
+    except (ImportError, ModuleNotFoundError) as exc:
+        wrapped = wrap_optional_dependency_error(
+            exc,
+            feature=f"Reduction method '{method}'",
+            extra="reductions",
+            packages=("umap", "umap-learn", "clustpy"),
+        )
+        if wrapped is not None:
+            raise wrapped from exc
+        raise
     runner = NonLinearReductions(
         dataset=dataset,
         return_type=return_type,

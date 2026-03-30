@@ -31,7 +31,7 @@ def _detect_cuda_available() -> bool:
     Returns False if torch cannot be imported.
     """
     try:
-        import torch  # type: ignore
+        import torch
 
         return bool(getattr(torch, "cuda", None)) and torch.cuda.is_available()
     except Exception:

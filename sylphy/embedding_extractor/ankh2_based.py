@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
 
+from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.types import PrecisionType
 
 from .embedding_based import EmbeddingBased
@@ -69,6 +70,19 @@ class Ankh2BasedEmbedding(EmbeddingBased):
             self.model = model
 
             model.eval()
+        except (ImportError, ModuleNotFoundError) as e:
+            wrapped = wrap_optional_dependency_error(
+                e,
+                feature="Ankh2 embeddings",
+                extra="embeddings",
+                packages=("sentencepiece",),
+            )
+            if wrapped is not None:
+                self.status = False
+                self.message = str(wrapped)
+                self.__logger__.error(self.message)
+                raise wrapped from e
+            raise
         except Exception as e:
             self.status = False
             self.message = f"Failed to load Ankh2 tokenizer/model: {e}"

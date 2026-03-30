@@ -4,6 +4,8 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
+from sylphy.core.optional_dependencies import wrap_optional_dependency_error
+
 """
 Embedding Extraction
 ====================
@@ -62,7 +64,18 @@ def __getattr__(name: str) -> Any:
             return EmbeddingFactory
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
     mod_name, attr = spec
-    module = import_module(mod_name, package=__name__)
+    try:
+        module = import_module(mod_name, package=__name__)
+    except (ImportError, ModuleNotFoundError) as exc:
+        wrapped = wrap_optional_dependency_error(
+            exc,
+            feature="Embedding features",
+            extra="embeddings",
+            packages=("torch", "transformers", "sentencepiece", "esm"),
+        )
+        if wrapped is not None:
+            raise wrapped from exc
+        raise
     value = getattr(module, attr)
     globals()[name] = value  # cache
     return value

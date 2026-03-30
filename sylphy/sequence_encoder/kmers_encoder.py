@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -59,7 +60,8 @@ class KMersEncoders(Encoders):
             X = vectorizer.fit_transform(self.dataset["kmer_sequence"])
 
             feature_names = pd.Index([c.upper() for c in vectorizer.get_feature_names_out()])
-            self.coded_dataset = pd.DataFrame.sparse.from_spmatrix(  # type: ignore[missing-attribute]
+            sparse_accessor = cast(Any, pd.DataFrame.sparse)
+            self.coded_dataset = sparse_accessor.from_spmatrix(
                 X,
                 index=self.dataset.index,
                 columns=feature_names,

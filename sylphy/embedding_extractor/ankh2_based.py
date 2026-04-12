@@ -39,7 +39,6 @@ class Ankh2BasedEmbedding(EmbeddingBased):
             column_seq=column_seq,
             debug=debug,
             debug_mode=debug_mode,
-            name_logging=Ankh2BasedEmbedding.__name__,
             trust_remote_code=True,
             precision=precision,
             oom_backoff=oom_backoff,

@@ -15,7 +15,6 @@ import pandas as pd
 from sklearn.metrics import pairwise_distances
 from sklearn.utils import shuffle
 
-from sylphy.constants.tool_configs import resolve_cache_dir
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.types import FileFormat
 
@@ -473,6 +472,3 @@ class UtilsLib:
             raise
 
         return dest
-
-    def get_cache_dir() -> Path:
-        return resolve_cache_dir()

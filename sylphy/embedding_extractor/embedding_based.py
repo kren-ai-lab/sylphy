@@ -47,7 +47,6 @@ class EmbeddingBased:
         column_seq: str = "sequence",
         debug: bool = False,
         debug_mode: int = logging.INFO,
-        name_logging: str = "EmbeddingBased",  # deprecated; kept for context info
         trust_remote_code: bool = False,
         precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
@@ -71,13 +70,14 @@ class EmbeddingBased:
         self.oom_backoff = oom_backoff
 
         # logger
-        self.__logger__ = get_logger("sylphy.embedding_extraction.base")
+        backend_name = type(self).__name__
+        self.__logger__ = get_logger(f"sylphy.embedding_extraction.{backend_name}")
         if debug:
             self.__logger__.setLevel(debug_mode)
         add_context(
             self.__logger__,
             component="embedding_extraction",
-            backend=name_logging,
+            backend=backend_name,
             model=self.name_model or "<unset>",
         )
 

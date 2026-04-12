@@ -24,8 +24,6 @@ Backends:
     MistralBasedEmbedding, ESMCBasedEmbedding, Ankh2BasedEmbedding
 Factory:
     EmbeddingFactory, create_embedding
-Meta:
-    SUPPORTED_FAMILIES
 """
 
 __all__ = [
@@ -38,7 +36,6 @@ __all__ = [
     "Ankh2BasedEmbedding",
     "EmbeddingFactory",
     "create_embedding",
-    "SUPPORTED_FAMILIES",
 ]
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
@@ -51,9 +48,6 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "Ankh2BasedEmbedding": (".ankh2_based", "Ankh2BasedEmbedding"),
     "EmbeddingFactory": (".embedding_factory", "EmbeddingFactory"),
 }
-
-SUPPORTED_FAMILIES = ("esm2", "ankh2", "prot_t5", "prot_bert", "mistral_prot", "esmc")
-
 
 def __getattr__(name: str) -> Any:
     spec = _LAZY_EXPORTS.get(name)

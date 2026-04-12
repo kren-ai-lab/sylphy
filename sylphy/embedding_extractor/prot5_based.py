@@ -42,7 +42,6 @@ class Prot5Based(EmbeddingBased):
             column_seq=column_seq or "sequence",
             debug=debug,
             debug_mode=debug_mode,
-            name_logging=Prot5Based.__name__,
             trust_remote_code=False,
             precision=precision,
             oom_backoff=oom_backoff,

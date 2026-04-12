@@ -68,7 +68,7 @@ sylphy --help
 sylphy --version
 
 # Extract embeddings
-sylphy get-embedding run \
+sylphy get-embedding \
   --model facebook/esm2_t6_8M_UR50D \
   --input-data data/sequences.csv \
   --sequence-identifier sequence \
@@ -76,7 +76,7 @@ sylphy get-embedding run \
   --device cuda --precision fp16 --batch-size 16 --pool mean
 
 # Encode sequences
-sylphy encode-sequences run \
+sylphy encode-sequences \
   --encoder one_hot \
   --input-data data/sequences.csv \
   --sequence-identifier sequence \

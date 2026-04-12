@@ -25,6 +25,7 @@ from sylphy.types import FileFormat
 
 app = typer.Typer(
     name="encode-sequences",
+    context_settings={"help_option_names": ["-h", "--help"]},
     help=(
         "Encode sequences with one-hot, ordinal, frequency, k-mers, "
         "physicochemical (AAIndex/group_based) or FFT."
@@ -171,8 +172,11 @@ def _ensure_ext(path: Path, fmt: str) -> Path:
     return path.with_suffix(f".{fmt}")
 
 
-@app.command("run")
-def run(
+@app.command(
+    "encode-sequences",
+    help="Encode sequences and export feature matrices using Sylphy's encoders.",
+)
+def encode_sequences(
     # encoder / pipeline
     encoder: str = ENCODER_OPTION,
     # dataset options

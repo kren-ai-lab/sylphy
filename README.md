@@ -103,14 +103,14 @@ model, reduced = reduce_dimensionality(
 ```bash
 sylphy --help
 
-sylphy get-embedding run \
+sylphy get-embedding \
   --model facebook/esm2_t6_8M_UR50D \
   --input-data sequences.csv \
   --sequence-identifier sequence \
   --output embeddings.parquet \
   --device cuda --precision fp16 --batch-size 16
 
-sylphy encode-sequences run \
+sylphy encode-sequences \
   --encoder one_hot \
   --input-data sequences.csv \
   --sequence-identifier sequence \

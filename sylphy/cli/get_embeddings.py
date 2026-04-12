@@ -29,6 +29,7 @@ from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
 
 app = typer.Typer(
     name="get-embedding",
+    context_settings={"help_option_names": ["-h", "--help"]},
     help="Extract protein sequence embeddings using a selected pretrained model.",
     no_args_is_help=True,
 )
@@ -188,8 +189,11 @@ def _ensure_ext(path: Path, fmt: str) -> Path:
 
 
 # ---- Command ----------------------------------------------------------------
-@app.command("run")
-def run(
+@app.command(
+    "get-embedding",
+    help="Extract embeddings and export them to disk using the chosen format.",
+)
+def get_embedding(
     # Model & backend
     model: str = MODEL_OPTION,
     device: str = DEVICE_OPTION,
@@ -221,14 +225,14 @@ def run(
 
     Examples
     --------
-    sylphy get-embedding run \\
+    sylphy get-embedding \\
       -m facebook/esm2_t6_8M_UR50D -i data/demo.csv -s sequence \\
       -o results/emb_esm2 -f parquet -d cuda -p fp16 -b 16 --layers last4 --layer-agg mean --pool mean
 
-    sylphy get-embedding run \\
+    sylphy get-embedding \\
       -m Rostlab/prot_t5_xl_uniref50 -i data/demo.csv -o results/emb_t5.npy -f npy -d cuda -p bf16
 
-    sylphy get-embedding run \\
+    sylphy get-embedding \\
       -m ElnaggarLab/ankh2-ext1 -i data/demo.csv -o results/emb_ankh \\
       -f csv --layers all --layer-agg sum --pool cls
     """

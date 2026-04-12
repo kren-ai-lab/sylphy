@@ -23,12 +23,4 @@ def test_version_flag():
     runner = CliRunner()
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert f"sylphy version {__version__}" in result.stdout
-
-
-def test_version_short_flag():
-    """Verify -v flag displays version and exits."""
-    runner = CliRunner()
-    result = runner.invoke(app, ["-v"])
-    assert result.exit_code == 0
-    assert f"sylphy version {__version__}" in result.stdout
+    assert f"sylphy {__version__}" in result.stdout

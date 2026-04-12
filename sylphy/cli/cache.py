@@ -23,12 +23,13 @@ import typer
 # ----------------------------
 app = typer.Typer(
     name="cache",
-    help="Inspect and manage Sylphy's cache directory (list, stats, prune, rm).",
+    context_settings={"help_option_names": ["-h", "--help"]},
+    help="Inspect and manage Sylphy's cache directory (list, stats, prune, remove).",
     no_args_is_help=True,
 )
 
 # ----------------------------
-# Utilities (pure stdlib -> fast import)
+# Utilities
 # ----------------------------
 _SIZE_UNITS = {
     "B": 1,
@@ -271,7 +272,7 @@ def _callback() -> None:
         typer.echo(msg)
 
 
-@app.command("ls")
+@app.command("ls", help="List cached files with optional filtering, sorting, or JSON output.")
 def cmd_ls(
     pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob pattern (e.g., '**/*.pt')."),
     recursive: bool = typer.Option(False, "--recursive", "-r", help="Recurse into subdirectories."),
@@ -316,7 +317,7 @@ def cmd_ls(
             typer.echo(f"{e.path.relative_to(mgr.cache_dir)}\t{size}\t{e.mtime_dt:%Y-%m-%d %H:%M}")
 
 
-@app.command("stats")
+@app.command("stats", help="Show cache location, file count, total size, and oldest/newest entries.")
 def cmd_stats() -> None:
     mgr = CacheManager()
     files, total = mgr.du()
@@ -338,7 +339,7 @@ def cmd_stats() -> None:
         _print_kv(con, "Oldest:", f"{oldest.path.name} @ {oldest.mtime_dt:%Y-%m-%d %H:%M}")
 
 
-@app.command("rm")
+@app.command("rm", help="Remove cached files by glob pattern and/or age, with dry-run by default.")
 def cmd_rm(
     pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob like '**/*.tmp'."),
     older_than: str | None = typer.Option(
@@ -365,7 +366,7 @@ def cmd_rm(
     _print_kv(con, "Result:", f"Deleted {deleted} files, freed {_human_size(freed)}")
 
 
-@app.command("prune")
+@app.command("prune", help="Shrink cache to a target size and optionally remove empty directories.")
 def cmd_prune(
     max_size: str | None = typer.Option(
         None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB)."
@@ -417,12 +418,12 @@ def cmd_prune(
     _print_kv(con, "Removed empty dirs:", str(removed_dirs))
 
 
-@app.command("path")
+@app.command("path", help="Print the resolved cache directory path.")
 def cmd_path() -> None:
     typer.echo(str(_default_cache_dir()))
 
 
-@app.command("clear")
+@app.command("clear", help="Remove the entire cache directory after confirmation.")
 def cmd_clear(
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt."),
 ) -> None:

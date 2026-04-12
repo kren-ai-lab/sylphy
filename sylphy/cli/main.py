@@ -5,12 +5,13 @@ import typer
 
 from sylphy import __version__
 from sylphy.cli.cache import app as cache_app
-from sylphy.cli.encoder_sequences import app as encoder_sequence_app
-from sylphy.cli.get_embeddings import app as embedding_extractor_app
+from sylphy.cli.encoder_sequences import encode_sequences
+from sylphy.cli.get_embeddings import get_embedding
 
 app = typer.Typer(
     name="sylphy",
     add_completion=False,
+    context_settings={"help_option_names": ["-h", "--help"]},
     help="Tools to numerically represent protein sequences (encoders, embeddings, reductions, cache).",
 )
 
@@ -18,13 +19,13 @@ app = typer.Typer(
 def version_callback(value: bool) -> None:
     """Show version and exit."""
     if value:
-        typer.echo(f"sylphy version {__version__}")
+        typer.echo(f"sylphy {__version__}")
         raise typer.Exit()
 
 
 @app.callback()
 def main(
-    version: bool = typer.Option(
+    _version: bool = typer.Option(
         None,
         "--version",
         "-v",
@@ -44,15 +45,15 @@ app.add_typer(
     help="Inspect and manage the library cache (list, stats, prune, remove).",
 )
 
-app.add_typer(
-    encoder_sequence_app,
+app.command(
     name="encode-sequences",
     help="Encode sequences (one-hot, ordinal, freq, kmers, physchem, FFT)",
-)
+)(encode_sequences)
 
-app.add_typer(
-    embedding_extractor_app, name="get-embedding", help="Extract embeddings from pretrained protein models"
-)
+app.command(
+    name="get-embedding",
+    help="Extract embeddings from pretrained protein models",
+)(get_embedding)
 
 if __name__ == "__main__":
     app()

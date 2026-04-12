@@ -8,7 +8,6 @@ Keeps the same UX as your current version, but with lazy imports to speed up sta
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 from collections.abc import Iterator
@@ -18,12 +17,15 @@ from pathlib import Path
 
 import typer
 
+from sylphy.cli._shared import HELP_CONTEXT_SETTINGS
+from sylphy.constants.tool_configs import DEFAULT_CACHE_DIR_ENV, DEFAULT_CACHE_ROOT_ENV, resolve_cache_dir
+
 # ----------------------------
 # Typer Application
 # ----------------------------
 app = typer.Typer(
     name="cache",
-    context_settings={"help_option_names": ["-h", "--help"]},
+    context_settings=HELP_CONTEXT_SETTINGS,
     help="Inspect and manage Sylphy's cache directory (list, stats, prune, remove).",
     no_args_is_help=True,
 )
@@ -95,36 +97,6 @@ def _table():
     except Exception:
         return None, None
 
-
-def _user_cache_dir(app: str, vendor: str) -> Path | None:
-    """Lazy import appdirs if present."""
-    try:
-        from appdirs import user_cache_dir
-    except Exception:
-        return None
-    return Path(user_cache_dir(app, vendor)).expanduser().resolve()
-
-
-# ----------------------------
-# Cache Discovery
-# ----------------------------
-DEFAULT_VENDOR = "KREN AI LAB"
-DEFAULT_APP = "sylphy"
-ENV_CACHE = "SYLPHY_CACHE_DIR"
-
-
-def _default_cache_dir() -> Path:
-    # Priority: env var -> appdirs -> ~/.cache/sylphy
-    env = os.getenv(ENV_CACHE)
-    if env:
-        return Path(env).expanduser().resolve()
-    appdirs = _user_cache_dir(DEFAULT_APP, DEFAULT_VENDOR)
-    if appdirs is not None:
-        return appdirs
-    base = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
-    return (base / DEFAULT_APP).expanduser().resolve()
-
-
 # ----------------------------
 # Data Structures
 # ----------------------------
@@ -144,7 +116,7 @@ class CacheManager:
     """Helper to inspect and manipulate the cache directory (stdlib-only)."""
 
     def __init__(self, cache_dir: Path | None = None) -> None:
-        self.cache_dir = (cache_dir or _default_cache_dir()).resolve()
+        self.cache_dir = (cache_dir or resolve_cache_dir()).resolve()
 
     # ---------- Inspect ----------
     def iter_entries(
@@ -265,7 +237,10 @@ def _print_kv(con, key: str, value: str) -> None:
 @app.callback()
 def _callback() -> None:
     con = _console()
-    msg = f"Cache dir: {_default_cache_dir()}  (set {ENV_CACHE} to override)"
+    msg = (
+        f"Cache dir: {resolve_cache_dir()}  "
+        f"(set {DEFAULT_CACHE_ROOT_ENV} to override; {DEFAULT_CACHE_DIR_ENV} is still supported)"
+    )
     if con:
         con.print(f"[dim]{msg}[/dim]")
     else:
@@ -420,7 +395,7 @@ def cmd_prune(
 
 @app.command("path", help="Print the resolved cache directory path.")
 def cmd_path() -> None:
-    typer.echo(str(_default_cache_dir()))
+    typer.echo(str(resolve_cache_dir()))
 
 
 @app.command("clear", help="Remove the entire cache directory after confirmation.")

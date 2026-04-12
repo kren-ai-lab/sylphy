@@ -1,4 +1,6 @@
 # tool_configs.py
+from __future__ import annotations
+
 import os
 import platform
 from dataclasses import dataclass, field
@@ -7,22 +9,37 @@ from pathlib import Path
 from .config_constants import CachePaths
 from .logging_constants import env_log_level
 
+DEFAULT_CACHE_APP = "sylphy"
+DEFAULT_CACHE_ROOT_ENV = "SYLPHY_CACHE_ROOT"
+DEFAULT_CACHE_DIR_ENV = "SYLPHY_CACHE_DIR"
 
-def _default_cache_root() -> Path:
-    """
-    Determine the default cache root honoring SYLPHY_CACHE_ROOT if set
-    and following OS-specific conventions otherwise.
-    """
+def _default_cache_parent() -> Path:
+    """Return the platform-specific parent directory used for application caches."""
     system = platform.system().lower()
     if system == "darwin":
-        base = Path.home() / "Library" / "Caches"
-    elif system == "windows":
-        base = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    else:
-        base = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
+        return Path.home() / "Library" / "Caches"
+    if system == "windows":
+        return Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    return Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
 
-    env = os.getenv("SYLPHY_CACHE_ROOT")
-    return Path(env) if env else base
+
+def resolve_cache_dir() -> Path:
+    """Resolve the final Sylphy cache directory from environment or platform defaults."""
+    env_dir = os.getenv(DEFAULT_CACHE_DIR_ENV)
+    if env_dir:
+        return Path(env_dir).expanduser().resolve()
+
+    env_root = os.getenv(DEFAULT_CACHE_ROOT_ENV)
+    if env_root:
+        return (Path(env_root).expanduser().resolve() / DEFAULT_CACHE_APP).resolve()
+
+    return (_default_cache_parent() / DEFAULT_CACHE_APP).expanduser().resolve()
+
+
+def default_cache_paths() -> CachePaths:
+    """Build cache paths from the resolved final cache directory."""
+    cache_dir = resolve_cache_dir()
+    return CachePaths(cache_dir.parent, tool_name=cache_dir.name)
 
 
 def _detect_cuda_available() -> bool:
@@ -61,7 +78,7 @@ class ToolConfig:
     Global configuration container for sylphy runtime.
     """
 
-    cache_paths: CachePaths = field(default_factory=lambda: CachePaths(_default_cache_root()))
+    cache_paths: CachePaths = field(default_factory=default_cache_paths)
     debug: bool = False
     default_device: str = field(default_factory=_default_device)
     log_level: int = field(default_factory=env_log_level)

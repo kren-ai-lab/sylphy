@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import importlib
-import importlib.util
 import logging
 import os
 import shutil
@@ -17,6 +15,7 @@ import pandas as pd
 from sklearn.metrics import pairwise_distances
 from sklearn.utils import shuffle
 
+from sylphy.constants.tool_configs import resolve_cache_dir
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.types import FileFormat
 
@@ -476,54 +475,4 @@ class UtilsLib:
         return dest
 
     def get_cache_dir() -> Path:
-        env = os.getenv("SYLPHY_CACHE_DIR")
-        if env:
-            return Path(env).expanduser()
-
-        siteconfig_cache = UtilsLib._siteconfig_cache_dir()
-        if siteconfig_cache is not None:
-            return siteconfig_cache
-
-        platform_cache = UtilsLib._platformdirs_cache_dir()
-        if platform_cache is not None:
-            return platform_cache
-
-        return Path.home() / ".cache" / "sylphy"
-
-    @staticmethod
-    def _siteconfig_cache_dir() -> Path | None:
-        try:
-            spec = importlib.util.find_spec("sylphy._siteconfig")
-            if spec is None:
-                return None
-            module = importlib.import_module("sylphy._siteconfig")
-        except ModuleNotFoundError:
-            return None
-        except Exception:
-            return None
-
-        cache_dir = getattr(module, "CACHE_DIR", None)
-        if not cache_dir:
-            return None
-        try:
-            return Path(str(cache_dir)).expanduser()
-        except Exception:
-            return None
-
-    @staticmethod
-    def _platformdirs_cache_dir() -> Path | None:
-        try:
-            platformdirs = importlib.import_module("platformdirs")
-        except ModuleNotFoundError:
-            return None
-        except Exception:
-            return None
-
-        user_cache_dir = getattr(platformdirs, "user_cache_dir", None)
-        if not callable(user_cache_dir):
-            return None
-        try:
-            cache_dir = user_cache_dir("sylphy")
-            return Path(str(cache_dir))
-        except Exception:
-            return None
+        return resolve_cache_dir()

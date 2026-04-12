@@ -4,6 +4,7 @@ from __future__ import annotations
 import typer
 
 from sylphy import __version__
+from sylphy.cli._shared import HELP_CONTEXT_SETTINGS
 from sylphy.cli.cache import app as cache_app
 from sylphy.cli.encoder_sequences import encode_sequences
 from sylphy.cli.get_embeddings import get_embedding
@@ -11,7 +12,7 @@ from sylphy.cli.get_embeddings import get_embedding
 app = typer.Typer(
     name="sylphy",
     add_completion=False,
-    context_settings={"help_option_names": ["-h", "--help"]},
+    context_settings=HELP_CONTEXT_SETTINGS,
     help="Tools to numerically represent protein sequences (encoders, embeddings, reductions, cache).",
 )
 

@@ -42,7 +42,7 @@ def set_cache_root(new_root: Path | str) -> None:
     with _LOCK:
         old = _get_config()
         new_cfg = ToolConfig(
-            cache_paths=CachePaths(root),
+            cache_paths=CachePaths(root, tool_name=old.cache_paths.tool_name),
             debug=old.debug,
             default_device=old.default_device,
             log_level=old.log_level,

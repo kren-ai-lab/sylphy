@@ -6,17 +6,6 @@ This module re-exports selected names to provide a clean and stable surface.
 """
 
 # tool_constants
-# cli_constants
-from .cli_constants import (
-    DebugMode,
-    Device,
-    EncoderType,
-    ExportOption,
-    PhysicochemicalOption,
-    PoolOption,
-    Precision,
-)
-
 # config_constants
 from .config_constants import CachePaths
 
@@ -84,12 +73,4 @@ __all__ = [
     "env_log_level",
     "env_log_json",
     "env_log_stderr",
-    # cli_constants
-    "ExportOption",
-    "EncoderType",
-    "Device",
-    "DebugMode",
-    "PhysicochemicalOption",
-    "PoolOption",
-    "Precision",
 ]

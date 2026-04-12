@@ -12,6 +12,7 @@ import pandas as pd
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
+from sylphy.constants.tool_configs import resolve_cache_dir
 from sylphy.core.model_registry import ModelSpec, register_model, resolve_model
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
@@ -51,7 +52,7 @@ class EmbeddingBased:
         precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
     ) -> None:
-        self._cache_root = UtilsLib.get_cache_dir()  # <- resuelve _siteconfig/env/platformdirs
+        self._cache_root = resolve_cache_dir()
         self._wire_cache_envs(self._cache_root)
 
         self.dataset: pd.DataFrame = dataset
@@ -108,10 +109,6 @@ class EmbeddingBased:
 
         # (opcional) Tokenizers (a veces usan su propia caché)
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-
-    def _hf_cache_dir_models(self) -> str:
-        # subcarpeta consistente para modelos HF bajo el cache de Sylphy
-        return str(Path(self._cache_root) / "models" / "huggingface")
 
     # ---------------------------------------------------------------------
     # Model resolution & loading

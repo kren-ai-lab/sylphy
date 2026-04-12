@@ -74,7 +74,7 @@ LIST_DESCRIPTORS_SEQUENCE: tuple[str, ...] = (
 LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC: tuple[str, ...] = ("sequence", "is_canon")
 
 
-def residues(extended: bool = False) -> tuple[str, ...]:
+def residues(*, extended: bool = False) -> tuple[str, ...]:
     """Return the residue alphabet.
 
     Parameters
@@ -91,7 +91,7 @@ def residues(extended: bool = False) -> tuple[str, ...]:
     return LIST_RESIDUES_EXTENDED if extended else LIST_RESIDUES
 
 
-def position_residues(extended: bool = False) -> dict[str, int]:
+def position_residues(*, extended: bool = False) -> dict[str, int]:
     """Return a residue → index mapping for the selected alphabet.
 
     Parameters

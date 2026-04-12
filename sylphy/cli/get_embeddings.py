@@ -20,7 +20,8 @@ Backends are selected by the factory from the model name. See:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from pathlib import Path  # noqa: TC003
+from typing import cast
 
 import typer
 
@@ -33,11 +34,7 @@ from sylphy.cli._shared import (
     load_csv,
     validate_choice,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
+from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType  # noqa: TC001
 
 app = typer.Typer(
     name="get-embedding",
@@ -90,7 +87,7 @@ MAX_LENGTH_OPTION = typer.Option(
     show_default=True,
 )
 OOM_BACKOFF_OPTION = typer.Option(
-    True,
+    True,  # noqa: FBT003
     "--oom-backoff/--no-oom-backoff",
     help="Auto-reduce batch size on CUDA OOM and retry.",
     show_default=True,
@@ -138,7 +135,7 @@ FORMAT_OUTPUT_OPTION = typer.Option(
     show_default=True,
 )
 DEBUG_OPTION = typer.Option(
-    False,
+    False,  # noqa: FBT003
     "--debug/--no-debug",
     help="Enable verbose logs for this command.",
     show_default=True,
@@ -157,6 +154,7 @@ LOG_LEVEL_OPTION = typer.Option(
     help="Extract embeddings and export them to disk using the chosen format.",
 )
 def get_embedding(
+    *,
     # Model & backend
     model: str = MODEL_OPTION,
     device: str = DEVICE_OPTION,
@@ -164,7 +162,7 @@ def get_embedding(
     batch_size: int = BATCH_SIZE_OPTION,
     max_length: int = MAX_LENGTH_OPTION,
     oom_backoff: bool = OOM_BACKOFF_OPTION,
-    # Layer/Pooling controls (handled by EmbeddingBased) :contentReference[oaicite:2]{index=2}
+    # Layer/Pooling controls (handled by EmbeddingBased)
     layers: str = LAYERS_OPTION,
     layer_agg: str = LAYER_AGG_OPTION,
     pool: str = POOL_OPTION,
@@ -231,7 +229,7 @@ def get_embedding(
                 ) from None
 
         # Lazy import: factory chooses backend based on model name.
-        from sylphy.embedding_extractor import create_embedding
+        from sylphy.embedding_extractor import create_embedding  # noqa: PLC0415
 
         embedder = create_embedding(
             model_name=model,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Protocol, TypeVar
 
 from sklearn.decomposition import (
     NMF,
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class _SupportsFitTransform(Protocol):
-    def fit_transform(self, X: Any, y: Any = None) -> np.ndarray: ...
+    def fit_transform(self, X: object, y: object = None) -> np.ndarray: ...
 
 
 ModelT = TypeVar("ModelT", bound=_SupportsFitTransform)
@@ -64,7 +64,7 @@ class LinearReduction(Reductions):
     # -----------------------------
     # Helpers
     # -----------------------------
-    def _init_with_seed(self, cls: type[ModelT], kwargs: dict[str, Any]) -> ModelT:
+    def _init_with_seed(self, cls: type[ModelT], kwargs: dict[str, object]) -> ModelT:
         sig = inspect.signature(cls.__init__)
         params = set(sig.parameters.keys())
         k = dict(kwargs)
@@ -98,47 +98,47 @@ class LinearReduction(Reductions):
     # -----------------------------
     # Public API
     # -----------------------------
-    def apply_pca(self, **kwargs) -> tuple[PCA, np.ndarray | pd.DataFrame | None]:
+    def apply_pca(self, **kwargs: object) -> tuple[PCA, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(PCA, kwargs)
         return self._apply_model(model, "PCA", kwargs.get("n_components"))
 
-    def apply_incremental_pca(self, **kwargs) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
+    def apply_incremental_pca(self, **kwargs: object) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(IncrementalPCA, kwargs)
         return self._apply_model(model, "IncrementalPCA", kwargs.get("n_components"))
 
-    def apply_sparse_pca(self, **kwargs) -> tuple[SparsePCA, np.ndarray | pd.DataFrame | None]:
+    def apply_sparse_pca(self, **kwargs: object) -> tuple[SparsePCA, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(SparsePCA, kwargs)
         return self._apply_model(model, "SparsePCA", kwargs.get("n_components"))
 
     def apply_minibatch_sparse_pca(
-        self, **kwargs,
+        self, **kwargs: object,
     ) -> tuple[MiniBatchSparsePCA, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(MiniBatchSparsePCA, kwargs)
         return self._apply_model(model, "MiniBatchSparsePCA", kwargs.get("n_components"))
 
-    def apply_fast_ica(self, **kwargs) -> tuple[FastICA, np.ndarray | pd.DataFrame | None]:
+    def apply_fast_ica(self, **kwargs: object) -> tuple[FastICA, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(FastICA, kwargs)
         return self._apply_model(model, "FastICA", kwargs.get("n_components"))
 
-    def apply_truncated_svd(self, **kwargs) -> tuple[TruncatedSVD, np.ndarray | pd.DataFrame | None]:
+    def apply_truncated_svd(self, **kwargs: object) -> tuple[TruncatedSVD, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(TruncatedSVD, kwargs)
         return self._apply_model(model, "TruncatedSVD", kwargs.get("n_components"))
 
-    def apply_factor_analysis(self, **kwargs) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
+    def apply_factor_analysis(self, **kwargs: object) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(FactorAnalysis, kwargs)
         return self._apply_model(model, "FactorAnalysis", kwargs.get("n_components"))
 
-    def apply_nmf(self, **kwargs) -> tuple[NMF, np.ndarray | pd.DataFrame | None]:
+    def apply_nmf(self, **kwargs: object) -> tuple[NMF, np.ndarray | pd.DataFrame | None]:
         # NMF requires non-negative data; users should ensure this upstream or via preprocess
         model = self._init_with_seed(NMF, kwargs)
         return self._apply_model(model, "NMF", kwargs.get("n_components"))
 
-    def apply_minibatch_nmf(self, **kwargs) -> tuple[MiniBatchNMF, np.ndarray | pd.DataFrame | None]:
+    def apply_minibatch_nmf(self, **kwargs: object) -> tuple[MiniBatchNMF, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(MiniBatchNMF, kwargs)
         return self._apply_model(model, "MiniBatchNMF", kwargs.get("n_components"))
 
     def apply_latent_dirichlet_allocation(
-        self, **kwargs,
+        self, **kwargs: object,
     ) -> tuple[LatentDirichletAllocation, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(LatentDirichletAllocation, kwargs)
         return self._apply_model(model, "LatentDirichletAllocation", kwargs.get("n_components"))

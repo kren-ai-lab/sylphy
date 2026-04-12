@@ -8,6 +8,8 @@ from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.logging import add_context, get_logger
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from sylphy.types import PrecisionType
 
     from .embedding_based import EmbeddingBased  # for type hints only
@@ -25,13 +27,14 @@ add_context(logger, component="embedding_extraction", backend="factory")
 
 def EmbeddingFactory(
     model_name: str,
-    dataset,
+    dataset: pd.DataFrame,
     column_seq: str,
     name_device: str = "cuda",
     precision: PrecisionType = "fp32",
+    debug_mode: int = logging.INFO,
+    *,
     oom_backoff: bool = True,
     debug: bool = False,
-    debug_mode: int = logging.INFO,
 ) -> EmbeddingBased:
     """Instantiate an embedding backend based on `model_name`.
 
@@ -45,7 +48,7 @@ def EmbeddingFactory(
 
     if "esm2" in name or name.startswith("facebook/esm2"):
         logger.info("Selecting ESM2 backend", extra={"model": model_name})
-        from .esm_based import ESMBasedEmbedding
+        from .esm_based import ESMBasedEmbedding  # noqa: PLC0415
 
         return ESMBasedEmbedding(
             name_device=name_device,
@@ -53,15 +56,15 @@ def EmbeddingFactory(
             name_tokenizer=model_name,
             dataset=dataset,
             column_seq=column_seq,
-            debug=debug,
             debug_mode=debug_mode,
             precision=precision,
+            debug=debug,
             oom_backoff=oom_backoff,
         )
 
     if "ankh2" in name or name.startswith("elnaggarlab/ankh2"):
         logger.info("Selecting Ankh2 backend", extra={"model": model_name})
-        from .ankh2_based import Ankh2BasedEmbedding
+        from .ankh2_based import Ankh2BasedEmbedding  # noqa: PLC0415
 
         return Ankh2BasedEmbedding(
             dataset=dataset,
@@ -69,16 +72,16 @@ def EmbeddingFactory(
             name_model=model_name,
             name_tokenizer=model_name,
             column_seq=column_seq,
-            use_encoder_only=True,
-            debug=debug,
             debug_mode=debug_mode,
             precision=precision,
+            use_encoder_only=True,
+            debug=debug,
             oom_backoff=oom_backoff,
         )
 
     if "ankh3" in name or name.startswith("elnaggarlab/ankh3"):
         logger.info("Selecting Ankh2 backend", extra={"model": model_name})
-        from .ankh2_based import Ankh2BasedEmbedding
+        from .ankh2_based import Ankh2BasedEmbedding  # noqa: PLC0415
 
         return Ankh2BasedEmbedding(
             dataset=dataset,
@@ -86,16 +89,16 @@ def EmbeddingFactory(
             name_model=model_name,
             name_tokenizer=model_name,
             column_seq=column_seq,
-            use_encoder_only=True,
-            debug=debug,
             debug_mode=debug_mode,
             precision=precision,
+            use_encoder_only=True,
+            debug=debug,
             oom_backoff=oom_backoff,
         )
 
     if "t5" in name or "prot_t5" in name or name.startswith("rostlab/prot_t5"):
         logger.info("Selecting ProtT5 backend", extra={"model": model_name})
-        from .prot5_based import Prot5Based
+        from .prot5_based import Prot5Based  # noqa: PLC0415
 
         return Prot5Based(
             name_device=name_device,
@@ -103,15 +106,15 @@ def EmbeddingFactory(
             name_tokenizer=model_name,
             dataset=dataset,
             column_seq=column_seq,
-            debug=debug,
             debug_mode=debug_mode,
             precision=precision,
+            debug=debug,
             oom_backoff=oom_backoff,
         )
 
     if "bert" in name or "prot_bert" in name or name.startswith("rostlab/prot_bert"):
         logger.info("Selecting ProtBERT backend", extra={"model": model_name})
-        from .bert_based import BertBasedEmbedding
+        from .bert_based import BertBasedEmbedding  # noqa: PLC0415
 
         return BertBasedEmbedding(
             name_device=name_device,
@@ -119,15 +122,15 @@ def EmbeddingFactory(
             name_tokenizer=model_name,
             dataset=dataset,
             column_seq=column_seq,
-            debug=debug,
             debug_mode=debug_mode,
             precision=precision,
+            debug=debug,
             oom_backoff=oom_backoff,
         )
 
     if "mistral" in name or "mistral-prot" in name:
         logger.info("Selecting Mistral-Prot backend", extra={"model": model_name})
-        from .mistral_based import MistralBasedEmbedding
+        from .mistral_based import MistralBasedEmbedding  # noqa: PLC0415
 
         return MistralBasedEmbedding(
             name_device=name_device,
@@ -135,16 +138,16 @@ def EmbeddingFactory(
             name_tokenizer=model_name,
             dataset=dataset,
             column_seq=column_seq,
-            debug=debug,
             debug_mode=debug_mode,
             precision=precision,
+            debug=debug,
             oom_backoff=oom_backoff,
         )
 
     if "esmc" in name:
         logger.info("Selecting ESM-C backend", extra={"model": model_name})
         try:
-            from .esmc_based import ESMCBasedEmbedding
+            from .esmc_based import ESMCBasedEmbedding  # noqa: PLC0415
         except (ImportError, ModuleNotFoundError) as exc:
             wrapped = wrap_optional_dependency_error(
                 exc,
@@ -160,9 +163,9 @@ def EmbeddingFactory(
             name_model=model_name,  # e.g., "esmc_300m" or registry key
             dataset=dataset,
             column_seq=column_seq,
-            debug=debug,
             debug_mode=debug_mode,
             precision=precision,
+            debug=debug,
             oom_backoff=oom_backoff,
         )
 

@@ -10,11 +10,11 @@ from sylphy.sequence_encoder import PhysicochemicalEncoder
 
 
 @pytest.fixture
-def mock_cache(monkeypatch, tmp_path):
+def mock_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Redirect AAIndex cache to a temporary directory."""
 
     class _CachePaths:
-        def data(self):
+        def data(self: object) -> str:
             return str(tmp_path / "data")
 
     class _Cfg:
@@ -26,7 +26,7 @@ def mock_cache(monkeypatch, tmp_path):
     return tmp_path / "data"
 
 
-def test_physicochemical_reads_cached_file(mock_cache) -> None:
+def test_physicochemical_reads_cached_file(mock_cache: Path) -> None:
     """Verify encoder loads from cached AAIndex file without network access."""
     cache_dir = mock_cache / "aaindex"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -48,7 +48,7 @@ def test_physicochemical_reads_cached_file(mock_cache) -> None:
     assert enc.coded_dataset.iloc[0, :5].tolist() == [1.0, 2.0, 3.0, 0.0, 0.0]
 
 
-def test_physicochemical_raises_on_unknown_property(mock_cache) -> None:
+def test_physicochemical_raises_on_unknown_property(mock_cache: Path) -> None:
     cache_dir = mock_cache / "aaindex"
     cache_dir.mkdir(parents=True, exist_ok=True)
     (cache_dir / Path(BASE_URL_AAINDEX).name).write_text("res,PROP\nA,1\n", encoding="utf-8")

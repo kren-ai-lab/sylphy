@@ -7,13 +7,13 @@ import pytest
 from sylphy.reductions import reduce_dimensionality
 
 
-def _any_log_contains(caplog, needle: str) -> bool:
+def _any_log_contains(caplog: pytest.LogCaptureFixture, needle: str) -> bool:
     """Helper: returns True if any captured record contains `needle` (case-insensitive)."""
     needle = needle.lower()
     return any(needle in r.getMessage().lower() for r in caplog.records)
 
 
-def test_factory_linear_pandas(df_small, caplog) -> None:
+def test_factory_linear_pandas(df_small: pd.DataFrame, caplog: pytest.LogCaptureFixture) -> None:
     """
     Linear dispatch: 'pca' should return a fitted linear model and a pandas DataFrame with
     the expected number of components (2).
@@ -46,7 +46,7 @@ def test_factory_linear_pandas(df_small, caplog) -> None:
         assert _any_log_contains(caplog, "pca") or _any_log_contains(caplog, "linear")
 
 
-def test_factory_nonlinear_numpy(X_small, caplog) -> None:
+def test_factory_nonlinear_numpy(X_small: np.ndarray, caplog: pytest.LogCaptureFixture) -> None:
     """
     Non-linear dispatch: 'isomap' usually returns (None, np.ndarray) in our API.
     """
@@ -70,7 +70,7 @@ def test_factory_nonlinear_numpy(X_small, caplog) -> None:
         assert _any_log_contains(caplog, "isomap") or _any_log_contains(caplog, "nonlinear")
 
 
-def test_factory_unknown_raises(X_small) -> None:
+def test_factory_unknown_raises(X_small: np.ndarray) -> None:
     """Unknown method should raise a ValueError."""
     with pytest.raises(ValueError):
         reduce_dimensionality("nope", X_small)

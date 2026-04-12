@@ -17,7 +17,7 @@ app = typer.Typer(
 )
 
 
-def version_callback(value: bool) -> None:
+def version_callback(value: bool) -> None:  # noqa: FBT001
     """Show version and exit."""
     if value:
         typer.echo(f"sylphy {__version__}")
@@ -26,7 +26,7 @@ def version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
-    _version: bool = typer.Option(
+    _version: bool = typer.Option(  # noqa: FBT001
         None,
         "--version",
         "-v",

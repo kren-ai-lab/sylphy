@@ -23,9 +23,10 @@ class BertBasedEmbedding(EmbeddingBased):
         name_tokenizer: str = "Rostlab/prot_bert",
         dataset: pd.DataFrame | None = None,
         column_seq: str | None = "sequence",
-        debug: bool = False,
         debug_mode: int = logging.INFO,
         precision: PrecisionType = "fp32",
+        *,
+        debug: bool = False,
         oom_backoff: bool = True,
     ) -> None:
         if dataset is None:
@@ -40,10 +41,10 @@ class BertBasedEmbedding(EmbeddingBased):
             provider="huggingface",
             revision=None,
             column_seq=column_seq or "sequence",
-            debug=debug,
             debug_mode=debug_mode,
-            trust_remote_code=False,
             precision=precision,
+            debug=debug,
+            trust_remote_code=False,
             oom_backoff=oom_backoff,
         )
 

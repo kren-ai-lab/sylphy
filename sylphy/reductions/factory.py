@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -108,7 +108,7 @@ def reduce_dimensionality(
     debug: bool = True,
     debug_mode: int = logging.INFO,
     logger_name: str = "sylphy.reductions.factory",
-    **kwargs: Any,
+    **kwargs: object,
 ) -> tuple[object | None, np.ndarray | pd.DataFrame | None]:
     """Run a dimensionality reduction by method name via a unified factory.
 
@@ -166,7 +166,7 @@ def reduce_dimensionality(
     log.info("Dispatching method='%s' (kind=%s) | preprocess=%s | kwargs=%s", key, kind, preprocess, kwargs)
 
     if kind == "linear":
-        from .linear_reductions import LinearReduction
+        from .linear_reductions import LinearReduction  # noqa: PLC0415
 
         runner = LinearReduction(
             dataset=dataset,
@@ -182,7 +182,7 @@ def reduce_dimensionality(
 
     # Non-linear
     try:
-        from .non_linear_reductions import NonLinearReductions
+        from .non_linear_reductions import NonLinearReductions  # noqa: PLC0415
     except (ImportError, ModuleNotFoundError) as exc:
         wrapped = wrap_optional_dependency_error(
             exc,

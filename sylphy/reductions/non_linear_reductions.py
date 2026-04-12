@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import umap.umap_ as umap
 from clustpy.partition import DipExt
@@ -51,7 +51,7 @@ class NonLinearReductions(Reductions):
     # -----------------------------
     # Helpers
     # -----------------------------
-    def _init_with_seed(self, cls: type[Any], kwargs: dict[str, Any]) -> Any:
+    def _init_with_seed(self, cls: type[object], kwargs: dict[str, object]) -> object:
         sig = inspect.signature(cls.__init__)
         params = set(sig.parameters.keys())
         k = dict(kwargs)
@@ -60,7 +60,7 @@ class NonLinearReductions(Reductions):
         return cls(**k)
 
     def _apply_model(
-        self, model: Any, method_name: str, n_components: int | None = None,
+        self, model: object, method_name: str, n_components: int | None = None,
     ) -> np.ndarray | pd.DataFrame | None:
         try:
             params = getattr(model, "get_params", dict)()
@@ -81,45 +81,45 @@ class NonLinearReductions(Reductions):
     # -----------------------------
     # Public API (one wrapper per method)
     # -----------------------------
-    def apply_tsne(self, **kwargs):
+    def apply_tsne(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         n = self.dataset.shape[0]
         perplexity = kwargs.get("perplexity", 30)
-        if perplexity >= max(1, n):
+        if isinstance(perplexity, (int, float)) and perplexity >= max(1, n):
             new_p = max(5, min(30, max(1, n // 3)))
             self.__logger__.warning("t-SNE perplexity=%s >= n=%s; using %s instead.", perplexity, n, new_p)
             kwargs["perplexity"] = new_p
         model = self._init_with_seed(TSNE, kwargs)
         return self._apply_model(model, "t-SNE", kwargs.get("n_components"))
 
-    def apply_isomap(self, **kwargs):
+    def apply_isomap(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = Isomap(**kwargs)  # no random_state
         return self._apply_model(model, "Isomap", kwargs.get("n_components"))
 
-    def apply_mds(self, **kwargs):
+    def apply_mds(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(MDS, kwargs)
         return self._apply_model(model, "MDS", kwargs.get("n_components"))
 
-    def apply_lle(self, **kwargs):
+    def apply_lle(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(LocallyLinearEmbedding, kwargs)
         return self._apply_model(model, "LLE", kwargs.get("n_components"))
 
-    def apply_spectral(self, **kwargs):
+    def apply_spectral(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(SpectralEmbedding, kwargs)
         return self._apply_model(model, "SpectralEmbedding", kwargs.get("n_components"))
 
-    def apply_umap(self, **kwargs):
+    def apply_umap(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         # umap-learn supports 'random_state'
         model = self._init_with_seed(umap.UMAP, kwargs)
         return self._apply_model(model, "UMAP", kwargs.get("n_components"))
 
-    def apply_dictionary_learning(self, **kwargs):
+    def apply_dictionary_learning(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(DictionaryLearning, kwargs)
         return self._apply_model(model, "DictionaryLearning", kwargs.get("n_components"))
 
-    def apply_mini_batch_dictionary_learning(self, **kwargs):
+    def apply_mini_batch_dictionary_learning(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(MiniBatchDictionaryLearning, kwargs)
         return self._apply_model(model, "MiniBatchDictionaryLearning", kwargs.get("n_components"))
 
-    def apply_dip_ext(self, **kwargs):
+    def apply_dip_ext(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = DipExt(**kwargs)  # library-specific, no random_state in __init__
         return self._apply_model(model, "DipExt", kwargs.get("n_components"))

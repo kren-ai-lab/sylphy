@@ -68,6 +68,7 @@ class Encoders:
         dataset: pd.DataFrame | None = None,
         sequence_column: str = "sequence",
         max_length: int = 1024,
+        *,
         allow_extended: bool = False,
         allow_unknown: bool = False,
         debug: bool = False,

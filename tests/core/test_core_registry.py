@@ -7,9 +7,13 @@ import sys
 import types
 import zipfile
 from pathlib import Path
-from typing import Never
+from typing import TYPE_CHECKING, Never, Self
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 
 from sylphy.core.config import get_config, temporary_cache_root
 from sylphy.core.model_registry import (
@@ -62,10 +66,10 @@ def test_unregister_and_clear() -> None:
     register_model(ModelSpec(name="a", provider="huggingface", ref="x/y"))
     register_model(ModelSpec(name="b", provider="huggingface", ref="x/z"))
     clear_registry()
-    assert list_registered_models(True) == []
+    assert list_registered_models(include_aliases=True) == []
 
 
-def test_env_override_path(monkeypatch, tmp_path) -> None:
+def test_env_override_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # Forzar el prefijo usado dentro del módulo
     import sylphy.core.model_registry as regmod
 
@@ -85,13 +89,17 @@ def test_env_override_path(monkeypatch, tmp_path) -> None:
     assert (resolved / "weights.bin").exists()
 
 
-def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path) -> None:
+def test_resolve_huggingface_download_mocked(monkeypatch: pytest.MonkeyPatch) -> None:
     # Mock huggingface_hub como módulo real con snapshot_download
     calls = {"n": 0}
 
     hub = types.ModuleType("huggingface_hub")
 
-    def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None) -> None:
+    def snapshot_download(
+        ref: str,
+        local_dir: str | Path | None = None,
+        **_kwargs: object,
+    ) -> None:
         calls["n"] += 1
         if local_dir is None:
             msg = "local_dir should be provided in snapshot_download mock."
@@ -113,7 +121,7 @@ def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path) -> None:
     assert calls["n"] == 1  # downloaded once
 
 
-def test_resolve_other_local_copy(tmp_path) -> None:
+def test_resolve_other_local_copy(tmp_path: Path) -> None:
     src = tmp_path / "src_model"
     src.mkdir()
     (src / "file.txt").write_text("payload")
@@ -130,7 +138,7 @@ def _make_zip_bytes() -> bytes:
     return buf.getvalue()
 
 
-def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path) -> None:
+def test_resolve_other_url_download_and_extract(monkeypatch: pytest.MonkeyPatch) -> None:
     # Mock requests.get → stream un zip pequeño
     class DummyResp:
         def __init__(self, data: bytes) -> None:
@@ -141,16 +149,16 @@ def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path) -> None:
         def raise_for_status(self) -> None:
             pass
 
-        def iter_content(self, chunk_size=65536):
+        def iter_content(self, chunk_size: int = 65536) -> Iterator[bytes]:  # noqa: ARG002
             yield self._data
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, *exc):
+        def __exit__(self, *exc: object) -> bool:
             return False
 
-    def fake_get(url, stream=True, timeout=60):
+    def fake_get(_url: str, **_kwargs: object) -> DummyResp:
         return DummyResp(_make_zip_bytes())
 
     req = types.ModuleType("requests")
@@ -162,11 +170,11 @@ def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path) -> None:
     assert (dst / "inner" / "ok.txt").exists()
 
 
-def test_download_error_is_wrapped(monkeypatch) -> None:
+def test_download_error_is_wrapped(monkeypatch: pytest.MonkeyPatch) -> None:
     register_model(ModelSpec(name="will_fail", provider="huggingface", ref="org/fail"))
     import sylphy.core.model_registry as regmod
 
-    def boom(*args, **kwargs) -> Never:
+    def boom(*_args: object, **_kwargs: object) -> Never:
         msg = "network down"
         raise RuntimeError(msg)
 
@@ -177,9 +185,10 @@ def test_download_error_is_wrapped(monkeypatch) -> None:
     assert "Failed to resolve model 'will_fail'" in str(ei.value)
 
 
-def test_config_temporary_cache_root(tmp_path) -> None:
+def test_config_temporary_cache_root(tmp_path: Path) -> None:
     cfg = get_config()
     original = cfg.cache_paths.cache_root
     with temporary_cache_root(tmp_path / "alt"):
         assert get_config().cache_paths.cache_root != original
     assert get_config().cache_paths.cache_root == original
+

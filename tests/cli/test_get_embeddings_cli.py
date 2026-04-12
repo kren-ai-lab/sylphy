@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path  # noqa: TC003
 from typing import Any, cast
 
 import pandas as pd
@@ -9,7 +10,7 @@ from typer.testing import CliRunner
 from sylphy.cli.get_embeddings import app
 
 
-def test_get_embeddings_runs_and_saves_csv(tmp_path) -> None:
+def test_get_embeddings_runs_and_saves_csv(tmp_path: Path) -> None:
     """Verify CLI extracts embeddings and saves to CSV with correct shape."""
     df = pd.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
     inp = tmp_path / "seqs.csv"
@@ -46,7 +47,7 @@ def test_get_embeddings_runs_and_saves_csv(tmp_path) -> None:
     assert "sequence" in got.columns
 
 
-def test_get_embeddings_oom_backoff_succeeds(tmp_path) -> None:
+def test_get_embeddings_oom_backoff_succeeds(tmp_path: Path) -> None:
     """Verify that the CLI successfully processes sequences and calls the model."""
     transformers_mod = cast("Any", sys.modules["transformers"])
     _FakeModel = transformers_mod.AutoModel

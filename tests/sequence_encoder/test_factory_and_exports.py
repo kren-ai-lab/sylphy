@@ -18,11 +18,11 @@ from sylphy.sequence_encoder import (
 
 
 @pytest.fixture
-def mock_cache(monkeypatch, tmp_path):
+def mock_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Redirect AAIndex cache to a temporary directory."""
 
     class _CachePaths:
-        def data(self):
+        def data(self: object) -> str:
             return str(tmp_path / "data")
 
     class _Cfg:
@@ -34,7 +34,7 @@ def mock_cache(monkeypatch, tmp_path):
     return tmp_path / "data"
 
 
-def test_factory_known_aliases(toy_df, mock_cache) -> None:
+def test_factory_known_aliases(toy_df: pd.DataFrame, mock_cache: Path) -> None:
     """Verify factory creates correct encoder for all known aliases."""
     # Pre-populate cache with minimal AAIndex file to avoid network requests
     cache_dir = mock_cache / "aaindex"

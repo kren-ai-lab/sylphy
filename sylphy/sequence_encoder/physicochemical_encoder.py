@@ -30,6 +30,7 @@ class PhysicochemicalEncoder(Encoders):
         max_length: int = 1024,
         type_descriptor: str = "aaindex",
         name_property: str = "ANDN920101",
+        *,
         allow_extended: bool = False,
         allow_unknown: bool = False,
         debug: bool = False,

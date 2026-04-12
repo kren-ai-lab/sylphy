@@ -8,10 +8,11 @@ import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
-def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
+def _quiet_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Redirect logs to a temporary file and clean SYLPHY_LOG_* environment variables."""
     for k in list(os.environ.keys()):
         if k.startswith("SYLPHY_LOG_"):

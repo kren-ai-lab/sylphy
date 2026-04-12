@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from sylphy.logging import add_context, get_logger
 
@@ -124,7 +124,7 @@ def _canonical(name: str) -> str:
     )
 
 
-def _filter_kwargs(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
+def _filter_kwargs(kind: str, kwargs: dict[str, object]) -> dict[str, object]:
     allowed = _ALLOWED[kind]
     filtered = {k: v for k, v in kwargs.items() if k in allowed}
     ignored = sorted(set(kwargs.keys()) - allowed)
@@ -133,7 +133,7 @@ def _filter_kwargs(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     return filtered
 
 
-def create_encoder(name: str, **kwargs: Any) -> EncoderInstance:
+def create_encoder(name: str, **kwargs: object) -> EncoderInstance:
     """Factory for sequence encoders with per-backend parameter filtering.
 
     Parameters
@@ -142,7 +142,7 @@ def create_encoder(name: str, **kwargs: Any) -> EncoderInstance:
         Encoder name or alias. Supported canonical names:
         {'one_hot','ordinal','frequency','kmers','physicochemical','fft'}.
         Aliases: onehot, kmer, tfidf, physchem, aaindex.
-    **kwargs : Any
+    **kwargs : object
         Backend-specific constructor parameters. Extra keys are ignored safely
         (and logged at DEBUG level).
 

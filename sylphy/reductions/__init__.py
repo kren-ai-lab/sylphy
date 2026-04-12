@@ -43,7 +43,7 @@ _OPTIONAL_DEPENDENCY_EXPORTS: dict[str, tuple[str, str, tuple[str, ...]]] = {
 }
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> object:
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
         msg = f"module '{__name__}' has no attribute '{name}'"

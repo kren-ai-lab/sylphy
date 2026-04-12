@@ -17,7 +17,7 @@ class _FakeConfig:
     hidden_size: int = 4
 
     @classmethod
-    def from_pretrained(cls, local_dir: str, trust_remote_code: bool = False):
+    def from_pretrained(cls, _local_dir: str, *, trust_remote_code: bool = False) -> _FakeConfig:  # noqa: ARG003
         return cls()
 
 
@@ -29,12 +29,13 @@ class _FakeTokenizer:
     @classmethod
     def from_pretrained(
         cls,
-        local_dir: str,
-        do_lower_case: bool = False,
-        use_fast: bool = True,
-        trust_remote_code: bool = False,
-        **kwargs,
-    ):
+        _local_dir: str,
+        *,
+        do_lower_case: bool = False,  # noqa: ARG003
+        use_fast: bool = True,  # noqa: ARG003
+        trust_remote_code: bool = False,  # noqa: ARG003
+        **kwargs: object,  # noqa: ARG003
+    ) -> _FakeTokenizer:
         return cls()
 
     def add_special_tokens(self, mapping: dict[str, str]) -> None:
@@ -48,10 +49,11 @@ class _FakeTokenizer:
     def __call__(
         self,
         sequences: list[str],
-        return_tensors: str = "pt",
+        *,
+        return_tensors: str = "pt",  # noqa: ARG002
         truncation: bool = True,
-        padding: bool = True,
-        add_special_tokens: bool = True,
+        padding: bool = True,  # noqa: ARG002
+        add_special_tokens: bool = True,  # noqa: ARG002
         max_length: int = 1024,
     ) -> dict[str, torch.Tensor]:
         def encode(s: str) -> list[int]:
@@ -91,18 +93,18 @@ class _FakeModel:
         pass
 
     @classmethod
-    def from_pretrained(cls, local_dir: str, trust_remote_code: bool = False):
+    def from_pretrained(cls, _local_dir: str, *, trust_remote_code: bool = False) -> _FakeModel:  # noqa: ARG003
         return cls()
 
-    def to(self, device):
+    def to(self, _device: object) -> _FakeModel:
         return self
 
-    def eval(self):
+    def eval(self) -> _FakeModel:
         return self
 
-    def __call__(self, **enc) -> _FakeOutput:
+    def __call__(self, **enc: object) -> _FakeOutput:
         _FakeModel.FORWARD_CALLS += 1
-        x: torch.Tensor = enc["input_ids"]
+        x: torch.Tensor = cast("torch.Tensor", enc["input_ids"])
         B, L = x.shape
         if self.OOM_THRESHOLD is not None and int(self.OOM_THRESHOLD) < B:
             msg = "simulated OOM"
@@ -142,31 +144,32 @@ _fake_esm_models.__path__ = []
 _fake_esm_models_esmc = cast("Any", types.ModuleType("esm.models.esmc"))
 
 
+class _ESMCOut:
+    def __init__(self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...]) -> None:
+        self.last_hidden_state = last_hidden_state
+        self.hidden_states = hidden_states
+
+
 class ESMC:
     @classmethod
-    def from_pretrained(cls, *args, **kwargs):
+    def from_pretrained(cls, *args: object, **kwargs: object) -> ESMC:  # noqa: ARG003
         return cls()
 
-    def to(self, device):
+    def to(self, _device: object) -> ESMC:
         return self
 
-    def eval(self):
+    def eval(self) -> ESMC:
         return self
 
-    def __call__(self, **enc):
-        x: torch.Tensor = enc["input_ids"]
+    def __call__(self, **enc: object) -> _ESMCOut:
+        x: torch.Tensor = cast("torch.Tensor", enc["input_ids"])
         B, L = x.shape
         H = 4
         base = torch.arange(1, H + 1, dtype=torch.float32, device=x.device).view(1, 1, H).repeat(B, L, 1)
         hidden_states = tuple(base + float(i) for i in range(4))
         last_hidden = hidden_states[-1]
 
-        class _Out:
-            def __init__(self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...]) -> None:
-                self.last_hidden_state = last_hidden_state
-                self.hidden_states = hidden_states
-
-        return _Out(last_hidden, hidden_states)
+        return _ESMCOut(last_hidden, hidden_states)
 
 
 _fake_esm_models_esmc.ESMC = ESMC

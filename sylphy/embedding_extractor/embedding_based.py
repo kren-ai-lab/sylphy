@@ -45,10 +45,11 @@ class EmbeddingBased:
         provider: str = "huggingface",  # {"huggingface","other"}
         revision: str | None = None,
         column_seq: str = "sequence",
-        debug: bool = False,
         debug_mode: int = logging.INFO,
-        trust_remote_code: bool = False,
         precision: PrecisionType = "fp32",
+        *,
+        debug: bool = False,
+        trust_remote_code: bool = False,
         oom_backoff: bool = True,
     ) -> None:
         self._cache_root = resolve_cache_dir()
@@ -406,7 +407,7 @@ class EmbeddingBased:
                 torch.cuda.empty_cache()
                 with contextlib.suppress(Exception):
                     torch.cuda.reset_peak_memory_stats()
-            import gc
+            import gc  # noqa: PLC0415
 
             gc.collect()
         except Exception as e:

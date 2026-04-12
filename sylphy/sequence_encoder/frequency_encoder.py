@@ -21,6 +21,7 @@ class FrequencyEncoder(Encoders):
         self,
         dataset: pd.DataFrame | None = None,
         sequence_column: str = "sequence",
+        *,
         allow_extended: bool = False,
         allow_unknown: bool = False,
         debug: bool = False,

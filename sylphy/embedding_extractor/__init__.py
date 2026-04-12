@@ -49,11 +49,11 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "EmbeddingFactory": (".embedding_factory", "EmbeddingFactory"),
 }
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> object:
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
         if name == "create_embedding":
-            from .embedding_factory import EmbeddingFactory  # lazy import
+            from .embedding_factory import EmbeddingFactory  # noqa: PLC0415
 
             return EmbeddingFactory
         msg = f"module '{__name__}' has no attribute '{name}'"
@@ -76,7 +76,7 @@ def __getattr__(name: str) -> Any:
     return value
 
 
-def __dir__():
+def __dir__() -> list[str]:
     return sorted(__all__)
 
 

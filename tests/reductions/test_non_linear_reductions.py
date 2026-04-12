@@ -22,7 +22,7 @@ except Exception:
 
 
 @pytest.mark.filterwarnings("ignore:Graph is not fully connected:UserWarning")
-def test_isomap_and_spectral(X_small) -> None:
+def test_isomap_and_spectral(X_small: np.ndarray) -> None:
     """Verify Isomap and SpectralEmbedding produce expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z_iso = nr.apply_isomap(n_components=2, n_neighbors=3)
@@ -35,7 +35,7 @@ def test_isomap_and_spectral(X_small) -> None:
     assert Z_spec.shape[1] == 2
 
 
-def test_lle_basic(X_small) -> None:
+def test_lle_basic(X_small: np.ndarray) -> None:
     """Verify LocallyLinearEmbedding produces expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z = nr.apply_lle(n_components=2, n_neighbors=4)
@@ -45,7 +45,7 @@ def test_lle_basic(X_small) -> None:
 
 @pytest.mark.skipif(not HAS_UMAP, reason="umap not installed")
 @pytest.mark.filterwarnings("ignore:n_jobs value.*overridden:UserWarning")
-def test_umap_if_available(X_small) -> None:
+def test_umap_if_available(X_small: np.ndarray) -> None:
     """Verify UMAP produces expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z = nr.apply_umap(n_components=2, n_neighbors=3, min_dist=0.1, random_state=0)
@@ -54,8 +54,8 @@ def test_umap_if_available(X_small) -> None:
 
 
 @pytest.mark.skipif(not HAS_CLUSTPY, reason="clustpy not installed")
-def test_dipext_if_available(X_small) -> None:
-    """Verify DipExt produces expected dimensions."""
+def test_dipext_if_available(X_small: np.ndarray) -> None:
+    """Verify DipExt produce expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z = nr.apply_dip_ext(n_components=2)
     if Z is not None:

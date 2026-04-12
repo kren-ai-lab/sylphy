@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING
 
 import pytest
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(autouse=True)
-def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
+def _quiet_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Redirect logs to a temporary file and clean SYLPHY_LOG_* environment variables."""
     for k in list(os.environ.keys()):
         if k.startswith("SYLPHY_LOG_"):
@@ -21,7 +22,7 @@ def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
-def _stub_model_registry(tmp_path, monkeypatch) -> None:
+def _stub_model_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point model resolution to a temporary directory to avoid network calls."""
     model_dir = tmp_path / "fake_model_dir"
     model_dir.mkdir(parents=True, exist_ok=True)

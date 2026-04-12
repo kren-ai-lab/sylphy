@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(autouse=True)
-def clean_env_and_reset(tmp_path, monkeypatch) -> Iterator[None]:
+def clean_env_and_reset(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Reset logger and clear environment variables between tests."""
     for key in list(os.environ.keys()):
         if key.startswith("SYLPHY_LOG_"):

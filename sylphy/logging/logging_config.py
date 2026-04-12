@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 try:
     from appdirs import user_log_dir
@@ -46,7 +46,7 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-def _env_bool(name: str, default: bool) -> bool:
+def _env_bool(name: str, *, default: bool) -> bool:
     """Parse a boolean from environment. Accepts: 1, true, yes, on."""
     raw = os.getenv(f"{LOG_ENV_PREFIX}{name}")
     if raw is None:
@@ -79,7 +79,7 @@ def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | No
 
     # 3) Lazy import to avoid cycles
     try:
-        from sylphy.constants.tool_configs import get_config  # local import
+        from sylphy.constants.tool_configs import get_config  # noqa: PLC0415
 
         root = Path(get_config().cache_paths.logs())
         root.mkdir(parents=True, exist_ok=True)
@@ -107,7 +107,7 @@ class _JsonFormatter(logging.Formatter):
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         # ISO-ish time; respect UTC flag
         if self._use_utc:
-            import time
+            import time  # noqa: PLC0415
 
             ct = time.gmtime(record.created)
             return time.strftime("%Y-%m-%dT%H:%M:%S", ct)
@@ -188,7 +188,7 @@ def _make_file_handler(
 ) -> logging.Handler:
     # Prefer rotating handler; gracefully fallback to simple file handler.
     try:
-        from logging.handlers import RotatingFileHandler
+        from logging.handlers import RotatingFileHandler  # noqa: PLC0415
 
         fh = RotatingFileHandler(
             path,
@@ -283,13 +283,13 @@ def setup_logger(
         lvl = int(level)
 
     if with_console is None:
-        with_console = env_log_stderr(LOG_DEFAULT_STDERR)
+        with_console = env_log_stderr(default=LOG_DEFAULT_STDERR)
 
     if use_json is None:
-        use_json = env_log_json(LOG_DEFAULT_JSON)
+        use_json = env_log_json(default=LOG_DEFAULT_JSON)
 
     if use_utc is None:
-        use_utc = _env_bool("UTC", False)
+        use_utc = _env_bool("UTC", default=False)
 
     if max_bytes is None:
         max_bytes = _env_int("MAX_BYTES", LOG_DEFAULT_MAX_BYTES)
@@ -363,7 +363,7 @@ def get_logger(name: str = LOG_DEFAULT_NAME) -> logging.Logger:
 class _ContextFilter(logging.Filter):
     """Static key-value context injector. Useful for adding component/model identifiers."""
 
-    def __init__(self, **static_context: Any) -> None:
+    def __init__(self, **static_context: object) -> None:
         super().__init__()
         self._ctx = static_context
 
@@ -373,7 +373,7 @@ class _ContextFilter(logging.Filter):
         return True
 
 
-def add_context(logger: logging.Logger, **context: Any) -> None:
+def add_context(logger: logging.Logger, **context: object) -> None:
     """Attach static context (e.g., component='encoder', model='esm2') to a logger."""
     if not context:
         return
@@ -405,3 +405,4 @@ def reset_logging(name: str = LOG_DEFAULT_NAME) -> None:
     for h in list(logger.handlers):
         logger.removeHandler(h)
     _CONFIGURED_ROOTS.discard(name)
+

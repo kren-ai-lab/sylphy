@@ -18,6 +18,7 @@ class KMersEncoders(Encoders):
         dataset: pd.DataFrame | None = None,
         sequence_column: str | None = "sequence",
         size_kmer: int = 3,
+        *,
         allow_extended: bool = False,
         allow_unknown: bool = False,
         debug: bool = False,

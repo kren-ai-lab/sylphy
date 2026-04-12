@@ -47,7 +47,7 @@ def _detect_cuda_available() -> bool:
     Returns False if torch cannot be imported.
     """
     try:
-        import torch
+        import torch  # noqa: PLC0415
 
         return bool(getattr(torch, "cuda", None)) and torch.cuda.is_available()
     except Exception:

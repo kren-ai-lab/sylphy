@@ -74,7 +74,7 @@ def clear_registry() -> None:
         logger.debug("Registry cleared")
 
 
-def list_registered_models(include_aliases: bool = False) -> list[str]:
+def list_registered_models(*, include_aliases: bool = False) -> list[str]:
     """List registered model names.
 
     Parameters
@@ -191,7 +191,7 @@ def _split_org_model(ref: str) -> tuple[str, str]:
 def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
     """Download a model snapshot into `dst` using huggingface_hub with a local cache."""
     try:
-        from huggingface_hub import snapshot_download
+        from huggingface_hub import snapshot_download  # noqa: PLC0415
     except Exception as e:  # pragma: no cover
         msg = (
             "huggingface_hub is required to download models from HF. "
@@ -216,12 +216,12 @@ def _download_other(ref: str, dst: Path) -> None:
     - If `ref` is a local path, copy its contents into `dst`.
     - Else treat `ref` as a URL and download; if archive, extract.
     """
-    import shutil
-    import tarfile
-    import zipfile
-    from urllib.parse import urlparse
+    import shutil  # noqa: PLC0415
+    import tarfile  # noqa: PLC0415
+    import zipfile  # noqa: PLC0415
+    from urllib.parse import urlparse  # noqa: PLC0415
 
-    import requests
+    import requests  # noqa: PLC0415
 
     p = Path(ref).expanduser()
     if p.exists():

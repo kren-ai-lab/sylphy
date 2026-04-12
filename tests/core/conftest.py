@@ -10,10 +10,11 @@ from sylphy.core.model_registry import clear_registry
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
-def _isolate_env_and_registry(monkeypatch, tmp_path) -> Iterator[None]:
+def _isolate_env_and_registry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[None]:
     """Isolate environment variables, cache, and model registry for each test."""
     for key in list(os.environ.keys()):
         if key.startswith(("SYLPHY_LOG_", "SYLPHY_MODEL_")):

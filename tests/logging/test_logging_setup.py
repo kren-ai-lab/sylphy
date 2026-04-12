@@ -31,13 +31,13 @@ def _find_console_handler(logger: logging.Logger) -> logging.Handler | None:
     return None
 
 
-def _read_console(capsys) -> tuple[str, str, str]:
+def _read_console(capsys: CaptureFixture[str]) -> tuple[str, str, str]:
     cap = capsys.readouterr()
     both = (cap.out or "") + (cap.err or "")
     return cap.out, cap.err, both
 
 
-def test_setup_logger_idempotent(monkeypatch, tmp_path) -> None:
+def test_setup_logger_idempotent(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     log_path = tmp_path / "idempotent.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -56,7 +56,7 @@ def test_setup_logger_idempotent(monkeypatch, tmp_path) -> None:
     assert log_path.parent.exists()
 
 
-def test_env_level_override(monkeypatch, tmp_path, capsys) -> None:
+def test_env_level_override(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
     """
     If a console handler exists, ensure ERROR messages are visible.
     Some implementations do not apply SYLPHY_LOG_LEVEL to the console handler;
@@ -87,7 +87,7 @@ def test_env_level_override(monkeypatch, tmp_path, capsys) -> None:
     # ignore SYLPHY_LOG_LEVEL for the console handler and inherit logger level instead.
 
 
-def test_json_console_output_and_stderr(monkeypatch, tmp_path, capsys) -> None:
+def test_json_console_output_and_stderr(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
     log_path = tmp_path / "jsonconsole.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "1")
@@ -116,7 +116,7 @@ def test_json_console_output_and_stderr(monkeypatch, tmp_path, capsys) -> None:
     assert PKG_LOGGER_NAME in payload.get("name", PKG_LOGGER_NAME)
 
 
-def test_file_handler_writes_and_rotates(monkeypatch, tmp_path) -> None:
+def test_file_handler_writes_and_rotates(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     log_path = tmp_path / "rotate.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     # Try to force rotation if supported
@@ -140,7 +140,7 @@ def test_file_handler_writes_and_rotates(monkeypatch, tmp_path) -> None:
         assert log_path.stat().st_size > 0
 
 
-def test_console_formatter_utc_suffix(monkeypatch, tmp_path, capsys) -> None:
+def test_console_formatter_utc_suffix(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
     log_path = tmp_path / "utc.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "0")
@@ -163,7 +163,7 @@ def test_console_formatter_utc_suffix(monkeypatch, tmp_path, capsys) -> None:
     # assert "Z" in line or True
 
 
-def test_add_context_injection_with_json(monkeypatch, tmp_path, capsys) -> None:
+def test_add_context_injection_with_json(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
     log_path = tmp_path / "ctx.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "1")
@@ -190,7 +190,7 @@ def test_add_context_injection_with_json(monkeypatch, tmp_path, capsys) -> None:
     # if "project" in payload: assert payload["project"] == "pr"
 
 
-def test_reset_logging_removes_handlers(monkeypatch, tmp_path) -> None:
+def test_reset_logging_removes_handlers(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     log_path = tmp_path / "reset.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -207,7 +207,7 @@ def test_reset_logging_removes_handlers(monkeypatch, tmp_path) -> None:
     assert _count_handlers(lg3) >= 1
 
 
-def test_get_logger_lazy_config(monkeypatch, tmp_path) -> None:
+def test_get_logger_lazy_config(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     log_path = tmp_path / "lazy.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -231,7 +231,7 @@ def test_silence_external_changes_level() -> None:
     assert logging.getLogger("urllib3").level >= logging.WARNING
 
 
-def test_global_disable(monkeypatch, tmp_path, capsys) -> None:
+def test_global_disable(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
     log_path = tmp_path / "disable.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     # If your implementation honors this flag, great; if not, the test still works

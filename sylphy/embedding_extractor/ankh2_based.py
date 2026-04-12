@@ -13,21 +13,23 @@ from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from .embedding_based import EmbeddingBased
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from sylphy.types import PrecisionType
 
 
 class Ankh2BasedEmbedding(EmbeddingBased):
     def __init__(
         self,
-        dataset,
+        dataset: pd.DataFrame,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "ElnaggarLab/ankh2-ext1",
         name_tokenizer: str = "ElnaggarLab/ankh2-ext1",
         column_seq: str = "sequence",
-        use_encoder_only: bool = True,
-        debug: bool = False,
         debug_mode: int = logging.INFO,
         *,
+        use_encoder_only: bool = True,
+        debug: bool = False,
         precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
     ) -> None:
@@ -39,10 +41,10 @@ class Ankh2BasedEmbedding(EmbeddingBased):
             provider="huggingface",
             revision=None,
             column_seq=column_seq,
-            debug=debug,
             debug_mode=debug_mode,
-            trust_remote_code=True,
             precision=precision,
+            debug=debug,
+            trust_remote_code=True,
             oom_backoff=oom_backoff,
         )
         self.use_encoder_only = use_encoder_only

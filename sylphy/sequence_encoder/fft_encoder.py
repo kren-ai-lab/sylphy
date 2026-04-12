@@ -30,6 +30,7 @@ class FFTEncoder:
         self,
         dataset: pd.DataFrame,
         sequence_column: str = "sequence",
+        *,
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:

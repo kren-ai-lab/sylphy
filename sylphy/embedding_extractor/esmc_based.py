@@ -35,12 +35,13 @@ class ESMCBasedEmbedding(EmbeddingBased):
         self,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "esmc_300m",
-        name_tokenizer: str | None = None,  # ignored for ESM-C
+        _name_tokenizer: str | None = None,  # ignored for ESM-C
         dataset: pd.DataFrame | None = None,
         column_seq: str | None = "sequence",
-        debug: bool = False,
         debug_mode: int = logging.INFO,
         precision: PrecisionType = "fp32",
+        *,
+        debug: bool = False,
         oom_backoff: bool = True,
     ) -> None:
         if dataset is None:
@@ -55,10 +56,10 @@ class ESMCBasedEmbedding(EmbeddingBased):
             provider="other",
             revision=None,
             column_seq=column_seq or "sequence",
-            debug=debug,
             debug_mode=debug_mode,
-            trust_remote_code=False,
             precision=precision,
+            debug=debug,
+            trust_remote_code=False,
             oom_backoff=oom_backoff,
         )
         self.requires_tokenizer = False
@@ -66,7 +67,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         self.model: ESMC | None = None  # explicit type for clarity
 
     # -------- utilities --------
-    def _has_hidden_states(self, hs) -> bool:
+    def _has_hidden_states(self, hs: object) -> bool:
         if hs is None:
             return False
         if isinstance(hs, (list, tuple)):

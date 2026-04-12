@@ -23,7 +23,7 @@ from sylphy.embedding_extractor.prot5_based import Prot5Based
         ("esmc_300m", ESMCBasedEmbedding),
     ],
 )
-def test_factory_selects_backend(model_name, cls) -> None:
+def test_factory_selects_backend(model_name: str, cls: type) -> None:
     """Verify factory routes model names to the correct backend class."""
     df = pd.DataFrame({"sequence": ["AAAA"]})
     inst = EmbeddingFactory(model_name=model_name, dataset=df, column_seq="sequence", name_device="cpu")

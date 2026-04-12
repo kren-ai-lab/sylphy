@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING
 
 import typer
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    import pandas as pd
 
 HELP_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+
 
 EXPORT_CHOICES = ("csv", "npy", "npz", "parquet")
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
@@ -29,7 +31,7 @@ def validate_choice(value: str, choices: tuple[str, ...], opt: str) -> str:
     return allowed[normalized]
 
 
-def load_csv(input_path: Path, seq_col: str):
+def load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
     """Lazy-load a CSV file and validate the requested sequence column."""
     if not input_path.exists():
         msg = f"Input file not found: {input_path}"
@@ -38,7 +40,7 @@ def load_csv(input_path: Path, seq_col: str):
         msg = "Only CSV is supported as input."
         raise typer.BadParameter(msg)
     try:
-        import pandas as pd
+        import pandas as pd  # noqa: PLC0415
     except Exception as exc:
         msg = "pandas is required to read CSV input."
         raise typer.BadParameter(msg) from exc

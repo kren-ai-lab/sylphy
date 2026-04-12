@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 from sylphy.cli.get_embeddings import app
 
 
-def test_get_embeddings_runs_and_saves_csv(tmp_path):
+def test_get_embeddings_runs_and_saves_csv(tmp_path) -> None:
     """Verify CLI extracts embeddings and saves to CSV with correct shape."""
     df = pd.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
     inp = tmp_path / "seqs.csv"
@@ -46,9 +46,9 @@ def test_get_embeddings_runs_and_saves_csv(tmp_path):
     assert "sequence" in got.columns
 
 
-def test_get_embeddings_oom_backoff_succeeds(tmp_path):
+def test_get_embeddings_oom_backoff_succeeds(tmp_path) -> None:
     """Verify that the CLI successfully processes sequences and calls the model."""
-    transformers_mod = cast(Any, sys.modules["transformers"])
+    transformers_mod = cast("Any", sys.modules["transformers"])
     _FakeModel = transformers_mod.AutoModel
     _FakeModel.OOM_THRESHOLD = None
     _FakeModel.FORWARD_CALLS = 0

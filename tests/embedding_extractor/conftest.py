@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @pytest.fixture(autouse=True)
@@ -13,7 +16,7 @@ def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
         if k.startswith("SYLPHY_LOG_"):
             monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(tmp_path / "embeddings.log"))
-    yield
+    return
 
 
 @pytest.fixture(autouse=True)
@@ -27,4 +30,4 @@ def _stub_resolve_model(tmp_path, monkeypatch) -> Iterator[None]:
     (local / "config.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(reg, "resolve_model", lambda name: local, raising=True)
     monkeypatch.setattr(embedding_based, "resolve_model", lambda name: local, raising=True)
-    yield
+    return

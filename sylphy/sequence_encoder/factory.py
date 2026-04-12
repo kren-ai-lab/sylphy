@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from sylphy.logging import add_context, get_logger
 
@@ -13,14 +13,17 @@ from .one_hot_encoder import OneHotEncoder
 from .ordinal_encoder import OrdinalEncoder
 from .physicochemical_encoder import PhysicochemicalEncoder
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 __all__ = [
     "Encoders",
-    "OrdinalEncoder",
-    "OneHotEncoder",
+    "FFTEncoder",
     "FrequencyEncoder",
     "KMersEncoders",
+    "OneHotEncoder",
+    "OrdinalEncoder",
     "PhysicochemicalEncoder",
-    "FFTEncoder",
     "create_encoder",
 ]
 
@@ -54,7 +57,7 @@ _ALIASES: dict[str, str] = {
 # Class map
 EncoderInstance = Encoders | FFTEncoder
 
-_CLASSES: dict[str, type[Encoders] | type[FFTEncoder]] = {
+_CLASSES: dict[str, type[Encoders | FFTEncoder]] = {
     "one_hot": OneHotEncoder,
     "ordinal": OrdinalEncoder,
     "frequency": FrequencyEncoder,
@@ -112,9 +115,12 @@ def _canonical(name: str) -> str:
     key = (name or "").strip().lower()
     if key in _ALIASES:
         return _ALIASES[key]
-    raise ValueError(
+    msg = (
         f"Unknown encoder '{name}'. "
         f"Available: {sorted(set(_ALIASES.values()))} (aliases supported: {sorted(_ALIASES.keys())})"
+    )
+    raise ValueError(
+        msg,
     )
 
 
@@ -128,8 +134,7 @@ def _filter_kwargs(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
 
 
 def create_encoder(name: str, **kwargs: Any) -> EncoderInstance:
-    """
-    Factory for sequence encoders with per-backend parameter filtering.
+    """Factory for sequence encoders with per-backend parameter filtering.
 
     Parameters
     ----------
@@ -145,11 +150,12 @@ def create_encoder(name: str, **kwargs: Any) -> EncoderInstance:
     -------
     Encoders
         An instance of the requested encoder.
+
     """
     kind = _canonical(name)
     cls = _CLASSES[kind]
     params = _filter_kwargs(kind, kwargs)
     _logger.info("Creating encoder kind=%s class=%s kwargs=%s", kind, cls.__name__, params)
     add_context(_logger, encoder=cls.__name__)  # enrich context once we know it
-    constructor = cast(Callable[..., EncoderInstance], cls)
+    constructor = cast("Callable[..., EncoderInstance]", cls)
     return constructor(**params)

@@ -40,8 +40,7 @@ _REGISTRY: dict[str, ModelSpec] = {}
 
 
 def register_model(spec: ModelSpec) -> None:
-    """
-    Register (or overwrite) a model spec by name.
+    """Register (or overwrite) a model spec by name.
 
     Thread-safe and idempotent per `name`.
     """
@@ -51,12 +50,11 @@ def register_model(spec: ModelSpec) -> None:
 
 
 def register_alias(alias: str, canonical: str) -> None:
-    """
-    Register an alias that resolves to an existing canonical name.
-    """
+    """Register an alias that resolves to an existing canonical name."""
     with _LOCK:
         if canonical not in _REGISTRY:
-            raise ModelNotFoundError(f"Cannot alias unknown model '{canonical}'")
+            msg = f"Cannot alias unknown model '{canonical}'"
+            raise ModelNotFoundError(msg)
         base = _REGISTRY[canonical]
         _REGISTRY[alias] = replace(base, name=alias, alias_of=canonical)
         logger.info("Registered alias '%s' -> '%s'", alias, canonical)
@@ -77,13 +75,13 @@ def clear_registry() -> None:
 
 
 def list_registered_models(include_aliases: bool = False) -> list[str]:
-    """
-    List registered model names.
+    """List registered model names.
 
     Parameters
     ----------
     include_aliases : bool, default=False
         If False, return only canonical names.
+
     """
     with _LOCK:
         names = [name for name, spec in _REGISTRY.items() if include_aliases or not spec.is_alias()]
@@ -91,17 +89,18 @@ def list_registered_models(include_aliases: bool = False) -> list[str]:
 
 
 def get_model_spec(name: str) -> ModelSpec:
-    """
-    Get the spec for a model or alias.
+    """Get the spec for a model or alias.
 
     Raises
     ------
     ModelNotFoundError
         If `name` is missing.
+
     """
     with _LOCK:
         if name not in _REGISTRY:
-            raise ModelNotFoundError(f"Unknown model '{name}'. Available: {sorted(_REGISTRY)}")
+            msg = f"Unknown model '{name}'. Available: {sorted(_REGISTRY)}"
+            raise ModelNotFoundError(msg)
         return _REGISTRY[name]
 
 
@@ -111,8 +110,7 @@ def get_model_spec(name: str) -> ModelSpec:
 
 
 def _env_override_path(name: str) -> Path | None:
-    """
-    Environment variable override for local model path.
+    """Environment variable override for local model path.
 
     The variable name is ``f"{_ENV_PREFIX}{name.upper().replace('-', '_')}"``.
     """
@@ -123,14 +121,14 @@ def _env_override_path(name: str) -> Path | None:
 
     p = Path(val).expanduser().resolve()
     if not p.exists():
-        raise FileNotFoundError(f"Environment override {key} points to non-existent path: {p}")
+        msg = f"Environment override {key} points to non-existent path: {p}"
+        raise FileNotFoundError(msg)
     logger.debug("Using environment override %s -> %s", key, p)
     return p
 
 
 def resolve_model(name: str) -> Path:
-    """
-    Resolve a model name to a local directory path, downloading if needed.
+    """Resolve a model name to a local directory path, downloading if needed.
 
     Resolution priority:
     1) Environment override (see :func:`_env_override_path`).
@@ -174,29 +172,33 @@ def resolve_model(name: str) -> Path:
             _download_other(spec.ref, local_dir)
             return local_dir
 
-        raise ValueError(f"Unsupported provider '{spec.provider}' for model '{name}'")
+        msg = f"Unsupported provider '{spec.provider}' for model '{name}'"
+        raise ValueError(msg)
 
     except Exception as e:
-        raise ModelDownloadError(f"Failed to resolve model '{name}': {e}") from e
+        msg = f"Failed to resolve model '{name}': {e}"
+        raise ModelDownloadError(msg) from e
 
 
 def _split_org_model(ref: str) -> tuple[str, str]:
     if "/" not in ref:
-        raise ValueError(f"Hugging Face ref must be 'org/model', got '{ref}'")
+        msg = f"Hugging Face ref must be 'org/model', got '{ref}'"
+        raise ValueError(msg)
     org, model = ref.split("/", 1)
     return org, model
 
 
 def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
-    """
-    Download a model snapshot into `dst` using huggingface_hub with a local cache.
-    """
+    """Download a model snapshot into `dst` using huggingface_hub with a local cache."""
     try:
         from huggingface_hub import snapshot_download
     except Exception as e:  # pragma: no cover
-        raise RuntimeError(
+        msg = (
             "huggingface_hub is required to download models from HF. "
             "Install with: pip install 'huggingface_hub>=0.23'"
+        )
+        raise RuntimeError(
+            msg,
         ) from e
 
     logger.info("Downloading HF model %s -> %s (rev=%s)", ref, dst, revision or "default")
@@ -209,8 +211,7 @@ def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
 
 
 def _download_other(ref: str, dst: Path) -> None:
-    """
-    Download or copy a non-HF model into `dst`.
+    """Download or copy a non-HF model into `dst`.
 
     - If `ref` is a local path, copy its contents into `dst`.
     - Else treat `ref` as a URL and download; if archive, extract.
@@ -238,7 +239,8 @@ def _download_other(ref: str, dst: Path) -> None:
 
     parsed = urlparse(ref)
     if not parsed.scheme:
-        raise ValueError(f"'other' provider ref is neither local path nor URL: {ref}")
+        msg = f"'other' provider ref is neither local path nor URL: {ref}"
+        raise ValueError(msg)
 
     tmp = dst / "download.tmp"
     logger.info("Downloading model from %s", ref)
@@ -272,42 +274,42 @@ def _init_default_registry() -> None:
             name="esm2_t6_8M_UR50D",
             provider="huggingface",
             ref="facebook/esm2_t6_8M_UR50D",
-        )
+        ),
     )
     register_model(
         ModelSpec(
             name="esm2_t12_35M_UR50D",
             provider="huggingface",
             ref="facebook/esm2_t12_35M_UR50D",
-        )
+        ),
     )
     register_model(
         ModelSpec(
             name="esm2_t30_150M_UR50D",
             provider="huggingface",
             ref="facebook/esm2_t30_150M_UR50D",
-        )
+        ),
     )
     register_model(
         ModelSpec(
             name="esm2_t33_650M_UR50D",
             provider="huggingface",
             ref="facebook/esm2_t33_650M_UR50D",
-        )
+        ),
     )
     register_model(
         ModelSpec(
             name="esm2_t36_3B_UR50D",
             provider="huggingface",
             ref="facebook/esm2_t36_3B_UR50D",
-        )
+        ),
     )
     register_model(
         ModelSpec(
             name="esm2_t48_15B_UR50D",
             provider="huggingface",
             ref="facebook/esm2_t48_15B_UR50D",
-        )
+        ),
     )
 
     # --- ProtT5 family ---
@@ -316,14 +318,14 @@ def _init_default_registry() -> None:
             name="prot_t5_xl_uniref50",
             provider="huggingface",
             ref="Rostlab/prot_t5_xl_uniref50",
-        )
+        ),
     )
     register_model(
         ModelSpec(
             name="prot_t5_xl_bfd",
             provider="huggingface",
             ref="Rostlab/prot_t5_xl_bfd",
-        )
+        ),
     )
 
     # --- ProtBERT ---
@@ -332,7 +334,7 @@ def _init_default_registry() -> None:
             name="prot_bert",
             provider="huggingface",
             ref="Rostlab/prot_bert",
-        )
+        ),
     )
 
     # --- ANKH2 ---
@@ -341,14 +343,14 @@ def _init_default_registry() -> None:
             name="ankh2_ext1",
             provider="huggingface",
             ref="ElnaggarLab/ankh2-ext1",
-        )
+        ),
     )
     register_model(
         ModelSpec(
             name="ankh2_large",
             provider="huggingface",
             ref="ElnaggarLab/ankh2-large",
-        )
+        ),
     )
 
     # --- Mistral-Prot ---
@@ -357,7 +359,7 @@ def _init_default_registry() -> None:
             name="mistral_prot_15m",
             provider="huggingface",
             ref="RaphaelMourad/Mistral-Prot-v1-15M",
-        )
+        ),
     )
 
 
@@ -365,14 +367,14 @@ def _init_default_registry() -> None:
 _init_default_registry()
 
 __all__ = [
-    "ModelRegistryError",
-    "ModelNotFoundError",
     "ModelDownloadError",
-    "register_model",
-    "register_alias",
-    "unregister",
+    "ModelNotFoundError",
+    "ModelRegistryError",
     "clear_registry",
-    "list_registered_models",
     "get_model_spec",
+    "list_registered_models",
+    "register_alias",
+    "register_model",
     "resolve_model",
+    "unregister",
 ]

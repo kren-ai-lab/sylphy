@@ -2,14 +2,17 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-import pandas as pd
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from sylphy.types import PrecisionType
-
 from .embedding_based import EmbeddingBased
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from sylphy.types import PrecisionType
 
 
 class MistralBasedEmbedding(EmbeddingBased):
@@ -26,7 +29,8 @@ class MistralBasedEmbedding(EmbeddingBased):
         oom_backoff: bool = True,
     ) -> None:
         if dataset is None:
-            raise ValueError("dataset must be provided")
+            msg = "dataset must be provided"
+            raise ValueError(msg)
 
         super().__init__(
             dataset=dataset,
@@ -50,7 +54,7 @@ class MistralBasedEmbedding(EmbeddingBased):
 
             self.__logger__.info("Loading Mistral tokenizer from: %s", local_dir)
             tokenizer = AutoTokenizer.from_pretrained(
-                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=False
+                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=False,
             )
             if getattr(tokenizer, "pad_token_id", None) is None:
                 tokenizer.add_special_tokens({"pad_token": "<pad>"})
@@ -75,6 +79,7 @@ class MistralBasedEmbedding(EmbeddingBased):
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         if not batch:
-            raise ValueError("Input batch is empty.")
+            msg = "Input batch is empty."
+            raise ValueError(msg)
         self.ensure_loaded()
         return self._forward_hidden_states(batch, max_length=max_length)

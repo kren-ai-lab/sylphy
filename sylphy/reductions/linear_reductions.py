@@ -3,10 +3,8 @@ from __future__ import annotations
 import inspect
 import logging
 import traceback
-from typing import Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
-import numpy as np
-import pandas as pd
 from sklearn.decomposition import (
     NMF,
     PCA,
@@ -22,6 +20,10 @@ from sklearn.decomposition import (
 
 from .reduction_methods import Preprocess, Reductions, ReturnType
 
+if TYPE_CHECKING:
+    import numpy as np
+    import pandas as pd
+
 
 class _SupportsFitTransform(Protocol):
     def fit_transform(self, X: Any, y: Any = None) -> np.ndarray: ...
@@ -31,8 +33,7 @@ ModelT = TypeVar("ModelT", bound=_SupportsFitTransform)
 
 
 class LinearReduction(Reductions):
-    """
-    Linear dimensionality reductions (PCA/ICA/NMF/LDA/etc.) with a consistent API.
+    """Linear dimensionality reductions (PCA/ICA/NMF/LDA/etc.) with a consistent API.
 
     All methods log their parameters and shapes, return either NumPy arrays or
     DataFrames depending on ``return_type``. For estimators where the trained model
@@ -79,7 +80,7 @@ class LinearReduction(Reductions):
     ) -> tuple[ModelT, np.ndarray | pd.DataFrame | None]:
         """Fit/transform wrapper with logging and error handling."""
         try:
-            params = getattr(model, "get_params", lambda: {})()
+            params = getattr(model, "get_params", dict)()
             self.__logger__.info("Applying %s with params=%s", method_name, params)
             transformed = model.fit_transform(self.dataset)
             k = (
@@ -110,7 +111,7 @@ class LinearReduction(Reductions):
         return self._apply_model(model, "SparsePCA", kwargs.get("n_components"))
 
     def apply_minibatch_sparse_pca(
-        self, **kwargs
+        self, **kwargs,
     ) -> tuple[MiniBatchSparsePCA, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(MiniBatchSparsePCA, kwargs)
         return self._apply_model(model, "MiniBatchSparsePCA", kwargs.get("n_components"))
@@ -137,7 +138,7 @@ class LinearReduction(Reductions):
         return self._apply_model(model, "MiniBatchNMF", kwargs.get("n_components"))
 
     def apply_latent_dirichlet_allocation(
-        self, **kwargs
+        self, **kwargs,
     ) -> tuple[LatentDirichletAllocation, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(LatentDirichletAllocation, kwargs)
         return self._apply_model(model, "LatentDirichletAllocation", kwargs.get("n_components"))

@@ -7,7 +7,7 @@ from sylphy import __version__
 from sylphy.cli.main import app
 
 
-def test_main_help_lists_subcommands():
+def test_main_help_lists_subcommands() -> None:
     """Verify main CLI help displays all subcommands."""
     runner = CliRunner()
     result = runner.invoke(app, ["--help"])
@@ -18,7 +18,7 @@ def test_main_help_lists_subcommands():
     assert "cache" in text
 
 
-def test_version_flag():
+def test_version_flag() -> None:
     """Verify --version flag displays version and exits."""
     runner = CliRunner()
     result = runner.invoke(app, ["--version"])

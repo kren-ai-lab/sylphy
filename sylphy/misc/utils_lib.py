@@ -6,9 +6,8 @@ import logging
 import os
 import shutil
 import uuid
-from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -16,14 +15,17 @@ from sklearn.metrics import pairwise_distances
 from sklearn.utils import shuffle
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
-from sylphy.types import FileFormat
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from sylphy.types import FileFormat
 
 _LOG = logging.getLogger("sylphy.misc.utils")
 
 
 class UtilsLib:
-    """
-    Utility collection for common data manipulation tasks used across the library.
+    """Utility collection for common data manipulation tasks used across the library.
 
     Features
     --------
@@ -36,6 +38,7 @@ class UtilsLib:
     Notes
     -----
     The methods are class methods to allow use without instantiation and to facilitate testing.
+
     """
 
     # -------------------------------------------------------------------------
@@ -53,8 +56,7 @@ class UtilsLib:
         replace: bool = False,
         random_state: int | None = 42,
     ) -> pd.DataFrame:
-        """
-        Randomly select rows from a DataFrame with optional stratification.
+        """Randomly select rows from a DataFrame with optional stratification.
 
         Parameters
         ----------
@@ -85,15 +87,17 @@ class UtilsLib:
         ValueError
             If `label_name` is provided but not found in `df`.
             If `labels` contains values not present in `df[label_name]`.
+
         """
         if label_name is None:
             _LOG.info("Sampling without stratification (n=%d).", n_samples)
-            shuffled = cast(pd.DataFrame, shuffle(df, random_state=random_state))
+            shuffled = cast("pd.DataFrame", shuffle(df, random_state=random_state))
             return shuffled.head(n_samples)
 
         if label_name not in df.columns:
             _LOG.error("Label column '%s' not found.", label_name)
-            raise ValueError(f"Label column '{label_name}' not found in DataFrame.")
+            msg = f"Label column '{label_name}' not found in DataFrame."
+            raise ValueError(msg)
 
         # Determine the set of labels to consider
         present = pd.unique(df[label_name])
@@ -103,7 +107,8 @@ class UtilsLib:
             unknown = [lab for lab in labels if lab not in present]
             if unknown:
                 _LOG.error("Unknown labels for '%s': %s", label_name, unknown)
-                raise ValueError(f"The following labels were not found in column '{label_name}': {unknown}")
+                msg = f"The following labels were not found in column '{label_name}': {unknown}"
+                raise ValueError(msg)
             use_labels = list(labels)
 
         # Per-label sampling
@@ -131,8 +136,8 @@ class UtilsLib:
             return df.iloc[0:0].copy()
 
         # Initial allocation
-        counts_any = cast(Any, counts)
-        alloc = cast(pd.Series, (counts_any / total * n_samples).round().astype(int))
+        counts_any = cast("Any", counts)
+        alloc = cast("pd.Series", (counts_any / total * n_samples).round().astype(int))
         # Ensure at least 1 for present labels when possible
         alloc = alloc.mask((counts > 0) & (alloc == 0), 1)
         # Adjust to match exactly n_samples
@@ -201,8 +206,7 @@ class UtilsLib:
         metric_params: dict[str, Any] | None = None,
         n_jobs: int | None = None,
     ) -> np.ndarray:
-        """
-        Compute pairwise distances between rows of a numeric matrix.
+        """Compute pairwise distances between rows of a numeric matrix.
 
         Parameters
         ----------
@@ -229,12 +233,15 @@ class UtilsLib:
         ValueError
             If input is not 2D, contains non-finite values (when required),
             or if `metric` is unsupported.
+
         """
         if not isinstance(matrix_data, np.ndarray):
             _LOG.error("Input must be a NumPy ndarray.")
-            raise TypeError("Input must be a NumPy ndarray.")
+            msg = "Input must be a NumPy ndarray."
+            raise TypeError(msg)
         if matrix_data.ndim != 2:
-            raise ValueError(f"matrix_data must be 2D; got shape {matrix_data.shape}")
+            msg = f"matrix_data must be 2D; got shape {matrix_data.shape}"
+            raise ValueError(msg)
 
         supported_metrics = {
             "cityblock",
@@ -264,7 +271,8 @@ class UtilsLib:
         }
         if metric not in supported_metrics:
             _LOG.error("Unsupported metric '%s'.", metric)
-            raise ValueError(f"Unsupported metric '{metric}'. Must be one of: {sorted(supported_metrics)}")
+            msg = f"Unsupported metric '{metric}'. Must be one of: {sorted(supported_metrics)}"
+            raise ValueError(msg)
 
         params: dict[str, Any] = dict(metric_params or {})
 
@@ -286,8 +294,9 @@ class UtilsLib:
 
         # Most metrics expect finite values (except specialized ones like nan_euclidean).
         if metric != "nan_euclidean" and not np.isfinite(matrix_data).all():
+            msg = "matrix_data contains non-finite values; consider 'nan_euclidean' or clean the data."
             raise ValueError(
-                "matrix_data contains non-finite values; consider 'nan_euclidean' or clean the data."
+                msg,
             )
 
         _LOG.info("Computing pairwise distances with metric '%s'.", metric)
@@ -298,8 +307,7 @@ class UtilsLib:
     # -------------------------------------------------------------------------
     @classmethod
     def create_jobid(cls, prefix: str | None = None) -> str:
-        """
-        Create a unique job identifier composed of an UTC timestamp and a shortened UUID.
+        """Create a unique job identifier composed of an UTC timestamp and a shortened UUID.
 
         Parameters
         ----------
@@ -311,8 +319,9 @@ class UtilsLib:
         str
             Identifier like: '20250101T120305123456Z-abcdef123456' or with prefix
             'encoder-20250101T120305123456Z-abcdef123456'.
+
         """
-        now = dt.datetime.now(dt.timezone.utc)
+        now = dt.datetime.now(dt.UTC)
         ts = now.strftime("%Y%m%dT%H%M%S%fZ")
         jid = f"{ts}-{uuid.uuid4().hex[:12]}"
         if prefix:
@@ -328,8 +337,7 @@ class UtilsLib:
         missing_ok: bool = True,
         restrict_to: Path | None = None,
     ) -> bool:
-        """
-        Safely delete a folder tree with guardrails.
+        """Safely delete a folder tree with guardrails.
 
         Parameters
         ----------
@@ -350,6 +358,7 @@ class UtilsLib:
         ------
         ValueError
             If the target path is unsafe (e.g., root) or outside `restrict_to`.
+
         """
         folder = Path(path_to_folder).expanduser().resolve()
 
@@ -360,25 +369,29 @@ class UtilsLib:
             forbidden.add(Path(os.environ.get("SystemDrive", "C:") + "\\").resolve())
 
         if folder in forbidden or str(folder).strip() in {"", ".", ".."}:
-            raise ValueError(f"Refusing to delete unsafe path: {folder}")
+            msg = f"Refusing to delete unsafe path: {folder}"
+            raise ValueError(msg)
 
         if restrict_to is not None:
             base = Path(restrict_to).expanduser().resolve()
             try:
                 folder.relative_to(base)
             except Exception as exc:
+                msg = f"Refusing to delete outside of restricted base: {base} (target: {folder})"
                 raise ValueError(
-                    f"Refusing to delete outside of restricted base: {base} (target: {folder})"
+                    msg,
                 ) from exc
 
         if not folder.exists():
             if missing_ok:
                 _LOG.info("Folder does not exist, nothing to delete: %s", folder)
                 return False
-            raise ValueError(f"Folder not found: {folder}")
+            msg = f"Folder not found: {folder}"
+            raise ValueError(msg)
 
         if not folder.is_dir():
-            raise ValueError(f"Not a directory: {folder}")
+            msg = f"Not a directory: {folder}"
+            raise ValueError(msg)
 
         shutil.rmtree(folder)
         _LOG.info("Deleted folder: %s", folder)
@@ -397,8 +410,7 @@ class UtilsLib:
         file_format: FileFormat | None = None,
         overwrite: bool = True,
     ) -> Path:
-        """
-        Persist an encoded table to disk.
+        """Persist an encoded table to disk.
 
         Parameters
         ----------
@@ -424,18 +436,20 @@ class UtilsLib:
             If the format is unsupported.
         FileExistsError
             If `overwrite=False` and destination exists.
+
         """
         dest = Path(path).expanduser()
         suffix = dest.suffix.lower()
         if file_format is None:
             if suffix in {".csv", ".npy", ".npz", ".parquet"}:
-                file_format = cast(FileFormat, suffix.lstrip("."))
+                file_format = cast("FileFormat", suffix.lstrip("."))
             else:
                 file_format = "csv"
 
         dest.parent.mkdir(parents=True, exist_ok=True)
         if dest.exists() and not overwrite:
-            raise FileExistsError(f"Destination exists: {dest}")
+            msg = f"Destination exists: {dest}"
+            raise FileExistsError(msg)
 
         try:
             if file_format == "csv":
@@ -457,7 +471,8 @@ class UtilsLib:
                 _LOG.info("%s exported to Parquet: %s", base_message, dest)
 
             else:
-                raise ValueError(f"Unsupported file format '{file_format}'.")
+                msg = f"Unsupported file format '{file_format}'."
+                raise ValueError(msg)
         except Exception as e:
             wrapped = wrap_optional_dependency_error(
                 e,

@@ -21,7 +21,7 @@ def version_callback(value: bool) -> None:
     """Show version and exit."""
     if value:
         typer.echo(f"sylphy {__version__}")
-        raise typer.Exit()
+        raise typer.Exit
 
 
 @app.callback()
@@ -36,7 +36,6 @@ def main(
     ),
 ) -> None:
     """Sylphy CLI main callback."""
-    pass
 
 
 # Cache management

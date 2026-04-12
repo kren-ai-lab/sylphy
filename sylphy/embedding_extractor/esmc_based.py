@@ -1,8 +1,9 @@
 # sylphy/embedding_extraction/esmc_based.py
 from __future__ import annotations
 
+import contextlib
 import logging
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -11,20 +12,23 @@ from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
 from tqdm import tqdm
 
-from sylphy.types import PrecisionType
-
 from .embedding_based import EmbeddingBased, LayerAgg, LayerSpec, Pool  # types & semantics
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from sylphy.types import PrecisionType
 
 
 class ESMCBasedEmbedding(EmbeddingBased):
-    """
-    ESM-C backend using Meta's ESM SDK.
+    """ESM-C backend using Meta's ESM SDK.
 
     Notes
     -----
     - ESMC exposes embeddings and (optionally) hidden states via LogitsConfig.
     - We provide per-sequence embedding with optional layer selection/aggregation.
     - No HuggingFace tokenizer is required for ESM-C.
+
     """
 
     def __init__(
@@ -40,7 +44,8 @@ class ESMCBasedEmbedding(EmbeddingBased):
         oom_backoff: bool = True,
     ) -> None:
         if dataset is None:
-            raise ValueError("dataset must be provided")
+            msg = "dataset must be provided"
+            raise ValueError(msg)
 
         super().__init__(
             dataset=dataset,
@@ -84,7 +89,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
             except Exception:
                 local_dir = None
 
-            load_ref = local_dir if local_dir else self.name_model
+            load_ref = local_dir or self.name_model
             self.__logger__.info("Loading ESM-C from: %s on device=%s", load_ref, self.device)
             mdl = ESMC.from_pretrained(load_ref)
             mdl.to(self.device)  # move to device
@@ -106,10 +111,9 @@ class ESMCBasedEmbedding(EmbeddingBased):
         *,
         return_hidden_states: bool,
     ) -> tuple[torch.Tensor | None, Sequence[torch.Tensor] | None]:
-        """
-        Encode one sequence. Returns:
-          - embeddings: (1, L, H) or None
-          - hidden_states: list of (1, L, H) or None
+        """Encode one sequence. Returns:
+        - embeddings: (1, L, H) or None
+        - hidden_states: list of (1, L, H) or None.
         """
         try:
             self.ensure_loaded()
@@ -148,8 +152,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
     ) -> pd.DataFrame:
-        """
-        Embed all sequences with ESM-C and return pooled embeddings per sequence.
+        """Embed all sequences with ESM-C and return pooled embeddings per sequence.
 
         Parameters
         ----------
@@ -161,14 +164,17 @@ class ESMCBasedEmbedding(EmbeddingBased):
             Aggregation across selected layers (ignored if hidden states unavailable).
         pool : {"mean","cls","eos"}
             Token pooling strategy.
+
         """
         # Ensure model is loaded (idempotent)
         self.ensure_loaded()
 
         if self.dataset is None:
-            raise ValueError("Dataset is not loaded.")
+            msg = "Dataset is not loaded."
+            raise ValueError(msg)
         if self.column_seq not in self.dataset.columns:
-            raise ValueError(f"Column '{self.column_seq}' not found in dataset.")
+            msg = f"Column '{self.column_seq}' not found in dataset."
+            raise ValueError(msg)
 
         sequences: list[str] = self.dataset[self.column_seq].astype(str).tolist()
         if seq_len is not None:
@@ -183,8 +189,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         )
 
         current_bs: int = int(batch_size)
-        if current_bs < 1:
-            current_bs = 1
+        current_bs = max(current_bs, 1)
         out_vecs: list[np.ndarray] = []
         i: int = 0
 
@@ -232,20 +237,18 @@ class ESMCBasedEmbedding(EmbeddingBased):
                 if not (self.oom_backoff and is_oom and current_bs > 1 and self.device.type == "cuda"):
                     raise
                 new_bs = current_bs // 2
-                if new_bs < 1:
-                    new_bs = 1
+                new_bs = max(new_bs, 1)
                 self.__logger__.warning("OOM at idx %d. Reducing batch size %d → %d.", i, current_bs, new_bs)
                 current_bs = new_bs
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
-                    try:
+                    with contextlib.suppress(Exception):
                         torch.cuda.reset_peak_memory_stats()
-                    except Exception:
-                        pass
                 continue
 
         if not out_vecs:
-            raise RuntimeError("No embeddings generated with ESM-C.")
+            msg = "No embeddings generated with ESM-C."
+            raise RuntimeError(msg)
 
         # Release GPU memory
         self.release_resources()

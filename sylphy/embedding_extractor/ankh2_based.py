@@ -2,16 +2,18 @@
 from __future__ import annotations
 
 import logging
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import torch
-import torch.nn as nn
+from torch import nn
 from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
-from sylphy.types import PrecisionType
 
 from .embedding_based import EmbeddingBased
+
+if TYPE_CHECKING:
+    from sylphy.types import PrecisionType
 
 
 class Ankh2BasedEmbedding(EmbeddingBased):
@@ -53,7 +55,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
 
             self.__logger__.info("Loading Ankh2 tokenizer from: %s", local_dir)
             self.tokenizer = AutoTokenizer.from_pretrained(
-                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=True
+                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=True,
             )
             if getattr(self.tokenizer, "pad_token_id", None) is None:
                 if getattr(self.tokenizer, "pad_token", None) is None:
@@ -65,7 +67,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
 
             self.__logger__.info("Loading Ankh2 encoder from: %s on device=%s", local_dir, self.device)
             model = T5EncoderModel.from_pretrained(local_dir, trust_remote_code=True)  # type: ignore[possibly-missing-attribute]
-            cast(nn.Module, model).to(self.device)
+            cast("nn.Module", model).to(self.device)
             self.model = model
 
             model.eval()
@@ -95,13 +97,15 @@ class Ankh2BasedEmbedding(EmbeddingBased):
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         if not batch:
-            raise ValueError("Input batch is empty.")
+            msg = "Input batch is empty."
+            raise ValueError(msg)
         self.ensure_loaded()
 
         tokenizer = self.tokenizer
         model = self.model
         if tokenizer is None or model is None:
-            raise RuntimeError("Tokenizer/model not loaded.")
+            msg = "Tokenizer/model not loaded."
+            raise RuntimeError(msg)
 
         enc = tokenizer(
             batch,
@@ -122,17 +126,16 @@ class Ankh2BasedEmbedding(EmbeddingBased):
                     out = model.encoder(input_ids=enc["input_ids"], output_hidden_states=True)
             else:
                 out = model.encoder(input_ids=enc["input_ids"], output_hidden_states=True)
-        else:
-            if use_amp:
-                with torch.autocast(device_type="cuda", dtype=amp_dtype):
-                    out = model(**enc, output_hidden_states=True)
-            else:
+        elif use_amp:
+            with torch.autocast(device_type="cuda", dtype=amp_dtype):
                 out = model(**enc, output_hidden_states=True)
+        else:
+            out = model(**enc, output_hidden_states=True)
 
         hs = (
             out.hidden_states if getattr(out, "hidden_states", None) is not None else (out.last_hidden_state,)
         )
-        attn = enc.get("attention_mask", None)
+        attn = enc.get("attention_mask")
         if attn is None:
             pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else 0
             attn = enc["input_ids"].ne(pad_id).to(hs[0].dtype)

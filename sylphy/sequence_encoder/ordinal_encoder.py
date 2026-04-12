@@ -11,8 +11,7 @@ from .base_encoder import Encoders
 
 
 class OrdinalEncoder(Encoders):
-    """
-    Ordinally encode residues as their index in the selected amino-acid alphabet,
+    """Ordinally encode residues as their index in the selected amino-acid alphabet,
     zero-padding up to `max_length`.
     """
 
@@ -50,7 +49,7 @@ class OrdinalEncoder(Encoders):
                         r,
                         extended=(self.allow_extended or self.allow_unknown),
                         allow_unknown=self.allow_unknown,
-                    )
+                    ),
                 )
             except Exception:
                 coded.append(0)
@@ -66,7 +65,7 @@ class OrdinalEncoder(Encoders):
         try:
             self.__logger__.info("Starting ordinal encoding for %d sequences.", len(self.dataset))
             matrix = [
-                self.__encode_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                self.__encode_sequence(cast("str", self.dataset.at[i, self.sequence_column]))
                 for i in self.dataset.index
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])

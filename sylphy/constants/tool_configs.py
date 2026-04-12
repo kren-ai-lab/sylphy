@@ -43,8 +43,7 @@ def default_cache_paths() -> CachePaths:
 
 
 def _detect_cuda_available() -> bool:
-    """
-    Best-effort CUDA availability check without hard dependency on torch.
+    """Best-effort CUDA availability check without hard dependency on torch.
     Returns False if torch cannot be imported.
     """
     try:
@@ -56,8 +55,7 @@ def _detect_cuda_available() -> bool:
 
 
 def _default_device() -> str:
-    """
-    Default device to use for model-backed features.
+    """Default device to use for model-backed features.
     Priority:
       1) Respect SYLPHY_DEVICE if set (e.g., 'cpu', 'cuda').
       2) Use 'cuda' only if available.
@@ -74,9 +72,7 @@ def _default_device() -> str:
 
 @dataclass
 class ToolConfig:
-    """
-    Global configuration container for sylphy runtime.
-    """
+    """Global configuration container for sylphy runtime."""
 
     cache_paths: CachePaths = field(default_factory=default_cache_paths)
     debug: bool = False
@@ -90,8 +86,7 @@ _GLOBAL: ToolConfig | None = None
 
 
 def get_config() -> ToolConfig:
-    """
-    Return the global ToolConfig, creating it on first use.
+    """Return the global ToolConfig, creating it on first use.
     Ensures cache directories exist.
     """
     global _GLOBAL
@@ -102,8 +97,7 @@ def get_config() -> ToolConfig:
 
 
 def set_config(cfg: ToolConfig) -> None:
-    """
-    Replace the global ToolConfig with a custom instance.
+    """Replace the global ToolConfig with a custom instance.
     Ensures cache directories exist.
     """
     global _GLOBAL

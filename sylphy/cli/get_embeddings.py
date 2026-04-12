@@ -1,4 +1,4 @@
-"""sylphy/cli/get_embeddings.py
+"""sylphy/cli/get_embeddings.py.
 
 Unified CLI to extract protein/peptide embeddings from pretrained models
 (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C), using Sylphy's
@@ -20,8 +20,7 @@ Backends are selected by the factory from the model name. See:
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import typer
 
@@ -34,7 +33,11 @@ from sylphy.cli._shared import (
     load_csv,
     validate_choice,
 )
-from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
 
 app = typer.Typer(
     name="get-embedding",
@@ -174,7 +177,7 @@ def get_embedding(
     debug: bool = DEBUG_OPTION,
     log_level: str = LOG_LEVEL_OPTION,
 ) -> None:
-    """Extract embeddings and export them to disk using the chosen format.
+    r"""Extract embeddings and export them to disk using the chosen format.
 
     Notes
     -----
@@ -195,14 +198,15 @@ def get_embedding(
     sylphy get-embedding \\
       -m ElnaggarLab/ankh2-ext1 -i data/demo.csv -o results/emb_ankh \\
       -f csv --layers all --layer-agg sum --pool cls
+
     """
     try:
         # Cheap validations first (keep startup fast)
         device_v = validate_choice(device, DEVICE_CHOICES, "device")
-        precision_v = cast(PrecisionType, validate_choice(precision, PRECISION_CHOICES, "precision"))
-        pool_v = cast(PoolType, validate_choice(pool, POOL_CHOICES, "pool"))
-        layer_agg_v = cast(LayerAggType, validate_choice(layer_agg, LAYER_AGG_CHOICES, "layer-agg"))
-        fmt_v = cast(FileFormat, validate_choice(format_output, EXPORT_CHOICES, "format-output"))
+        precision_v = cast("PrecisionType", validate_choice(precision, PRECISION_CHOICES, "precision"))
+        pool_v = cast("PoolType", validate_choice(pool, POOL_CHOICES, "pool"))
+        layer_agg_v = cast("LayerAggType", validate_choice(layer_agg, LAYER_AGG_CHOICES, "layer-agg"))
+        fmt_v = cast("FileFormat", validate_choice(format_output, EXPORT_CHOICES, "format-output"))
         lvl = level_from_str(log_level)
 
         # CSV → DataFrame (lazy pandas)
@@ -221,8 +225,9 @@ def get_embedding(
                 else:
                     layers_spec = int(ls)
             except ValueError:
+                msg = "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | comma-separated integers."
                 raise typer.BadParameter(
-                    "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | comma-separated integers."
+                    msg,
                 ) from None
 
         # Lazy import: factory chooses backend based on model name.

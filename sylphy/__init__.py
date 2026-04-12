@@ -30,17 +30,17 @@ from .core import (  # noqa: E402
 )
 
 __all__ = [
-    "__version__",
     # core API
     "ModelSpec",
-    "register_model",
-    "register_alias",
-    "unregister",
+    "__version__",
     "clear_registry",
-    "list_registered_models",
-    "get_model_spec",
-    "resolve_model",
     "get_config",
+    "get_model_spec",
+    "list_registered_models",
+    "register_alias",
+    "register_model",
+    "resolve_model",
     "set_cache_root",
     "temporary_cache_root",
+    "unregister",
 ]

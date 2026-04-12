@@ -1,19 +1,22 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
 from sylphy.constants import residues
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
-from sylphy.types import FileFormat
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from sylphy.types import FileFormat
 
 
 class Encoders:
-    """
-    Common pre-processing and validation for protein/peptide sequence encoders.
+    """Common pre-processing and validation for protein/peptide sequence encoders.
 
     This class validates the input alphabet and maximum length constraints,
     preserving selected columns for downstream encoders.
@@ -57,6 +60,7 @@ class Encoders:
         Whether 'X' is allowed when not using extended alphabet.
     __logger__ : logging.Logger
         Child logger for this encoder.
+
     """
 
     def __init__(
@@ -143,7 +147,8 @@ class Encoders:
             self.__logger__.info("Filtered sequences outside alphabet: %d removed.", removed)
         except Exception as exc:
             self.__logger__.exception("[ERROR] Failed during alphabet validation.")
-            raise RuntimeError("Failed during alphabet validation.") from exc
+            msg = "Failed during alphabet validation."
+            raise RuntimeError(msg) from exc
 
     def process_length_sequences(self) -> None:
         """Filter out sequences longer than `max_length`."""
@@ -156,7 +161,8 @@ class Encoders:
             self.__logger__.info("Filtered long sequences: %d removed.", removed)
         except Exception as exc:
             self.__logger__.exception("[ERROR] Failed during length validation.")
-            raise RuntimeError("Failed during length validation.") from exc
+            msg = "Failed during length validation."
+            raise RuntimeError(msg) from exc
 
     # ----------------------------
     # IO
@@ -164,7 +170,8 @@ class Encoders:
 
     def run_process(self) -> None:
         """Subclasses must implement their encoding routine."""
-        raise NotImplementedError("Encoders subclasses must implement run_process().")
+        msg = "Encoders subclasses must implement run_process()."
+        raise NotImplementedError(msg)
 
     def export_encoder(
         self,

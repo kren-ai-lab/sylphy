@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -9,17 +9,21 @@ from scipy.fft import fft
 
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
-from sylphy.types import FileFormat
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from sylphy.types import FileFormat
 
 
 class FFTEncoder:
-    """
-    Apply FFT to each numeric row (after removing the `sequence_column`).
+    """Apply FFT to each numeric row (after removing the `sequence_column`).
 
     Notes
     -----
     Expects a numeric matrix in the dataframe except for the `sequence_column`,
     which is preserved and re-attached to the output.
+
     """
 
     def __init__(
@@ -89,7 +93,8 @@ class FFTEncoder:
             self.__logger__.info("FFT encoding complete. Output shape: %s", self.coded_dataset.shape)
         except Exception as e:
             self.__logger__.error("Failed to encode dataset with FFT: %s", e)
-            raise RuntimeError("FFT encoding failed.") from e
+            msg = "FFT encoding failed."
+            raise RuntimeError(msg) from e
 
     def run_process(self) -> None:
         """Convenience to mirror other encoders."""
@@ -104,7 +109,8 @@ class FFTEncoder:
     ) -> None:
         data = df_encoder if df_encoder is not None else self.coded_dataset
         if data is None:
-            raise ValueError("No encoded FFT dataset available for export.")
+            msg = "No encoded FFT dataset available for export."
+            raise ValueError(msg)
 
         UtilsLib.export_data(
             df_encoded=data,

@@ -1,11 +1,12 @@
 # sylphy/embedding_extraction/embedding_based.py
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -24,8 +25,7 @@ LayerSpec = str | int | Sequence[int]
 
 
 class EmbeddingBased:
-    """
-    Base class for embedding extraction from protein sequences.
+    """Base class for embedding extraction from protein sequences.
 
     Supports:
     - HuggingFace-style backends (model + tokenizer).
@@ -63,7 +63,7 @@ class EmbeddingBased:
         self.revision = revision
 
         self._device: Any = torch.device(
-            name_device if torch.cuda.is_available() and name_device == "cuda" else "cpu"
+            name_device if torch.cuda.is_available() and name_device == "cuda" else "cpu",
         )
         self.trust_remote_code = trust_remote_code
         self.precision = precision
@@ -91,7 +91,7 @@ class EmbeddingBased:
 
     @property
     def device(self) -> torch.device:
-        return cast(torch.device, self._device)
+        return cast("torch.device", self._device)
 
     @staticmethod
     def _wire_cache_envs(root: Path) -> None:
@@ -115,8 +115,7 @@ class EmbeddingBased:
     # ---------------------------------------------------------------------
 
     def _register_and_resolve(self) -> str:
-        """
-        Resolve the model via the registry. If missing and provider is HF
+        """Resolve the model via the registry. If missing and provider is HF
         and `name_model` looks like 'org/model', register it, then resolve.
         Returns a local directory path to the model.
         """
@@ -131,9 +130,7 @@ class EmbeddingBased:
             raise
 
     def load_hf_tokenizer_and_model(self) -> None:
-        """
-        Load tokenizer and model from local cache/registry into `self.device`.
-        """
+        """Load tokenizer and model from local cache/registry into `self.device`."""
         try:
             local_dir = self._register_and_resolve()
 
@@ -181,8 +178,7 @@ class EmbeddingBased:
         return True
 
     def ensure_loaded(self) -> None:
-        """
-        Idempotent loader. If not ready, tries:
+        """Idempotent loader. If not ready, tries:
         - subclass's `load_model_tokenizer()` if present (custom backends),
         - else falls back to `load_hf_tokenizer_and_model()` (HF backends).
         """
@@ -198,7 +194,8 @@ class EmbeddingBased:
         elif self.provider == "huggingface":
             self.load_hf_tokenizer_and_model()
         else:
-            raise RuntimeError("No loader available to initialize model/tokenizer.")
+            msg = "No loader available to initialize model/tokenizer."
+            raise RuntimeError(msg)
 
     # ---------------------------------------------------------------------
     # Hooks & utilities
@@ -224,12 +221,12 @@ class EmbeddingBased:
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
     ) -> pd.DataFrame:
-        """
-        Hook for non-tokenizer backends.
+        """Hook for non-tokenizer backends.
 
         Subclasses that set ``requires_tokenizer = False`` must override this method.
         """
-        raise NotImplementedError("Non-tokenizer backends must implement embedding_process().")
+        msg = "Non-tokenizer backends must implement embedding_process()."
+        raise NotImplementedError(msg)
 
     def _make_batches(self, seqs: list[str], batch_size: int) -> list[list[str]]:
         return [seqs[i : i + batch_size] for i in range(0, len(seqs), batch_size)]
@@ -245,8 +242,7 @@ class EmbeddingBased:
         *,
         max_length: int,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
-        """
-        Tokenize → forward pass with `output_hidden_states=True`.
+        """Tokenize → forward pass with `output_hidden_states=True`.
 
         Returns
         -------
@@ -254,14 +250,17 @@ class EmbeddingBased:
             Tuple of length n_layers: each (B, L, H).
         attention_mask : torch.Tensor
             (B, L) attention mask (1 for real tokens).
+
         """
         if (self.model is None) or (self.requires_tokenizer and self.tokenizer is None):
-            raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
+            msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
+            raise RuntimeError(msg)
 
         tokenizer = self.tokenizer
         model = self.model
         if tokenizer is None or model is None:
-            raise RuntimeError("Model/tokenizer not loaded.")
+            msg = "Model/tokenizer not loaded."
+            raise RuntimeError(msg)
 
         batch = self._pre_tokenize(sequences)
         enc = tokenizer(
@@ -287,7 +286,7 @@ class EmbeddingBased:
         if hidden_states is None:
             hidden_states = (out.last_hidden_state,)
 
-        attn = enc.get("attention_mask", None)
+        attn = enc.get("attention_mask")
         if attn is None:
             attn = torch.ones(out.last_hidden_state.shape[:2], device=self.device)
         return hidden_states, attn
@@ -302,8 +301,8 @@ class EmbeddingBased:
         if isinstance(spec, int):
             return [spec]
         if isinstance(spec, (list, tuple)):
-            layer_items = cast(Sequence[Any], spec)
-            return sorted(list({int(i) for i in layer_items}))
+            layer_items = cast("Sequence[Any]", spec)
+            return sorted({int(i) for i in layer_items})
         if isinstance(spec, str):
             if spec == "last":
                 return [n_layers - 1]
@@ -316,7 +315,8 @@ class EmbeddingBased:
                 return [i]
             except ValueError:
                 pass
-        raise ValueError(f"Invalid layer spec: {spec!r}")
+        msg = f"Invalid layer spec: {spec!r}"
+        raise ValueError(msg)
 
     @staticmethod
     def _pool_tokens(
@@ -335,7 +335,8 @@ class EmbeddingBased:
             num = (reps * mask).sum(dim=1)
             den = mask.sum(dim=1).clamp_min(1e-6)
             return num / den
-        raise ValueError(f"Unknown pool '{pool}'")
+        msg = f"Unknown pool '{pool}'"
+        raise ValueError(msg)
 
     @staticmethod
     def _aggregate_layers(
@@ -351,7 +352,8 @@ class EmbeddingBased:
             return torch.stack(chosen, dim=0).mean(dim=0)
         if agg == "sum":
             return torch.stack(chosen, dim=0).sum(dim=0)
-        raise ValueError(f"Unknown layer aggregation '{agg}'")
+        msg = f"Unknown layer aggregation '{agg}'"
+        raise ValueError(msg)
 
     # ---------------------------------------------------------------------
     # Public API
@@ -366,23 +368,27 @@ class EmbeddingBased:
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
     ) -> np.ndarray:
-        """
-        Encode a batch returning pooled, layer-aggregated embeddings.
+        """Encode a batch returning pooled, layer-aggregated embeddings.
 
         Returns
         -------
         np.ndarray
             (B, H') with H' depending on `layer_agg` and the number of selected layers.
+
         """
         if not self.requires_tokenizer:
-            raise NotImplementedError(
+            msg = (
                 "encode_batch_layers is only available for HuggingFace-style backends. "
                 "Backends without tokenizer must implement `embedding_process()`."
+            )
+            raise NotImplementedError(
+                msg,
             )
 
         self.ensure_loaded()
         if not self._is_ready():
-            raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
+            msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
+            raise RuntimeError(msg)
 
         hidden_states, attn = self._forward_hidden_states(sequences, max_length=max_length)
         n_layers = len(hidden_states)
@@ -392,41 +398,31 @@ class EmbeddingBased:
         pooled = self._pool_tokens(reps, attn, pool)  # (B, H' or H)
         return pooled.detach().cpu().numpy()
 
-    def clean_memory(self):
+    def clean_memory(self) -> None:
         try:
             if torch.cuda.is_available():
-                try:
+                with contextlib.suppress(Exception):
                     torch.cuda.synchronize()
-                except Exception:
-                    pass
                 torch.cuda.empty_cache()
-                try:
+                with contextlib.suppress(Exception):
                     torch.cuda.reset_peak_memory_stats()
-                except Exception:
-                    pass
             import gc
 
             gc.collect()
         except Exception as e:
             self.__logger__.debug("clean_memory() warning: %s", e)
 
-    def release_resources(self):
+    def release_resources(self) -> None:
         try:
             model = getattr(self, "model", None)
             if model is not None:
-                try:
+                with contextlib.suppress(Exception):
                     model.to("cpu")
-                except Exception:
-                    pass
-            try:
+            with contextlib.suppress(Exception):
                 del self.model
-            except Exception:
-                pass
             self.model = None
-            try:
+            with contextlib.suppress(Exception):
                 del self.tokenizer
-            except Exception:
-                pass
             self.tokenizer = None
         finally:
             self.clean_memory()
@@ -440,8 +436,7 @@ class EmbeddingBased:
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
     ) -> None:
-        """
-        Encode all sequences in the dataset and store `self.coded_dataset`.
+        """Encode all sequences in the dataset and store `self.coded_dataset`.
 
         Routing:
         - If `requires_tokenizer=False` and subclass implements `embedding_process`,
@@ -451,7 +446,8 @@ class EmbeddingBased:
         try:
             self.ensure_loaded()
             if not self._is_ready():
-                raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
+                msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
+                raise RuntimeError(msg)
 
             if not self.requires_tokenizer:
                 df = self.embedding_process(
@@ -477,8 +473,7 @@ class EmbeddingBased:
             seqs = self.dataset[self.column_seq].astype(str).tolist()
             mats: list[np.ndarray] = []
             bs: int = int(batch_size)
-            if bs < 1:
-                bs = 1
+            bs = max(bs, 1)
 
             for chunk in self._make_batches(seqs, bs):
                 try:
@@ -494,16 +489,13 @@ class EmbeddingBased:
                     if not (self.oom_backoff and bs > 1 and self.device.type == "cuda"):
                         raise
                     new_bs: int = bs // 2
-                    if new_bs < 1:
-                        new_bs = 1
+                    new_bs = max(new_bs, 1)
                     self.__logger__.warning("CUDA OOM at bs=%d. Retrying with bs=%d.", bs, new_bs)
                     bs = new_bs
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
-                        try:
+                        with contextlib.suppress(Exception):
                             torch.cuda.reset_peak_memory_stats()
-                        except Exception:
-                            pass
                     # retry this same chunk with smaller batch
                     for sub in self._make_batches(chunk, bs):
                         X = self.encode_batch_layers(

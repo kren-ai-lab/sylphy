@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
 
 from sylphy.misc.utils_lib import UtilsLib
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def test_parquet_export_missing_engine_suggests_parquet_extra(monkeypatch, tmp_path: Path):
+
+def test_parquet_export_missing_engine_suggests_parquet_extra(monkeypatch, tmp_path: Path) -> None:
     df = pd.DataFrame({"sequence": ["AAAA"]})
 
     def _boom(self: pd.DataFrame, *args: Any, **kwargs: Any) -> Any:
-        raise ImportError("Unable to find a usable engine; tried using: 'pyarrow', 'fastparquet'.")
+        msg = "Unable to find a usable engine; tried using: 'pyarrow', 'fastparquet'."
+        raise ImportError(msg)
 
     monkeypatch.setattr(pd.DataFrame, "to_parquet", _boom)
 

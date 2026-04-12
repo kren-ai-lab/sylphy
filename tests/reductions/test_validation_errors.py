@@ -7,7 +7,7 @@ import pytest
 from sylphy.reductions import LinearReduction
 
 
-def test_non_numeric_raises_type_error():
+def test_non_numeric_raises_type_error() -> None:
     """String-only frames should be rejected."""
     df = pd.DataFrame({"a": ["x", "y"], "b": ["z", "w"]})
     with pytest.raises(Exception) as exc_info:
@@ -15,7 +15,7 @@ def test_non_numeric_raises_type_error():
     assert isinstance(exc_info.value, (TypeError, ValueError))
 
 
-def test_1d_array_raises_value_error():
+def test_1d_array_raises_value_error() -> None:
     """1D inputs are invalid; require 2D feature matrices."""
     arr = np.array([1, 2, 3], dtype=float)
     with pytest.raises(ValueError):

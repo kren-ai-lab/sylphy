@@ -34,7 +34,7 @@ LIST_RESIDUES: tuple[str, ...] = (
 
 # Extended alphabet (optionally enabled via function parameters)
 # Includes: B (D/N), Z (E/Q), X (unknown), U (selenocysteine), O (pyrrolysine).
-LIST_RESIDUES_EXTENDED: tuple[str, ...] = LIST_RESIDUES + ("B", "Z", "X", "U", "O")
+LIST_RESIDUES_EXTENDED: tuple[str, ...] = (*LIST_RESIDUES, "B", "Z", "X", "U", "O")
 
 # Standard sequence-level descriptors
 LIST_DESCRIPTORS_SEQUENCE: tuple[str, ...] = (
@@ -75,8 +75,7 @@ LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC: tuple[str, ...] = ("sequence", "is_canon"
 
 
 def residues(extended: bool = False) -> tuple[str, ...]:
-    """
-    Return the residue alphabet.
+    """Return the residue alphabet.
 
     Parameters
     ----------
@@ -87,13 +86,13 @@ def residues(extended: bool = False) -> tuple[str, ...]:
     -------
     tuple[str, ...]
         Alphabet tuple.
+
     """
     return LIST_RESIDUES_EXTENDED if extended else LIST_RESIDUES
 
 
 def position_residues(extended: bool = False) -> dict[str, int]:
-    """
-    Return a residue → index mapping for the selected alphabet.
+    """Return a residue → index mapping for the selected alphabet.
 
     Parameters
     ----------
@@ -104,14 +103,14 @@ def position_residues(extended: bool = False) -> dict[str, int]:
     -------
     dict[str, int]
         Mapping of one-letter residue to 0-based index.
+
     """
     alpha = residues(extended=extended)
     return {res: i for i, res in enumerate(alpha)}
 
 
 def get_index(residue: str, *, extended: bool = False, allow_unknown: bool = False) -> int:
-    """
-    Return the 0-based index for a one-letter amino acid.
+    """Return the 0-based index for a one-letter amino acid.
 
     Parameters
     ----------
@@ -131,21 +130,24 @@ def get_index(residue: str, *, extended: bool = False, allow_unknown: bool = Fal
     ------
     KeyError
         If the residue is not part of the selected alphabet.
+
     """
     r = residue.strip().upper()
     use_extended = extended or (allow_unknown and r == "X")
     mapping = position_residues(extended=use_extended)
     if r not in mapping:
-        raise KeyError(
+        msg = (
             f"Residue '{residue}' is not recognized in "
             f"{'extended' if use_extended else 'canonical'} alphabet."
+        )
+        raise KeyError(
+            msg,
         )
     return mapping[r]
 
 
 def get_residue(index: int, *, extended: bool = False) -> str:
-    """
-    Return the one-letter amino acid at the given 0-based index.
+    """Return the one-letter amino acid at the given 0-based index.
 
     Parameters
     ----------
@@ -163,12 +165,16 @@ def get_residue(index: int, *, extended: bool = False) -> str:
     ------
     IndexError
         If the index is out of bounds.
+
     """
     alpha = residues(extended=extended)
     if not 0 <= index < len(alpha):
-        raise IndexError(
+        msg = (
             f"Index '{index}' is out of bounds. "
             f"Valid range: [0, {len(alpha) - 1}] for "
             f"{'extended' if extended else 'canonical'} alphabet."
+        )
+        raise IndexError(
+            msg,
         )
     return alpha[index]

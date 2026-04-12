@@ -1,5 +1,4 @@
-"""
-Dimensionality reduction subpackage for sylphy.
+"""Dimensionality reduction subpackage for sylphy.
 
 Public API:
 - Base: `Reductions`, `ReturnType`
@@ -16,15 +15,15 @@ from typing import TYPE_CHECKING, Any
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
 __all__ = [
-    "Reductions",
-    "ReturnType",
-    "Preprocess",
     "LinearReduction",
     "NonLinearReductions",
-    "reduce_dimensionality",
+    "Preprocess",
+    "Reductions",
+    "ReturnType",
     "get_available_methods",
     "is_linear_method",
     "is_nonlinear_method",
+    "reduce_dimensionality",
 ]
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
@@ -47,7 +46,8 @@ _OPTIONAL_DEPENDENCY_EXPORTS: dict[str, tuple[str, str, tuple[str, ...]]] = {
 def __getattr__(name: str) -> Any:
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
-        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+        msg = f"module '{__name__}' has no attribute '{name}'"
+        raise AttributeError(msg)
 
     mod_name, attr = spec
     try:

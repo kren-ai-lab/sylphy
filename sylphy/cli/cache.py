@@ -1,4 +1,4 @@
-"""sylphy/cli/cache.py
+"""sylphy/cli/cache.py.
 
 Fast-start CLI utilities to inspect and manage Sylphy's cache directory.
 
@@ -10,15 +10,18 @@ from __future__ import annotations
 import json
 import re
 import shutil
-from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import typer
 
 from sylphy.cli._shared import HELP_CONTEXT_SETTINGS
 from sylphy.constants.tool_configs import DEFAULT_CACHE_DIR_ENV, DEFAULT_CACHE_ROOT_ENV, resolve_cache_dir
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
 
 # ----------------------------
 # Typer Application
@@ -57,7 +60,8 @@ def _human_size(num_bytes: int) -> str:
 def _parse_size(text: str) -> int:
     m = _SIZE_RE.match(text or "")
     if not m:
-        raise typer.BadParameter(f"Invalid size: {text}")
+        msg = f"Invalid size: {text}"
+        raise typer.BadParameter(msg)
     value, unit = m.group(1), (m.group(2) or "B").upper()
     return int(value) * _SIZE_UNITS[unit]
 
@@ -65,7 +69,8 @@ def _parse_size(text: str) -> int:
 def _parse_timedelta(text: str) -> timedelta:
     m = _DELTA_RE.match(text or "")
     if not m or m.group(0).strip() == "":
-        raise typer.BadParameter(f"Invalid timedelta: {text!r} (use forms like 30d, 12h, 15m, 7d12h)")
+        msg = f"Invalid timedelta: {text!r} (use forms like 30d, 12h, 15m, 7d12h)"
+        raise typer.BadParameter(msg)
     return timedelta(
         days=int(m.group("days") or 0),
         hours=int(m.group("hours") or 0),
@@ -109,7 +114,7 @@ class CacheEntry:
 
     @property
     def mtime_dt(self) -> datetime:
-        return datetime.fromtimestamp(self.mtime, tz=timezone.utc).astimezone()
+        return datetime.fromtimestamp(self.mtime, tz=UTC).astimezone()
 
 
 class CacheManager:
@@ -159,7 +164,7 @@ class CacheManager:
         older_than: timedelta | None = None,
         dry_run: bool = False,
     ) -> tuple[int, int]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         deleted = freed = 0
         for e in list(self.iter_entries(pattern=pattern, recursive=True)):
             if e.is_dir:
@@ -259,7 +264,8 @@ def cmd_ls(
 ) -> None:
     sort = sort.lower()
     if sort not in SORT_CHOICES:
-        raise typer.BadParameter(f"--sort must be one of: {', '.join(sorted(SORT_CHOICES))}")
+        msg = f"--sort must be one of: {', '.join(sorted(SORT_CHOICES))}"
+        raise typer.BadParameter(msg)
 
     mgr = CacheManager()
     entries = [e for e in mgr.iter_entries(pattern=pattern, recursive=recursive) if not e.is_dir]
@@ -318,7 +324,7 @@ def cmd_stats() -> None:
 def cmd_rm(
     pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob like '**/*.tmp'."),
     older_than: str | None = typer.Option(
-        None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h')."
+        None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h').",
     ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation when applying."),
@@ -328,14 +334,14 @@ def cmd_rm(
     candidates = [
         e
         for e in mgr.iter_entries(pattern=pattern, recursive=True)
-        if not e.is_dir and (td is None or (datetime.now(timezone.utc) - e.mtime_dt) >= td)
+        if not e.is_dir and (td is None or (datetime.now(UTC) - e.mtime_dt) >= td)
     ]
     total_bytes = sum(e.size for e in candidates)
     con = _console()
     _print_kv(con, "Candidates:", f"{len(candidates)} files, total {_human_size(total_bytes)}")
 
     if not dry_run and not force and not typer.confirm("Proceed with deletion?"):
-        raise typer.Abort()
+        raise typer.Abort
 
     deleted, freed = mgr.rm(pattern=pattern, older_than=td, dry_run=dry_run)
     _print_kv(con, "Result:", f"Deleted {deleted} files, freed {_human_size(freed)}")
@@ -344,10 +350,10 @@ def cmd_rm(
 @app.command("prune", help="Shrink cache to a target size and optionally remove empty directories.")
 def cmd_prune(
     max_size: str | None = typer.Option(
-        None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB)."
+        None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB).",
     ),
     remove_empty_dirs: bool = typer.Option(
-        True, "--prune-empty/--keep-empty", help="Remove empty directories."
+        True, "--prune-empty/--keep-empty", help="Remove empty directories.",
     ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
 ) -> None:
@@ -407,7 +413,7 @@ def cmd_clear(
         typer.echo("Cache directory does not exist.")
         raise typer.Exit(code=0)
     if not force and not typer.confirm(f"This will permanently remove {mgr.cache_dir}. Continue?"):
-        raise typer.Abort()
+        raise typer.Abort
     try:
         shutil.rmtree(mgr.cache_dir)
         typer.echo("Cache cleared.")

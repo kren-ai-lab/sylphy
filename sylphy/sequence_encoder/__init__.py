@@ -1,6 +1,5 @@
 # protein_representation/sequence_encoder/__init__.py
-"""
-Sequence Encoding Toolkit
+"""Sequence Encoding Toolkit.
 =========================
 
 Encoders to transform protein/peptide sequences into numerical representations:
@@ -18,11 +17,11 @@ from .physicochemical_encoder import PhysicochemicalEncoder
 
 __all__ = [
     "Encoders",
-    "OrdinalEncoder",
-    "OneHotEncoder",
+    "FFTEncoder",
     "FrequencyEncoder",
     "KMersEncoders",
+    "OneHotEncoder",
+    "OrdinalEncoder",
     "PhysicochemicalEncoder",
-    "FFTEncoder",
     "create_encoder",
 ]

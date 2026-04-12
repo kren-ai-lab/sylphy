@@ -37,7 +37,7 @@ def _read_console(capsys) -> tuple[str, str, str]:
     return cap.out, cap.err, both
 
 
-def test_setup_logger_idempotent(monkeypatch, tmp_path):
+def test_setup_logger_idempotent(monkeypatch, tmp_path) -> None:
     log_path = tmp_path / "idempotent.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -56,7 +56,7 @@ def test_setup_logger_idempotent(monkeypatch, tmp_path):
     assert log_path.parent.exists()
 
 
-def test_env_level_override(monkeypatch, tmp_path, capsys):
+def test_env_level_override(monkeypatch, tmp_path, capsys) -> None:
     """
     If a console handler exists, ensure ERROR messages are visible.
     Some implementations do not apply SYLPHY_LOG_LEVEL to the console handler;
@@ -80,14 +80,14 @@ def test_env_level_override(monkeypatch, tmp_path, capsys):
 
         pytest.skip("No console handler present; skipping console assertions.")
 
-    out, err, both = _read_console(capsys)
+    _out, _err, both = _read_console(capsys)
     # At minimum, errors must be printed
     assert "error-visible" in both
     # Do NOT enforce that INFO/DEBUG are hidden, since some implementations
     # ignore SYLPHY_LOG_LEVEL for the console handler and inherit logger level instead.
 
 
-def test_json_console_output_and_stderr(monkeypatch, tmp_path, capsys):
+def test_json_console_output_and_stderr(monkeypatch, tmp_path, capsys) -> None:
     log_path = tmp_path / "jsonconsole.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "1")
@@ -103,7 +103,7 @@ def test_json_console_output_and_stderr(monkeypatch, tmp_path, capsys):
         pytest.skip("No console handler present; skipping console JSON assertions.")
 
     logger.info("hello-json", extra={"run_id": "abc123"})
-    out, err, both = _read_console(capsys)
+    out, err, _both = _read_console(capsys)
     line = (err or out).strip().splitlines()[-1] if (err or out) else ""
 
     assert line, "No console output captured"
@@ -116,7 +116,7 @@ def test_json_console_output_and_stderr(monkeypatch, tmp_path, capsys):
     assert PKG_LOGGER_NAME in payload.get("name", PKG_LOGGER_NAME)
 
 
-def test_file_handler_writes_and_rotates(monkeypatch, tmp_path):
+def test_file_handler_writes_and_rotates(monkeypatch, tmp_path) -> None:
     log_path = tmp_path / "rotate.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     # Try to force rotation if supported
@@ -140,7 +140,7 @@ def test_file_handler_writes_and_rotates(monkeypatch, tmp_path):
         assert log_path.stat().st_size > 0
 
 
-def test_console_formatter_utc_suffix(monkeypatch, tmp_path, capsys):
+def test_console_formatter_utc_suffix(monkeypatch, tmp_path, capsys) -> None:
     log_path = tmp_path / "utc.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "0")
@@ -156,14 +156,14 @@ def test_console_formatter_utc_suffix(monkeypatch, tmp_path, capsys):
 
         pytest.skip("No console handler present; skipping console format assertions.")
 
-    out, err, both = _read_console(capsys)
+    out, err, _both = _read_console(capsys)
     line = (out or err).strip().splitlines()[-1]
     assert "utc-line" in line
     # If your human-readable formatter doesn't include 'Z', do not force it:
     # assert "Z" in line or True
 
 
-def test_add_context_injection_with_json(monkeypatch, tmp_path, capsys):
+def test_add_context_injection_with_json(monkeypatch, tmp_path, capsys) -> None:
     log_path = tmp_path / "ctx.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "1")
@@ -180,7 +180,7 @@ def test_add_context_injection_with_json(monkeypatch, tmp_path, capsys):
     add_context(logger, project="pr", phase="train")
     logger.info("ctx-msg", extra={"epoch": 1})
 
-    out, err, both = _read_console(capsys)
+    out, err, _both = _read_console(capsys)
     line = (out or err).strip().splitlines()[-1]
     payload = json.loads(line)
     # Your _JsonFormatter uses 'message' for the log body
@@ -190,7 +190,7 @@ def test_add_context_injection_with_json(monkeypatch, tmp_path, capsys):
     # if "project" in payload: assert payload["project"] == "pr"
 
 
-def test_reset_logging_removes_handlers(monkeypatch, tmp_path):
+def test_reset_logging_removes_handlers(monkeypatch, tmp_path) -> None:
     log_path = tmp_path / "reset.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -207,7 +207,7 @@ def test_reset_logging_removes_handlers(monkeypatch, tmp_path):
     assert _count_handlers(lg3) >= 1
 
 
-def test_get_logger_lazy_config(monkeypatch, tmp_path):
+def test_get_logger_lazy_config(monkeypatch, tmp_path) -> None:
     log_path = tmp_path / "lazy.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -219,7 +219,7 @@ def test_get_logger_lazy_config(monkeypatch, tmp_path):
     assert log_path.exists()
 
 
-def test_silence_external_changes_level():
+def test_silence_external_changes_level() -> None:
     reset_logging(PKG_LOGGER_NAME)
     setup_logger(name=PKG_LOGGER_NAME, level="DEBUG")
 
@@ -231,7 +231,7 @@ def test_silence_external_changes_level():
     assert logging.getLogger("urllib3").level >= logging.WARNING
 
 
-def test_global_disable(monkeypatch, tmp_path, capsys):
+def test_global_disable(monkeypatch, tmp_path, capsys) -> None:
     log_path = tmp_path / "disable.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     # If your implementation honors this flag, great; if not, the test still works
@@ -247,7 +247,7 @@ def test_global_disable(monkeypatch, tmp_path, capsys):
     lg.info("no-output")
 
     # If there is a console, nothing should be printed at CRITICAL global level
-    out, err, both = _read_console(capsys)
+    _out, _err, both = _read_console(capsys)
     assert "no-output" not in both
 
     # And the file should not grow either at CRITICAL level
@@ -255,7 +255,7 @@ def test_global_disable(monkeypatch, tmp_path, capsys):
         assert Path(log_path).stat().st_size == 0
 
 
-def test_set_global_level_affects_pkg_logger():
+def test_set_global_level_affects_pkg_logger() -> None:
     reset_logging(PKG_LOGGER_NAME)
     lg = setup_logger(name=PKG_LOGGER_NAME, level="DEBUG")
 

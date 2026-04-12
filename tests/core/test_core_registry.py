@@ -7,6 +7,7 @@ import sys
 import types
 import zipfile
 from pathlib import Path
+from typing import Never
 
 import pytest
 
@@ -25,7 +26,7 @@ from sylphy.core.model_registry import (
 from sylphy.core.model_spec import ModelSpec
 
 
-def test_register_and_get_spec_roundtrip():
+def test_register_and_get_spec_roundtrip() -> None:
     spec = ModelSpec(name="dummy", provider="huggingface", ref="org/model")
     register_model(spec)
     got = get_model_spec("dummy")
@@ -37,7 +38,7 @@ def test_register_and_get_spec_roundtrip():
         get_model_spec("nope")
 
 
-def test_alias_registration_and_listing():
+def test_alias_registration_and_listing() -> None:
     register_model(ModelSpec(name="esm2_small", provider="huggingface", ref="facebook/esm2_t6_8M_UR50D"))
     register_alias("esm2", "esm2_small")
 
@@ -47,11 +48,12 @@ def test_alias_registration_and_listing():
 
     names_no_alias = list_registered_models(include_aliases=False)
     names_with_alias = list_registered_models(include_aliases=True)
-    assert "esm2_small" in names_no_alias and "esm2" not in names_no_alias
+    assert "esm2_small" in names_no_alias
+    assert "esm2" not in names_no_alias
     assert set(names_with_alias) >= {"esm2_small", "esm2"}
 
 
-def test_unregister_and_clear():
+def test_unregister_and_clear() -> None:
     register_model(ModelSpec(name="to_drop", provider="huggingface", ref="org/model"))
     unregister("to_drop")
     with pytest.raises(ModelNotFoundError):
@@ -63,7 +65,7 @@ def test_unregister_and_clear():
     assert list_registered_models(True) == []
 
 
-def test_env_override_path(monkeypatch, tmp_path):
+def test_env_override_path(monkeypatch, tmp_path) -> None:
     # Forzar el prefijo usado dentro del módulo
     import sylphy.core.model_registry as regmod
 
@@ -83,16 +85,17 @@ def test_env_override_path(monkeypatch, tmp_path):
     assert (resolved / "weights.bin").exists()
 
 
-def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path):
+def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path) -> None:
     # Mock huggingface_hub como módulo real con snapshot_download
     calls = {"n": 0}
 
     hub = types.ModuleType("huggingface_hub")
 
-    def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None):
+    def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None) -> None:
         calls["n"] += 1
         if local_dir is None:
-            raise AssertionError("local_dir should be provided in snapshot_download mock.")
+            msg = "local_dir should be provided in snapshot_download mock."
+            raise AssertionError(msg)
         dest = Path(local_dir)
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "config.json").write_text(json.dumps({"ref": ref}))
@@ -110,7 +113,7 @@ def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path):
     assert calls["n"] == 1  # downloaded once
 
 
-def test_resolve_other_local_copy(tmp_path):
+def test_resolve_other_local_copy(tmp_path) -> None:
     src = tmp_path / "src_model"
     src.mkdir()
     (src / "file.txt").write_text("payload")
@@ -127,15 +130,15 @@ def _make_zip_bytes() -> bytes:
     return buf.getvalue()
 
 
-def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path):
+def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path) -> None:
     # Mock requests.get → stream un zip pequeño
     class DummyResp:
-        def __init__(self, data: bytes):
+        def __init__(self, data: bytes) -> None:
             self._data = data
             self.status_code = 200
             self.ok = True
 
-        def raise_for_status(self):
+        def raise_for_status(self) -> None:
             pass
 
         def iter_content(self, chunk_size=65536):
@@ -159,12 +162,13 @@ def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path):
     assert (dst / "inner" / "ok.txt").exists()
 
 
-def test_download_error_is_wrapped(monkeypatch):
+def test_download_error_is_wrapped(monkeypatch) -> None:
     register_model(ModelSpec(name="will_fail", provider="huggingface", ref="org/fail"))
     import sylphy.core.model_registry as regmod
 
-    def boom(*args, **kwargs):
-        raise RuntimeError("network down")
+    def boom(*args, **kwargs) -> Never:
+        msg = "network down"
+        raise RuntimeError(msg)
 
     monkeypatch.setattr(regmod, "_download_huggingface", boom, raising=True)
 
@@ -173,7 +177,7 @@ def test_download_error_is_wrapped(monkeypatch):
     assert "Failed to resolve model 'will_fail'" in str(ei.value)
 
 
-def test_config_temporary_cache_root(tmp_path):
+def test_config_temporary_cache_root(tmp_path) -> None:
     cfg = get_config()
     original = cfg.cache_paths.cache_root
     with temporary_cache_root(tmp_path / "alt"):

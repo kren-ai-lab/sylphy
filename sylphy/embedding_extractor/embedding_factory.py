@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.logging import add_context, get_logger
-from sylphy.types import PrecisionType
 
 if TYPE_CHECKING:
+    from sylphy.types import PrecisionType
+
     from .embedding_based import EmbeddingBased  # for type hints only
 
 
@@ -22,7 +23,7 @@ logger = logging.getLogger("sylphy.embedding_extraction.factory")
 add_context(logger, component="embedding_extraction", backend="factory")
 
 
-def EmbeddingFactory(  # noqa: N802
+def EmbeddingFactory(
     model_name: str,
     dataset,
     column_seq: str,
@@ -31,14 +32,14 @@ def EmbeddingFactory(  # noqa: N802
     oom_backoff: bool = True,
     debug: bool = False,
     debug_mode: int = logging.INFO,
-) -> "EmbeddingBased":
-    """
-    Instantiate an embedding backend based on `model_name`.
+) -> EmbeddingBased:
+    """Instantiate an embedding backend based on `model_name`.
 
     Returns
     -------
     EmbeddingBased
         Concrete backend (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, or ESM-C).
+
     """
     name = _norm(model_name)
 
@@ -165,9 +166,12 @@ def EmbeddingFactory(  # noqa: N802
             oom_backoff=oom_backoff,
         )
 
-    raise ValueError(
+    msg = (
         f"Unknown model name '{model_name}'. "
         f"Supported: ESM2 ('facebook/esm2_*'), Ankh2 ('ElnaggarLab/ankh2-*'), "
         f"ProtT5 ('Rostlab/prot_t5_*'), ProtBERT ('Rostlab/prot_bert'), "
         f"Mistral-Prot ('RaphaelMourad/Mistral-Prot-*'), and ESM-C ('esmc_*')."
+    )
+    raise ValueError(
+        msg,
     )

@@ -1,4 +1,4 @@
-"""sylphy/cli/encoder_sequences.py
+"""sylphy/cli/encoder_sequences.py.
 
 Unified CLI to encode protein/peptide sequences with:
 - one_hot
@@ -16,8 +16,7 @@ Design goals:
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import typer
 
@@ -30,7 +29,12 @@ from sylphy.cli._shared import (
     load_csv,
     validate_choice,
 )
-from sylphy.types import FileFormat
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from sylphy.sequence_encoder.fft_encoder import FFTEncoder
+    from sylphy.types import FileFormat
 
 app = typer.Typer(
     name="encode-sequences",
@@ -161,12 +165,13 @@ def encode_sequences(
     - 'fft' runs as a pipeline: physicochemical (AAIndex/group_based) first, then FFT,
       so the signal is numerical before spectral analysis.
     - Alphabet and length validation are handled by the shared base encoder.
+
     """
     try:
         # Cheap validations (no heavy imports yet)
         enc_choice = validate_choice(encoder, ENCODER_CHOICES, "encoder")
-        fmt_choice = cast(FileFormat, validate_choice(format_output, EXPORT_CHOICES, "format-output"))
-        if enc_choice == "physicochemical" or enc_choice == "fft":
+        fmt_choice = cast("FileFormat", validate_choice(format_output, EXPORT_CHOICES, "format-output"))
+        if enc_choice in {"physicochemical", "fft"}:
             validate_choice(type_descriptor or "aaindex", DESCRIPTOR_CHOICES, "type-descriptor")
 
         level = level_from_str(log_level)
@@ -180,7 +185,6 @@ def encode_sequences(
 
         # --- FFT pipeline (physicochemical -> FFT) ---
         if enc_choice == "fft":
-            from sylphy.sequence_encoder.fft_encoder import FFTEncoder
 
             phys = create_encoder(
                 "physicochemical",
@@ -196,10 +200,11 @@ def encode_sequences(
             )
             phys.run_process()
             if phys.coded_dataset is None or phys.coded_dataset.empty:
-                raise RuntimeError("Physicochemical step produced empty features.")
+                msg = "Physicochemical step produced empty features."
+                raise RuntimeError(msg)
 
             fft = cast(
-                FFTEncoder,
+                "FFTEncoder",
                 create_encoder(
                     "fft",
                     dataset=phys.coded_dataset,
@@ -220,14 +225,14 @@ def encode_sequences(
             return
 
         # --- Single-step backends ---
-        kwargs_common = dict(
-            dataset=df,
-            sequence_column=sequence_identifier,
-            allow_extended=allow_extended,
-            allow_unknown=allow_unknown,
-            debug=debug,
-            debug_mode=level,
-        )
+        kwargs_common = {
+            "dataset": df,
+            "sequence_column": sequence_identifier,
+            "allow_extended": allow_extended,
+            "allow_unknown": allow_unknown,
+            "debug": debug,
+            "debug_mode": level,
+        }
 
         if enc_choice in ("one_hot", "ordinal", "physicochemical"):
             kwargs_common["max_length"] = max_length

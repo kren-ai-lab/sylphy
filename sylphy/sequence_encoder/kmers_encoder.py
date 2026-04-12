@@ -11,9 +11,7 @@ from .base_encoder import Encoders
 
 
 class KMersEncoders(Encoders):
-    """
-    TF-IDF encode k-merized sequences (word-level analyzer).
-    """
+    """TF-IDF encode k-merized sequences (word-level analyzer)."""
 
     def __init__(
         self,
@@ -49,7 +47,7 @@ class KMersEncoders(Encoders):
         try:
             self.__logger__.info("Starting k-mer encoding (k=%d).", self.size_kmer)
             self.dataset["kmer_sequence"] = self.dataset[self.sequence_column].apply(
-                lambda x: self.kmer(x, self.size_kmer)
+                lambda x: self.kmer(x, self.size_kmer),
             )
 
             vectorizer = TfidfVectorizer(
@@ -60,7 +58,7 @@ class KMersEncoders(Encoders):
             X = vectorizer.fit_transform(self.dataset["kmer_sequence"])
 
             feature_names = pd.Index([c.upper() for c in vectorizer.get_feature_names_out()])
-            sparse_accessor = cast(Any, pd.DataFrame.sparse)
+            sparse_accessor = cast("Any", pd.DataFrame.sparse)
             self.coded_dataset = sparse_accessor.from_spmatrix(
                 X,
                 index=self.dataset.index,
@@ -69,10 +67,10 @@ class KMersEncoders(Encoders):
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
 
             if "sequence" in self.coded_dataset.columns and self.sequence_column != "sequence":
-                self.coded_dataset.drop(columns=["sequence"], inplace=True)
+                self.coded_dataset = self.coded_dataset.drop(columns=["sequence"])
 
             self.__logger__.info(
-                "TF-IDF k-mer encoding completed with %d features.", self.coded_dataset.shape[1]
+                "TF-IDF k-mer encoding completed with %d features.", self.coded_dataset.shape[1],
             )
         except Exception as e:
             self.status = False

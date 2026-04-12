@@ -1,5 +1,4 @@
-"""
-Miscellaneous Utilities for Sequence/Embedding Workflows
+"""Miscellaneous Utilities for Sequence/Embedding Workflows.
 ========================================================
 
 This package contains utility abstractions shared across the project such as:

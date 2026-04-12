@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @pytest.fixture(autouse=True)
@@ -14,11 +17,11 @@ def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
         if k.startswith("SYLPHY_LOG_"):
             monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(tmp_path / "cli.log"))
-    yield
+    return
 
 
 @pytest.fixture(autouse=True)
-def _stub_model_registry(tmp_path, monkeypatch):
+def _stub_model_registry(tmp_path, monkeypatch) -> None:
     """Point model resolution to a temporary directory to avoid network calls."""
     model_dir = tmp_path / "fake_model_dir"
     model_dir.mkdir(parents=True, exist_ok=True)
@@ -27,4 +30,3 @@ def _stub_model_registry(tmp_path, monkeypatch):
     from sylphy.core import model_registry as reg
 
     monkeypatch.setattr(reg, "resolve_model", lambda name: model_dir, raising=True)
-    yield

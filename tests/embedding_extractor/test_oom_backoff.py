@@ -11,9 +11,9 @@ from sylphy.embedding_extractor import EmbeddingFactory
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-def test_cuda_oom_backoff_retries_and_succeeds():
+def test_cuda_oom_backoff_retries_and_succeeds() -> None:
     """Verify OOM backoff halves batch size when encountering simulated CUDA OOM errors."""
-    transformers_mod = cast(Any, sys.modules["transformers"])
+    transformers_mod = cast("Any", sys.modules["transformers"])
     _FakeModel = transformers_mod.AutoModel
     _FakeModel.OOM_THRESHOLD = 2
     _FakeModel.FORWARD_CALLS = 0

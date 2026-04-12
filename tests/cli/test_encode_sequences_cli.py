@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 from sylphy.cli.encoder_sequences import app
 
 
-def test_encode_onehot_saves_expected_shape(tmp_path):
+def test_encode_onehot_saves_expected_shape(tmp_path) -> None:
     """Verify CLI one-hot encodes sequences and saves with expected shape."""
     df = pd.DataFrame({"sequence": ["ACD", "WYYVV", "KLMNP"]})
     inp = tmp_path / "seqs.csv"
@@ -36,7 +36,7 @@ def test_encode_onehot_saves_expected_shape(tmp_path):
     assert got.shape == (3, 5 * 20 + 1)  # max_length * 20 AAs + sequence column
 
 
-def test_encode_ordinal_basic(tmp_path):
+def test_encode_ordinal_basic(tmp_path) -> None:
     """Verify CLI ordinal encodes sequences and saves to .npy format."""
     df = pd.DataFrame({"sequence": ["AAAA", "BBB"]})
     inp = tmp_path / "seq.csv"

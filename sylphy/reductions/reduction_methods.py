@@ -15,8 +15,7 @@ Preprocess = Literal["none", "standardize", "normalize", "robust"]
 
 
 class Reductions:
-    """
-    Base utilities for dimensionality reduction workflows.
+    """Base utilities for dimensionality reduction workflows.
 
     Responsibilities
     ----------------
@@ -42,6 +41,7 @@ class Reductions:
         Logging level when ``debug=True`` (e.g., ``logging.DEBUG``).
     name_logging : str, default="Reductions"
         Suffix used for the child logger name ``sylphy.reductions.<name_logging>``.
+
     """
 
     def __init__(
@@ -70,9 +70,11 @@ class Reductions:
             dataset = dataset.values
         arr = np.asarray(dataset)
         if arr.ndim != 2:
-            raise ValueError(f"Expected 2D array, got shape {arr.shape}")
+            msg = f"Expected 2D array, got shape {arr.shape}"
+            raise ValueError(msg)
         if not np.issubdtype(arr.dtype, np.number):
-            raise TypeError("Dataset must be numeric.")
+            msg = "Dataset must be numeric."
+            raise TypeError(msg)
         self.dataset: np.ndarray = arr.astype(np.float32, copy=False)
 
         self.__logger__.info(
@@ -101,7 +103,8 @@ class Reductions:
         elif self.preprocess == "robust":
             self._scaler = RobustScaler(with_centering=True, with_scaling=True)
         else:
-            raise ValueError(f"Unknown preprocess option '{self.preprocess}'.")
+            msg = f"Unknown preprocess option '{self.preprocess}'."
+            raise ValueError(msg)
 
         self.__logger__.info("Applying preprocess: %s", self.preprocess)
         scaler = self._scaler
@@ -120,8 +123,7 @@ class Reductions:
         transform_values: np.ndarray | list[list[float]],
         n_components: int | None = None,
     ) -> np.ndarray | pd.DataFrame:
-        """
-        Build the final reduced output.
+        """Build the final reduced output.
 
         - If ``return_type='numpy'`` → returns a numpy array (N, K).
         - If ``return_type='pandas'`` → returns a DataFrame with columns ``p_1..p_K``.
@@ -129,21 +131,22 @@ class Reductions:
         try:
             transform_array = np.asarray(transform_values)
             if transform_array.ndim != 2:
-                raise ValueError(f"Expected 2D reduced array, got shape {transform_array.shape}")
+                msg = f"Expected 2D reduced array, got shape {transform_array.shape}"
+                raise ValueError(msg)
 
             k = transform_array.shape[1]
             if n_components is None:
                 n_components = k
             if k != n_components:
-                raise ValueError(f"Expected {n_components} components, but got {k}")
+                msg = f"Expected {n_components} components, but got {k}"
+                raise ValueError(msg)
 
             if self.return_type == "numpy":
                 self.__logger__.info("Prepared NumPy output with %d components.", n_components)
                 return transform_array
-            else:
-                headers = self._make_headers(n_components)
-                self.__logger__.info("Prepared pandas DataFrame with %d components.", n_components)
-                return pd.DataFrame(data=transform_array, columns=pd.Index(headers))
+            headers = self._make_headers(n_components)
+            self.__logger__.info("Prepared pandas DataFrame with %d components.", n_components)
+            return pd.DataFrame(data=transform_array, columns=pd.Index(headers))
 
         except Exception as e:
             self.__logger__.error("Failed to build post-reduction output: %s", e)

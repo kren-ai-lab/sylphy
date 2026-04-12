@@ -11,8 +11,7 @@ from .base_encoder import Encoders
 
 
 class OneHotEncoder(Encoders):
-    """
-    One-hot encode sequences; |alphabet|-dim per residue, zero-padded to `max_length`.
+    """One-hot encode sequences; |alphabet|-dim per residue, zero-padded to `max_length`.
     Supports canonical or extended alphabet via base class flags.
     """
 
@@ -73,7 +72,7 @@ class OneHotEncoder(Encoders):
         try:
             self.__logger__.info("Starting one-hot encoding for %d sequences.", len(self.dataset))
             matrix = [
-                self.__encode_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                self.__encode_sequence(cast("str", self.dataset.at[i, self.sequence_column]))
                 for i in self.dataset.index
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])

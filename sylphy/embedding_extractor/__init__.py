@@ -27,14 +27,14 @@ Factory:
 """
 
 __all__ = [
-    "EmbeddingBased",
-    "ESMBasedEmbedding",
-    "Prot5Based",
-    "BertBasedEmbedding",
-    "MistralBasedEmbedding",
-    "ESMCBasedEmbedding",
     "Ankh2BasedEmbedding",
+    "BertBasedEmbedding",
+    "ESMBasedEmbedding",
+    "ESMCBasedEmbedding",
+    "EmbeddingBased",
     "EmbeddingFactory",
+    "MistralBasedEmbedding",
+    "Prot5Based",
     "create_embedding",
 ]
 
@@ -56,7 +56,8 @@ def __getattr__(name: str) -> Any:
             from .embedding_factory import EmbeddingFactory  # lazy import
 
             return EmbeddingFactory
-        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+        msg = f"module '{__name__}' has no attribute '{name}'"
+        raise AttributeError(msg)
     mod_name, attr = spec
     try:
         module = import_module(mod_name, package=__name__)
@@ -76,7 +77,7 @@ def __getattr__(name: str) -> Any:
 
 
 def __dir__():
-    return sorted(list(__all__))
+    return sorted(__all__)
 
 
 # Optional typing-only exposure (keeps runtime lazy)

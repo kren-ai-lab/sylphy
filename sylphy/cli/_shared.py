@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 HELP_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
@@ -21,24 +24,29 @@ def validate_choice(value: str, choices: tuple[str, ...], opt: str) -> str:
     normalized = (value or "").strip().lower()
     allowed = {choice.lower(): choice for choice in choices}
     if normalized not in allowed:
-        raise typer.BadParameter(f"Invalid {opt}: {value!r}. Allowed: {', '.join(choices)}")
+        msg = f"Invalid {opt}: {value!r}. Allowed: {', '.join(choices)}"
+        raise typer.BadParameter(msg)
     return allowed[normalized]
 
 
 def load_csv(input_path: Path, seq_col: str):
     """Lazy-load a CSV file and validate the requested sequence column."""
     if not input_path.exists():
-        raise typer.BadParameter(f"Input file not found: {input_path}")
+        msg = f"Input file not found: {input_path}"
+        raise typer.BadParameter(msg)
     if input_path.suffix.lower() != ".csv":
-        raise typer.BadParameter("Only CSV is supported as input.")
+        msg = "Only CSV is supported as input."
+        raise typer.BadParameter(msg)
     try:
         import pandas as pd
     except Exception as exc:
-        raise typer.BadParameter("pandas is required to read CSV input.") from exc
+        msg = "pandas is required to read CSV input."
+        raise typer.BadParameter(msg) from exc
 
     df = pd.read_csv(input_path)
     if seq_col not in df.columns:
-        raise typer.BadParameter(f"Column '{seq_col}' not found. Available: {list(df.columns)}")
+        msg = f"Column '{seq_col}' not found. Available: {list(df.columns)}"
+        raise typer.BadParameter(msg)
     df[seq_col] = df[seq_col].astype(str).fillna("")
     return df
 

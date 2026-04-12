@@ -15,12 +15,12 @@ from .base_encoder import Encoders
 
 
 class PhysicochemicalEncoder(Encoders):
-    """
-    Encode sequences using a selected physicochemical property (e.g., AAIndex).
+    """Encode sequences using a selected physicochemical property (e.g., AAIndex).
 
     Notes
     -----
     Non-canonical residues in the table are treated as 0.0 after validation.
+
     """
 
     def __init__(
@@ -56,7 +56,7 @@ class PhysicochemicalEncoder(Encoders):
 
     def _load_descriptor_file(self, type_descriptor: str = "aaindex") -> pd.DataFrame:
         if type_descriptor not in {"aaindex", "group_based"}:
-            msg = "Unsupported descriptor type: %s. Must be 'aaindex' or 'group_based'." % type_descriptor
+            msg = f"Unsupported descriptor type: {type_descriptor}. Must be 'aaindex' or 'group_based'."
             self.__logger__.error(msg)
             raise ValueError(msg)
 
@@ -82,7 +82,8 @@ class PhysicochemicalEncoder(Encoders):
                 self.__logger__.info("Descriptor cached at %s", filepath)
             except Exception as e:
                 self.__logger__.error("Failed to download descriptor file: %s", e)
-                raise RuntimeError("Failed to load or download descriptor file.") from e
+                msg_0 = "Failed to load or download descriptor file."
+                raise RuntimeError(msg_0) from e
 
         try:
             df = pd.read_csv(filepath, index_col=0)
@@ -90,11 +91,12 @@ class PhysicochemicalEncoder(Encoders):
             return df
         except Exception as e:
             self.__logger__.error("Failed to read descriptor file from cache: %s", e)
-            raise RuntimeError("Failed to read cached descriptor file.") from e
+            msg_0 = "Failed to read cached descriptor file."
+            raise RuntimeError(msg_0) from e
 
     def __encoding_residue(self, residue: str) -> float:
         try:
-            value = cast(float | int | str, self.df_properties.at[residue, self.name_property])
+            value = cast("float | int | str", self.df_properties.at[residue, self.name_property])
             return float(value)
         except KeyError:
             self.__logger__.warning("Residue '%s' not in property table. Using 0.0", residue)
@@ -119,7 +121,7 @@ class PhysicochemicalEncoder(Encoders):
         try:
             self.__logger__.info("Encoding dataset with physicochemical property: %s", self.name_property)
             matrix = [
-                self.__encoding_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                self.__encoding_sequence(cast("str", self.dataset.at[i, self.sequence_column]))
                 for i in self.dataset.index
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
@@ -128,7 +130,8 @@ class PhysicochemicalEncoder(Encoders):
             self.__logger__.info("Encoding complete. Dataset shape: %s", self.coded_dataset.shape)
         except Exception as e:
             self.__logger__.error("Error encoding dataset: %s", e)
-            raise RuntimeError("Failed to encode dataset.") from e
+            msg = "Failed to encode dataset."
+            raise RuntimeError(msg) from e
 
     def run_process(self) -> None:
         if self.status:

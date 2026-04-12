@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import sys
 import types
-from collections.abc import Iterator
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 import torch
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class _FakeConfig:
@@ -73,8 +75,8 @@ class _FakeTokenizer:
 
 class _FakeOutput:
     def __init__(
-        self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...] | None = None
-    ):
+        self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...] | None = None,
+    ) -> None:
         self.last_hidden_state = last_hidden_state
         self.hidden_states = hidden_states or (last_hidden_state,)
 
@@ -85,7 +87,7 @@ class _FakeModel:
     OOM_THRESHOLD: int | None = None
     FORWARD_CALLS: int = 0
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @classmethod
@@ -102,8 +104,9 @@ class _FakeModel:
         _FakeModel.FORWARD_CALLS += 1
         x: torch.Tensor = enc["input_ids"]
         B, L = x.shape
-        if self.OOM_THRESHOLD is not None and B > int(self.OOM_THRESHOLD):
-            raise torch.cuda.OutOfMemoryError("simulated OOM")
+        if self.OOM_THRESHOLD is not None and int(self.OOM_THRESHOLD) < B:
+            msg = "simulated OOM"
+            raise torch.cuda.OutOfMemoryError(msg)
         H = 4
         base = torch.arange(1, H + 1, dtype=torch.float32, device=x.device).view(1, 1, H).repeat(B, L, 1)
         hidden_states = tuple(base + float(i) for i in range(4))  # 4 layers
@@ -111,7 +114,7 @@ class _FakeModel:
         return _FakeOutput(last_hidden, hidden_states)
 
 
-_fake_tf = cast(Any, types.ModuleType("transformers"))
+_fake_tf = cast("Any", types.ModuleType("transformers"))
 _fake_tf.AutoTokenizer = _FakeTokenizer
 _fake_tf.AutoModel = _FakeModel
 _fake_tf.AutoConfig = _FakeConfig
@@ -131,12 +134,12 @@ _fake_tf.PreTrainedTokenizerFast = PreTrainedTokenizerFast
 sys.modules["transformers"] = _fake_tf
 
 
-_fake_esm = cast(Any, types.ModuleType("esm"))
+_fake_esm = cast("Any", types.ModuleType("esm"))
 _fake_esm.__path__ = []
 
-_fake_esm_models = cast(Any, types.ModuleType("esm.models"))
+_fake_esm_models = cast("Any", types.ModuleType("esm.models"))
 _fake_esm_models.__path__ = []
-_fake_esm_models_esmc = cast(Any, types.ModuleType("esm.models.esmc"))
+_fake_esm_models_esmc = cast("Any", types.ModuleType("esm.models.esmc"))
 
 
 class ESMC:
@@ -159,7 +162,7 @@ class ESMC:
         last_hidden = hidden_states[-1]
 
         class _Out:
-            def __init__(self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...]):
+            def __init__(self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...]) -> None:
                 self.last_hidden_state = last_hidden_state
                 self.hidden_states = hidden_states
 
@@ -168,10 +171,10 @@ class ESMC:
 
 _fake_esm_models_esmc.ESMC = ESMC
 
-_fake_esm_sdk = cast(Any, types.ModuleType("esm.sdk"))
+_fake_esm_sdk = cast("Any", types.ModuleType("esm.sdk"))
 _fake_esm_sdk.__path__ = []
-_fake_esm_sdk_api = cast(Any, types.ModuleType("esm.sdk.api"))
-_fake_esm_sdk_forge = cast(Any, types.ModuleType("esm.sdk.forge"))
+_fake_esm_sdk_api = cast("Any", types.ModuleType("esm.sdk.api"))
+_fake_esm_sdk_forge = cast("Any", types.ModuleType("esm.sdk.forge"))
 
 
 class ESMProtein:

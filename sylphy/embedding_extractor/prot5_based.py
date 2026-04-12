@@ -3,17 +3,20 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-import pandas as pd
 import torch
-import torch.nn as nn
+from torch import nn
 from transformers import AutoConfig, T5EncoderModel, T5Tokenizer
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
-from sylphy.types import PrecisionType
 
 from .embedding_based import EmbeddingBased
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from sylphy.types import PrecisionType
 
 
 class Prot5Based(EmbeddingBased):
@@ -30,7 +33,8 @@ class Prot5Based(EmbeddingBased):
         oom_backoff: bool = True,
     ) -> None:
         if dataset is None:
-            raise ValueError("dataset must be provided")
+            msg = "dataset must be provided"
+            raise ValueError(msg)
 
         super().__init__(
             dataset=dataset,
@@ -54,7 +58,7 @@ class Prot5Based(EmbeddingBased):
 
             self.__logger__.info("Loading ProtT5 tokenizer from: %s", local_dir)
             tokenizer = T5Tokenizer.from_pretrained(local_dir, do_lower_case=False, use_fast=False)  # type: ignore[possibly-missing-attribute]
-            tokenizer_any = cast(Any, tokenizer)
+            tokenizer_any = cast("Any", tokenizer)
             pad_token_id: int | None = getattr(tokenizer_any, "pad_token_id", None)
             if pad_token_id is None:
                 tokenizer_any.add_special_tokens({"pad_token": "<pad>"})
@@ -65,7 +69,7 @@ class Prot5Based(EmbeddingBased):
 
             self.__logger__.info("Loading ProtT5 encoder from: %s on device=%s", local_dir, self.device)
             model = T5EncoderModel.from_pretrained(local_dir)  # type: ignore[possibly-missing-attribute]
-            cast(nn.Module, model).to(self.device)
+            cast("nn.Module", model).to(self.device)
             self.model = model
             model.eval()
         except (ImportError, ModuleNotFoundError) as e:
@@ -103,8 +107,10 @@ class Prot5Based(EmbeddingBased):
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         if not batch:
-            raise ValueError("Input batch is empty.")
+            msg = "Input batch is empty."
+            raise ValueError(msg)
         self.ensure_loaded()
         if self.tokenizer is None:
-            raise RuntimeError("Tokenizer not loaded.")
+            msg = "Tokenizer not loaded."
+            raise RuntimeError(msg)
         return self._forward_hidden_states(batch, max_length=max_length)

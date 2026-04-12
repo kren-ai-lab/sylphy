@@ -9,9 +9,7 @@ _LOCK = threading.RLock()
 
 @dataclass
 class CachePaths:
-    """
-    Helper to manage sylphy cache layout and ensure directories exist.
-    """
+    """Helper to manage sylphy cache layout and ensure directories exist."""
 
     cache_root: Path
     tool_name: str = "sylphy"
@@ -24,16 +22,12 @@ class CachePaths:
         return self.base() / "models"
 
     def hf_model_dir(self, org: str, model: str, revision: str | None = None) -> Path:
-        """
-        Return a path for a HuggingFace model cache directory.
-        """
+        """Return a path for a HuggingFace model cache directory."""
         p = self.models() / "huggingface" / org / model
         return p if not revision else p / revision
 
     def other_model_dir(self, provider: str, name: str) -> Path:
-        """
-        Return a path for a non-HF model cache directory.
-        """
+        """Return a path for a non-HF model cache directory."""
         return self.models() / "other" / provider / name
 
     def data(self) -> Path:
@@ -46,9 +40,7 @@ class CachePaths:
         return self.base() / "logs"
 
     def ensure_all(self) -> None:
-        """
-        Create the common cache directories if they do not exist.
-        """
+        """Create the common cache directories if they do not exist."""
         with _LOCK:
             for p in [self.base(), self.models(), self.data(), self.tmp(), self.logs()]:
                 p.mkdir(parents=True, exist_ok=True)

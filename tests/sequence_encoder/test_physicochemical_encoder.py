@@ -22,11 +22,11 @@ def mock_cache(monkeypatch, tmp_path):
 
     from sylphy.sequence_encoder import physicochemical_encoder
 
-    monkeypatch.setattr(physicochemical_encoder, "get_config", lambda: _Cfg(), raising=True)
+    monkeypatch.setattr(physicochemical_encoder, "get_config", _Cfg, raising=True)
     return tmp_path / "data"
 
 
-def test_physicochemical_reads_cached_file(mock_cache):
+def test_physicochemical_reads_cached_file(mock_cache) -> None:
     """Verify encoder loads from cached AAIndex file without network access."""
     cache_dir = mock_cache / "aaindex"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -48,7 +48,7 @@ def test_physicochemical_reads_cached_file(mock_cache):
     assert enc.coded_dataset.iloc[0, :5].tolist() == [1.0, 2.0, 3.0, 0.0, 0.0]
 
 
-def test_physicochemical_raises_on_unknown_property(mock_cache):
+def test_physicochemical_raises_on_unknown_property(mock_cache) -> None:
     cache_dir = mock_cache / "aaindex"
     cache_dir.mkdir(parents=True, exist_ok=True)
     (cache_dir / Path(BASE_URL_AAINDEX).name).write_text("res,PROP\nA,1\n", encoding="utf-8")

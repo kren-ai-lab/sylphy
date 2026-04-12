@@ -7,7 +7,7 @@ from sylphy.core.optional_dependencies import (
 )
 
 
-def test_build_optional_dependency_error_mentions_extra():
+def test_build_optional_dependency_error_mentions_extra() -> None:
     err = build_optional_dependency_error(
         feature="ProtT5 embeddings",
         extra="embeddings",
@@ -19,7 +19,7 @@ def test_build_optional_dependency_error_mentions_extra():
     assert "sylphy[embeddings]" in str(err)
 
 
-def test_build_optional_dependency_error_uses_plural_install_target():
+def test_build_optional_dependency_error_uses_plural_install_target() -> None:
     err = build_optional_dependency_error(
         feature="Parquet export",
         extra="parquet",
@@ -29,7 +29,7 @@ def test_build_optional_dependency_error_uses_plural_install_target():
     assert "Install them with" in str(err)
 
 
-def test_is_missing_optional_dependency_matches_module_name():
+def test_is_missing_optional_dependency_matches_module_name() -> None:
     exc = ModuleNotFoundError("No module named 'sentencepiece'")
     exc.name = "sentencepiece"
 
@@ -37,7 +37,7 @@ def test_is_missing_optional_dependency_matches_module_name():
     assert is_missing_optional_dependency(exc, ("transformers",)) is False
 
 
-def test_wrap_optional_dependency_error_returns_none_for_unrelated_error():
+def test_wrap_optional_dependency_error_returns_none_for_unrelated_error() -> None:
     exc = RuntimeError("network timeout")
 
     assert (

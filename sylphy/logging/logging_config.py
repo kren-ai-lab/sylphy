@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any
 
 try:
     from appdirs import user_log_dir
@@ -26,6 +26,9 @@ from sylphy.constants.logging_constants import (
     env_log_stderr,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 # Track configured roots to avoid handler duplication across repeated calls.
 _CONFIGURED_ROOTS: set[str] = set()
 
@@ -33,9 +36,7 @@ _CONFIGURED_ROOTS: set[str] = set()
 
 
 def _env_int(name: str, default: int) -> int:
-    """
-    Parse an integer from environment. Returns default on failure.
-    """
+    """Parse an integer from environment. Returns default on failure."""
     raw = os.getenv(f"{LOG_ENV_PREFIX}{name}")
     if raw is None:
         return default
@@ -46,9 +47,7 @@ def _env_int(name: str, default: int) -> int:
 
 
 def _env_bool(name: str, default: bool) -> bool:
-    """
-    Parse a boolean from environment. Accepts: 1, true, yes, on.
-    """
+    """Parse a boolean from environment. Accepts: 1, true, yes, on."""
     raw = os.getenv(f"{LOG_ENV_PREFIX}{name}")
     if raw is None:
         return default
@@ -56,8 +55,7 @@ def _env_bool(name: str, default: bool) -> bool:
 
 
 def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | None = None) -> Path | None:
-    """
-    Decide log file path without importing heavy modules at import time.
+    """Decide log file path without importing heavy modules at import time.
 
     Priority:
       1) explicit argument `explicit_path`
@@ -100,9 +98,7 @@ def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | No
 
 
 class _JsonFormatter(logging.Formatter):
-    """
-    Minimal JSON formatter with safe extras serialization and optional UTC timestamps.
-    """
+    """Minimal JSON formatter with safe extras serialization and optional UTC timestamps."""
 
     def __init__(self, *, use_utc: bool = False) -> None:
         super().__init__()
@@ -167,7 +163,7 @@ class _JsonFormatter(logging.Formatter):
 
 
 def _make_stream_handler(
-    level: int, fmt: str, *, use_json: bool, use_utc: bool, datefmt: str | None
+    level: int, fmt: str, *, use_json: bool, use_utc: bool, datefmt: str | None,
 ) -> logging.Handler:
     h = logging.StreamHandler()
     h.setLevel(level)
@@ -232,8 +228,7 @@ def setup_logger(
     force_reconfigure: bool = False,
     extra_filters: Iterable[logging.Filter] | None = None,
 ) -> logging.Logger:
-    """
-    Configure and return the package root logger.
+    """Configure and return the package root logger.
 
     Idempotent per `name`: subsequent calls update the level and (optionally) reconfigure
     handlers if `force_reconfigure=True`.
@@ -277,6 +272,7 @@ def setup_logger(
     -------
     logging.Logger
         The configured logger instance.
+
     """
     # Resolve defaults from env if not provided
     if level is None:
@@ -358,18 +354,14 @@ def setup_logger(
 
 
 def get_logger(name: str = LOG_DEFAULT_NAME) -> logging.Logger:
-    """
-    Return the configured root logger. If not configured, configure with sane defaults.
-    """
+    """Return the configured root logger. If not configured, configure with sane defaults."""
     if name not in _CONFIGURED_ROOTS:
         setup_logger(name=name)
     return logging.getLogger(name)
 
 
 class _ContextFilter(logging.Filter):
-    """
-    Static key-value context injector. Useful for adding component/model identifiers.
-    """
+    """Static key-value context injector. Useful for adding component/model identifiers."""
 
     def __init__(self, **static_context: Any) -> None:
         super().__init__()
@@ -382,22 +374,15 @@ class _ContextFilter(logging.Filter):
 
 
 def add_context(logger: logging.Logger, **context: Any) -> None:
-    """
-    Attach static context (e.g., component='encoder', model='esm2') to a logger.
-    """
+    """Attach static context (e.g., component='encoder', model='esm2') to a logger."""
     if not context:
         return
     logger.addFilter(_ContextFilter(**context))
 
 
 def set_global_level(level: int | str, name: str = LOG_DEFAULT_NAME) -> None:
-    """
-    Change the level of the root logger and its handlers.
-    """
-    if isinstance(level, str):
-        lvl = LOG_LEVEL_MAP.get(level.upper(), LOG_DEFAULT_LEVEL)
-    else:
-        lvl = int(level)
+    """Change the level of the root logger and its handlers."""
+    lvl = LOG_LEVEL_MAP.get(level.upper(), LOG_DEFAULT_LEVEL) if isinstance(level, str) else int(level)
     logger = get_logger(name)
     logger.setLevel(lvl)
     for h in logger.handlers:
@@ -405,9 +390,7 @@ def set_global_level(level: int | str, name: str = LOG_DEFAULT_NAME) -> None:
 
 
 def silence_external() -> None:
-    """
-    Lower verbosity of common external libraries.
-    """
+    """Lower verbosity of common external libraries."""
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("transformers").setLevel(logging.WARNING)
     logging.getLogger("accelerate").setLevel(logging.WARNING)
@@ -415,8 +398,7 @@ def silence_external() -> None:
 
 
 def reset_logging(name: str = LOG_DEFAULT_NAME) -> None:
-    """
-    Remove all handlers for the given logger name and mark it as unconfigured.
+    """Remove all handlers for the given logger name and mark it as unconfigured.
     Useful for test teardown or dynamic reconfiguration.
     """
     logger = logging.getLogger(name)

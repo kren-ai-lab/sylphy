@@ -3,10 +3,8 @@ from __future__ import annotations
 import inspect
 import logging
 import traceback
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
-import pandas as pd
 import umap.umap_ as umap
 from clustpy.partition import DipExt
 from sklearn.decomposition import DictionaryLearning, MiniBatchDictionaryLearning
@@ -14,10 +12,13 @@ from sklearn.manifold import MDS, TSNE, Isomap, LocallyLinearEmbedding, Spectral
 
 from .reduction_methods import Preprocess, Reductions, ReturnType
 
+if TYPE_CHECKING:
+    import numpy as np
+    import pandas as pd
+
 
 class NonLinearReductions(Reductions):
-    """
-    Non-linear dimensionality reductions with a unified interface.
+    """Non-linear dimensionality reductions with a unified interface.
 
     Supported methods
     -----------------
@@ -59,10 +60,10 @@ class NonLinearReductions(Reductions):
         return cls(**k)
 
     def _apply_model(
-        self, model: Any, method_name: str, n_components: int | None = None
+        self, model: Any, method_name: str, n_components: int | None = None,
     ) -> np.ndarray | pd.DataFrame | None:
         try:
-            params = getattr(model, "get_params", lambda: {})()
+            params = getattr(model, "get_params", dict)()
             self.__logger__.info("Applying %s with params=%s", method_name, params)
             transformed = model.fit_transform(self.dataset)
             k = (

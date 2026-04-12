@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,8 @@ import pandas as pd
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.logging import add_context, get_logger
 
-from .reduction_methods import Preprocess, ReturnType
+if TYPE_CHECKING:
+    from .reduction_methods import Preprocess, ReturnType
 
 DatasetLike = np.ndarray | pd.DataFrame
 Kind = Literal["linear", "nonlinear"]
@@ -64,8 +65,7 @@ add_context(logger, component="reductions", facility="factory")
 
 
 def get_available_methods(kind: Kind | None = None) -> list[str]:
-    """
-    List available method names.
+    """List available method names.
 
     Parameters
     ----------
@@ -76,6 +76,7 @@ def get_available_methods(kind: Kind | None = None) -> list[str]:
     -------
     list of str
         Method names you can pass to `reduce_dimensionality`.
+
     """
     if kind is None:
         return sorted(_METHODS.keys())
@@ -83,7 +84,8 @@ def get_available_methods(kind: Kind | None = None) -> list[str]:
         return sorted(_LINEAR_METHODS.keys())
     if kind == "nonlinear":
         return sorted(_NONLINEAR_METHODS.keys())
-    raise ValueError("kind must be one of: None, 'linear', 'nonlinear'.")
+    msg = "kind must be one of: None, 'linear', 'nonlinear'."
+    raise ValueError(msg)
 
 
 def is_linear_method(name: str) -> bool:
@@ -108,8 +110,7 @@ def reduce_dimensionality(
     logger_name: str = "sylphy.reductions.factory",
     **kwargs: Any,
 ) -> tuple[object | None, np.ndarray | pd.DataFrame | None]:
-    """
-    Run a dimensionality reduction by method name via a unified factory.
+    """Run a dimensionality reduction by method name via a unified factory.
 
     For linear methods, returns ``(fitted_model, transformed)``.
     For non-linear methods, returns ``(None, transformed)`` (current behavior).
@@ -148,6 +149,7 @@ def reduce_dimensionality(
     ------
     ValueError
         If the method name is not registered.
+
     """
     # Child logger for this invocation (level control via `debug`)
     log = logging.getLogger(logger_name)
@@ -157,7 +159,8 @@ def reduce_dimensionality(
     key = method.lower().strip()
     if key not in _METHODS:
         all_methods = ", ".join(sorted(_METHODS.keys()))
-        raise ValueError(f"Unknown reduction method '{method}'. Available: {all_methods}")
+        msg = f"Unknown reduction method '{method}'. Available: {all_methods}"
+        raise ValueError(msg)
 
     kind, attr = _METHODS[key]
     log.info("Dispatching method='%s' (kind=%s) | preprocess=%s | kwargs=%s", key, kind, preprocess, kwargs)

@@ -9,8 +9,7 @@ Provider = Literal["huggingface", "other"]
 
 @dataclass(frozen=True)
 class ModelSpec:
-    """
-    Canonical specification for a model entry in the registry.
+    """Canonical specification for a model entry in the registry.
 
     Parameters
     ----------
@@ -30,6 +29,7 @@ class ModelSpec:
     Notes
     -----
     - Minimal and immutable to keep the registry deterministic and easy to serialize.
+
     """
 
     name: str

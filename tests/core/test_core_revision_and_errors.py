@@ -18,7 +18,7 @@ from sylphy.core.model_registry import (
 from sylphy.core.model_spec import ModelSpec
 
 
-def test_hf_revision_path_is_used(monkeypatch, tmp_path):
+def test_hf_revision_path_is_used(monkeypatch, tmp_path) -> None:
     """
     If a revision is provided, the resolved cache path should include the revision
     (per CachePaths.hf_model_dir(org, model, revision)).
@@ -26,10 +26,11 @@ def test_hf_revision_path_is_used(monkeypatch, tmp_path):
     calls = {"n": 0}
     hub = types.ModuleType("huggingface_hub")
 
-    def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None):
+    def snapshot_download(ref, revision=None, local_dir=None, local_dir_use_symlinks=None) -> None:
         calls["n"] += 1
         if local_dir is None:
-            raise AssertionError("local_dir should be provided in snapshot_download mock.")
+            msg = "local_dir should be provided in snapshot_download mock."
+            raise AssertionError(msg)
         dest = Path(local_dir)
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "marker.txt").write_text("ok")
@@ -51,12 +52,12 @@ def test_hf_revision_path_is_used(monkeypatch, tmp_path):
     assert calls["n"] == 1
 
 
-def test_alias_requires_existing_canonical():
+def test_alias_requires_existing_canonical() -> None:
     with pytest.raises(ModelNotFoundError):
         register_alias("alias_x", "not_registered")
 
 
-def test_env_override_nonexistent_raises(monkeypatch, tmp_path):
+def test_env_override_nonexistent_raises(monkeypatch, tmp_path) -> None:
     import sylphy.core.model_registry as regmod
 
     monkeypatch.setattr(regmod, "_ENV_PREFIX", "PR_MODEL_", raising=True)
@@ -66,20 +67,20 @@ def test_env_override_nonexistent_raises(monkeypatch, tmp_path):
         resolve_model("x")
 
 
-def test_unsupported_provider_wraps_in_download_error():
-    register_model(ModelSpec(name="bad", provider=cast(Any, "weird"), ref="x/y"))
+def test_unsupported_provider_wraps_in_download_error() -> None:
+    register_model(ModelSpec(name="bad", provider=cast("Any", "weird"), ref="x/y"))
     with pytest.raises(ModelDownloadError):
         resolve_model("bad")
 
 
-def test_cache_layout_helpers_agree_with_resolve(monkeypatch):
+def test_cache_layout_helpers_agree_with_resolve(monkeypatch) -> None:
     """
     Smoke check: resolve_model() returns a path equal to CachePaths.hf_model_dir
     for HF models (no revision case).
     """
     hub = types.ModuleType("huggingface_hub")
 
-    def snapshot_download(*args, **kwargs):
+    def snapshot_download(*args, **kwargs) -> None:
         # simulate download by creating the destination directory
         local_dir = kwargs.get("local_dir")
         # Also support positional style: snapshot_download(ref, revision=None, local_dir=..., ...)

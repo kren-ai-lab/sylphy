@@ -30,11 +30,11 @@ def mock_cache(monkeypatch, tmp_path):
 
     from sylphy.sequence_encoder import physicochemical_encoder
 
-    monkeypatch.setattr(physicochemical_encoder, "get_config", lambda: _Cfg(), raising=True)
+    monkeypatch.setattr(physicochemical_encoder, "get_config", _Cfg, raising=True)
     return tmp_path / "data"
 
 
-def test_factory_known_aliases(toy_df, mock_cache):
+def test_factory_known_aliases(toy_df, mock_cache) -> None:
     """Verify factory creates correct encoder for all known aliases."""
     # Pre-populate cache with minimal AAIndex file to avoid network requests
     cache_dir = mock_cache / "aaindex"
@@ -63,7 +63,7 @@ def test_factory_known_aliases(toy_df, mock_cache):
         assert isinstance(enc, cls)
 
 
-def test_factory_unknown_raises():
+def test_factory_unknown_raises() -> None:
     """Verify factory raises ValueError for unknown encoder names."""
     with pytest.raises(ValueError):
         create_encoder("nope", dataset=pd.DataFrame({"sequence": ["AAA"]}))

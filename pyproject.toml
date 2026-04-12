@@ -118,12 +118,12 @@ select = ["F", "W", "E", "I", "A", "B", "N"]
 ignore = ["N802", "N803", "N806"]
 
 [tool.taskipy.tasks]
-sort-imports = "ruff check --fix --select I sylphy/ tests/"
+sort-imports = "ruff check --fix --select I,F401 sylphy/ tests/"
 format = "task sort-imports && ruff format sylphy/ tests/"
 lint = "ruff check sylphy/ tests/"
 lint-fix = "ruff check --fix sylphy/ tests/"
 test = "pytest -q"
 test-v = "pytest -v"
 test-cov = "pytest --cov=sylphy --cov-report=html"
-typecheck = "pyrefly check sylphy/ tests/"
-typecheck-ty = "ty check sylphy/ tests/"
+pyrefly = "pyrefly check sylphy/ tests/"
+ty = "ty check sylphy/ tests/"

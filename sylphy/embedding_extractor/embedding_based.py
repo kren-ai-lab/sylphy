@@ -218,6 +218,22 @@ class EmbeddingBased:
             return torch.bfloat16
         return None
 
+    def embedding_process(
+        self,
+        batch_size: int = 32,
+        *,
+        seq_len: int | None = None,
+        layers: LayerSpec = "last",
+        layer_agg: LayerAgg = "mean",
+        pool: Pool = "mean",
+    ) -> pd.DataFrame:
+        """
+        Hook for non-tokenizer backends.
+
+        Subclasses that set ``requires_tokenizer = False`` must override this method.
+        """
+        raise NotImplementedError("Non-tokenizer backends must implement embedding_process().")
+
     def _make_batches(self, seqs: list[str], batch_size: int) -> list[list[str]]:
         return [seqs[i : i + batch_size] for i in range(0, len(seqs), batch_size)]
 
@@ -440,8 +456,8 @@ class EmbeddingBased:
             if not self._is_ready():
                 raise RuntimeError("Model/tokenizer not loaded. Call load_model_tokenizer() before forward.")
 
-            if not self.requires_tokenizer and hasattr(self, "embedding_process"):
-                df = self.embedding_process(  # type: ignore[attr-defined]
+            if not self.requires_tokenizer:
+                df = self.embedding_process(
                     batch_size=batch_size,
                     seq_len=max_length,
                     layers=layers,

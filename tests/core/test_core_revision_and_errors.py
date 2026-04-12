@@ -34,7 +34,7 @@ def test_hf_revision_path_is_used(monkeypatch, tmp_path):
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "marker.txt").write_text("ok")
 
-    hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
+    monkeypatch.setattr(hub, "snapshot_download", snapshot_download, raising=False)
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
 
     spec = ModelSpec(
@@ -89,7 +89,7 @@ def test_cache_layout_helpers_agree_with_resolve(monkeypatch):
         if local_dir:
             Path(str(local_dir)).mkdir(parents=True, exist_ok=True)
 
-    hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
+    monkeypatch.setattr(hub, "snapshot_download", snapshot_download, raising=False)
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
 
     spec = ModelSpec(name="hf_simple", provider="huggingface", ref="org/name2")

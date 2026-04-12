@@ -97,7 +97,7 @@ def test_resolve_huggingface_download_mocked(monkeypatch, tmp_path):
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "config.json").write_text(json.dumps({"ref": ref}))
 
-    hub.snapshot_download = snapshot_download  # type: ignore[attr-defined]
+    monkeypatch.setattr(hub, "snapshot_download", snapshot_download, raising=False)
 
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
 
@@ -151,7 +151,7 @@ def test_resolve_other_url_download_and_extract(monkeypatch, tmp_path):
         return DummyResp(_make_zip_bytes())
 
     req = types.ModuleType("requests")
-    req.get = fake_get  # type: ignore[attr-defined]
+    monkeypatch.setattr(req, "get", fake_get, raising=False)
     monkeypatch.setitem(sys.modules, "requests", req)
 
     register_model(ModelSpec(name="other_url", provider="other", ref="https://example.com/model.zip"))

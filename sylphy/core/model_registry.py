@@ -231,50 +231,57 @@ def _download_other(ref: str, dst: Path) -> None:
     - If `ref` is a local path, copy its contents into `dst`.
     - Else treat `ref` as a URL and download; if archive, extract.
     """
+    p = Path(ref).expanduser()
+    if p.exists():
+        _handle_local_copy(p, dst)
+        return
+
+    _download_url_and_extract(ref, dst)
+
+
+def _handle_local_copy(src: Path, dst: Path) -> None:
+    """Copy local path or directory contents to destination."""
     import shutil  # noqa: PLC0415
+    logger.info("Copying local model from %s to %s", src, dst)
+    if src.is_dir():
+        for item in src.iterdir():
+            dest = dst / item.name
+            if item.is_dir():
+                shutil.copytree(item, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, dest)
+    else:
+        shutil.copy2(src, dst / src.name)
+
+
+def _download_url_and_extract(url: str, dst: Path) -> None:
+    """Download file from URL and extract if it's an archive."""
+    import tarfile  # noqa: PLC0415
+    import zipfile  # noqa: PLC0415
     from urllib.parse import urlparse  # noqa: PLC0415
 
     import requests  # noqa: PLC0415
 
-    p = Path(ref).expanduser()
-    if p.exists():
-        logger.info("Copying local model from %s to %s", p, dst)
-        if p.is_dir():
-            for item in p.iterdir():
-                dest = dst / item.name
-                if item.is_dir():
-                    shutil.copytree(item, dest, dirs_exist_ok=True)
-                else:
-                    shutil.copy2(item, dest)
-        else:
-            shutil.copy2(p, dst / p.name)
-        return
-
-    parsed = urlparse(ref)
+    parsed = urlparse(url)
     if not parsed.scheme:
-        msg = f"'other' provider ref is neither local path nor URL: {ref}"
+        msg = f"'other' provider ref is neither local path nor URL: {url}"
         raise ValueError(msg)
 
     tmp = dst / "download.tmp"
-    logger.info("Downloading model from %s", ref)
-    with requests.get(ref, stream=True, timeout=60) as r:
+    logger.info("Downloading model from %s", url)
+    with requests.get(url, stream=True, timeout=60) as r:
         r.raise_for_status()
         with tmp.open("wb") as f:
             for chunk in r.iter_content(chunk_size=1 << 20):
                 if chunk:
                     f.write(chunk)
 
-    import tarfile  # noqa: PLC0415
-    import zipfile  # noqa: PLC0415
-
     try:
         if tarfile.is_tarfile(tmp):
             with tarfile.open(tmp) as tf:
-                # Use 'data' filter if available (Python 3.12+ or patched 3.11)
                 try:
                     tf.extractall(dst, filter="data")
                 except (TypeError, AttributeError):
-                    # Fallback for older Python versions
                     tf.extractall(dst)  # noqa: S202
             tmp.unlink(missing_ok=True)
         elif zipfile.is_zipfile(tmp):

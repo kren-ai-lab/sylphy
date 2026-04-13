@@ -13,14 +13,14 @@ except Exception:  # noqa: BLE001 # pragma: no cover
 
 # Import lightweight constants/helpers (avoid cycles)
 from sylphy.constants.logging_constants import (
-    LOG_DEFAULT_BACKUPS,  # 3
-    LOG_DEFAULT_JSON,  # False
-    LOG_DEFAULT_LEVEL,  # logging.INFO
-    LOG_DEFAULT_MAX_BYTES,  # 10 MB
-    LOG_DEFAULT_NAME,  # "sylphy"
-    LOG_DEFAULT_STDERR,  # False
-    LOG_ENV_PREFIX,  # "SYLPHY_LOG_"
-    LOG_LEVEL_MAP,  # str->level
+    LOG_DEFAULT_BACKUPS,
+    LOG_DEFAULT_JSON,
+    LOG_DEFAULT_LEVEL,
+    LOG_DEFAULT_MAX_BYTES,
+    LOG_DEFAULT_NAME,
+    LOG_DEFAULT_STDERR,
+    LOG_ENV_PREFIX,
+    LOG_LEVEL_MAP,
     env_log_json,
     env_log_level,
     env_log_stderr,
@@ -55,29 +55,18 @@ def _env_bool(name: str, *, default: bool) -> bool:
 
 
 def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | None = None) -> Path | None:
-    """Decide log file path without importing heavy modules at import time.
-
-    Priority:
-      1) explicit argument `explicit_path`
-      2) env SYLPHY_LOG_FILE
-      3) sylphy.constants.tool_configs.get_config().cache_paths.logs()  (lazy import)
-      4) appdirs user_log_dir()
-      5) None (no file handler)
-    """
-    # 1) explicit path argument
+    """Decide log file path without importing heavy modules at import time."""
     if explicit_path is not None:
         p = Path(explicit_path).expanduser()
         p.parent.mkdir(parents=True, exist_ok=True)
         return p
 
-    # 2) env override
     env_path = os.getenv(f"{LOG_ENV_PREFIX}FILE")
     if env_path:
         p = Path(env_path).expanduser()
         p.parent.mkdir(parents=True, exist_ok=True)
         return p
 
-    # 3) Lazy import to avoid cycles
     try:
         from sylphy.constants.tool_configs import get_config  # noqa: PLC0415
 
@@ -87,25 +76,22 @@ def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | No
     except Exception:  # noqa: BLE001, S110
         pass
 
-    # 4) Fallback to appdirs
     if user_log_dir is not None:
         base = Path(user_log_dir("sylphy", "Sylphy"))
         base.mkdir(parents=True, exist_ok=True)
         return base / default_name
 
-    # 5) give up: no file
     return None
 
 
 class _JsonFormatter(logging.Formatter):
-    """Minimal JSON formatter with safe extras serialization and optional UTC timestamps."""
+    """Minimal JSON formatter with safe extras serialization."""
 
     def __init__(self, *, use_utc: bool = False) -> None:
         super().__init__()
         self._use_utc = use_utc
 
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
-        # ISO-ish time; respect UTC flag
         if self._use_utc:
             import time  # noqa: PLC0415
 
@@ -120,40 +106,20 @@ class _JsonFormatter(logging.Formatter):
             "name": record.name,
             "message": record.getMessage(),
         }
-        # Attach extra context fields (added via filters or loggerAdapter)
         for k, v in record.__dict__.items():
             if k in {
-                "args",
-                "asctime",
-                "created",
-                "exc_info",
-                "exc_text",
-                "filename",
-                "funcName",
-                "levelname",
-                "levelno",
-                "lineno",
-                "module",
-                "msecs",
-                "msg",
-                "name",
-                "pathname",
-                "process",
-                "processName",
-                "relativeCreated",
-                "stack_info",
-                "thread",
-                "threadName",
+                "args", "asctime", "created", "exc_info", "exc_text", "filename",
+                "funcName", "levelname", "levelno", "lineno", "module", "msecs",
+                "msg", "name", "pathname", "process", "processName",
+                "relativeCreated", "stack_info", "thread", "threadName",
             }:
                 continue
-            # Keep only JSON-safe values; fallback to str.
             try:
                 json.dumps({k: v})
                 payload[k] = v
             except Exception:  # noqa: BLE001
                 payload[k] = str(v)
 
-        # Exception info, if any
         if record.exc_info:
             payload["exc"] = self.formatException(record.exc_info)
         if record.stack_info:
@@ -170,8 +136,7 @@ def _make_stream_handler(
     if use_json:
         h.setFormatter(_JsonFormatter(use_utc=use_utc))
     else:
-        formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
-        h.setFormatter(formatter)
+        h.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
     return h
 
 
@@ -186,7 +151,6 @@ def _make_file_handler(
     max_bytes: int,
     backups: int,
 ) -> logging.Handler:
-    # Prefer rotating handler; gracefully fallback to simple file handler.
     try:
         from logging.handlers import RotatingFileHandler  # noqa: PLC0415
 
@@ -204,6 +168,85 @@ def _make_file_handler(
     else:
         fh.setFormatter(logging.Formatter(fmt=fmt, datefmt=datefmt))
     return fh
+
+
+# ---------- setup_logger decomposition ----------
+
+
+def _resolve_setup_params(
+    level: int | str | None,
+    *,
+    with_console: bool | None,
+    use_json: bool | None,
+    use_utc: bool | None,
+    max_bytes: int | None,
+    backups: int | None,
+) -> tuple[int, bool, bool, bool, int, int]:
+    if level is None:
+        lvl = env_log_level()
+    elif isinstance(level, str):
+        lvl = LOG_LEVEL_MAP.get(level.upper(), LOG_DEFAULT_LEVEL)
+    else:
+        lvl = int(level)
+
+    wc = env_log_stderr(default=LOG_DEFAULT_STDERR) if with_console is None else with_console
+    uj = env_log_json(default=LOG_DEFAULT_JSON) if use_json is None else use_json
+    uu = _env_bool("UTC", default=False) if use_utc is None else use_utc
+    mb = _env_int("MAX_BYTES", LOG_DEFAULT_MAX_BYTES) if max_bytes is None else max_bytes
+    bk = _env_int("BACKUPS", LOG_DEFAULT_BACKUPS) if backups is None else backups
+
+    return lvl, wc, uj, uu, mb, bk
+
+
+def _update_existing_handlers(logger: logging.Logger, lvl: int) -> None:
+    logger.setLevel(lvl)
+    for h in logger.handlers:
+        h.setLevel(lvl if isinstance(lvl, int) else LOG_DEFAULT_LEVEL)
+
+
+def _clear_existing_handlers(logger: logging.Logger, name: str) -> None:
+    for h in list(logger.handlers):
+        logger.removeHandler(h)
+    _CONFIGURED_ROOTS.discard(name)
+
+
+def _add_console_handler(
+    logger: logging.Logger,
+    lvl: int,
+    fmt: str,
+    *,
+    json: bool,
+    utc: bool,
+    datefmt: str | None,
+) -> None:
+    ch = _make_stream_handler(lvl, fmt, use_json=json, use_utc=utc, datefmt=datefmt)
+    logger.addHandler(ch)
+
+
+def _add_file_handler(
+    logger: logging.Logger,
+    file_path: Path | None,
+    fmt: str,
+    *,
+    json: bool,
+    utc: bool,
+    datefmt: str | None,
+    max_bytes: int,
+    backups: int,
+) -> None:
+    path = _resolve_log_file(explicit_path=file_path)
+    if path is not None:
+        fh = _make_file_handler(
+            path,
+            level=logging.DEBUG,
+            fmt=fmt,
+            use_json=json,
+            use_utc=utc,
+            datefmt=datefmt,
+            max_bytes=max_bytes,
+            backups=backups,
+        )
+        logger.addHandler(fh)
 
 
 # ---------- public API ----------
@@ -228,123 +271,37 @@ def setup_logger(
     force_reconfigure: bool = False,
     extra_filters: Iterable[logging.Filter] | None = None,
 ) -> logging.Logger:
-    """Configure and return the package root logger.
-
-    Idempotent per `name`: subsequent calls update the level and (optionally) reconfigure
-    handlers if `force_reconfigure=True`.
-
-    Parameters
-    ----------
-    name : str
-        Logger name (package root).
-    level : int | str | None
-        Logging level (int or textual). If None, read from env (SYLPHY_LOG_LEVEL).
-    with_console : bool | None
-        If None, read from env (SYLPHY_LOG_STDERR). If True, add STDERR handler.
-    with_file : bool
-        Whether to add a file handler (rotating if possible).
-    file_path : Optional[Path]
-        Force a specific file path. Otherwise resolved by _resolve_log_file.
-    fmt_console : str
-        Format string for console logs (ignored if JSON).
-    fmt_file : str
-        Format string for file logs (ignored if JSON).
-    datefmt_console : Optional[str]
-        Date format for console logs (ignored if JSON).
-    datefmt_file : Optional[str]
-        Date format for file logs (ignored if JSON).
-    use_json : Optional[bool]
-        If None, read from env (SYLPHY_LOG_JSON). If True, use JSON formatter.
-    use_utc : Optional[bool]
-        If None, read from env (SYLPHY_LOG_UTC). If True, timestamps in UTC.
-    max_bytes : Optional[int]
-        Max bytes per log file; if None, read from env (SYLPHY_LOG_MAX_BYTES).
-    backups : Optional[int]
-        Number of rotated backups; if None, read from env (SYLPHY_LOG_BACKUPS).
-    propagate : bool
-        Whether the logger should propagate to parent loggers.
-    force_reconfigure : bool
-        If True, remove existing handlers and re-add with current parameters.
-    extra_filters : Optional[Iterable[logging.Filter]]
-        Additional filters to attach to the logger (e.g., context filters).
-
-    Returns
-    -------
-    logging.Logger
-        The configured logger instance.
-
-    """
-    # Resolve defaults from env if not provided
-    if level is None:
-        lvl = env_log_level()
-    elif isinstance(level, str):
-        lvl = LOG_LEVEL_MAP.get(level.upper(), LOG_DEFAULT_LEVEL)
-    else:
-        lvl = int(level)
-
-    if with_console is None:
-        with_console = env_log_stderr(default=LOG_DEFAULT_STDERR)
-
-    if use_json is None:
-        use_json = env_log_json(default=LOG_DEFAULT_JSON)
-
-    if use_utc is None:
-        use_utc = _env_bool("UTC", default=False)
-
-    if max_bytes is None:
-        max_bytes = _env_int("MAX_BYTES", LOG_DEFAULT_MAX_BYTES)
-
-    if backups is None:
-        backups = _env_int("BACKUPS", LOG_DEFAULT_BACKUPS)
+    """Configure and return the package root logger."""
+    lvl, wc, uj, uu, mb, bk = _resolve_setup_params(
+        level,
+        with_console=with_console,
+        use_json=use_json,
+        use_utc=use_utc,
+        max_bytes=max_bytes,
+        backups=backups,
+    )
 
     logger = logging.getLogger(name)
     logger.propagate = propagate
 
     already_configured = name in _CONFIGURED_ROOTS
-
     if already_configured and not force_reconfigure:
-        # Just update levels across existing handlers.
-        logger.setLevel(lvl)
-        for h in logger.handlers:
-            h.setLevel(lvl if isinstance(lvl, int) else LOG_DEFAULT_LEVEL)
+        _update_existing_handlers(logger, lvl)
         return logger
 
-    # (Re)configure from scratch
     if already_configured and force_reconfigure:
-        for h in list(logger.handlers):
-            logger.removeHandler(h)
-        _CONFIGURED_ROOTS.discard(name)
+        _clear_existing_handlers(logger, name)
 
     logger.setLevel(lvl)
 
-    # Console handler (stderr)
-    if with_console:
-        ch = _make_stream_handler(
-            lvl,
-            fmt_console,
-            use_json=bool(use_json),
-            use_utc=bool(use_utc),
-            datefmt=datefmt_console,
-        )
-        logger.addHandler(ch)
+    if wc:
+        _add_console_handler(logger, lvl, fmt_console, json=uj, utc=uu, datefmt=datefmt_console)
 
-    # File handler
     if with_file:
-        path = _resolve_log_file(explicit_path=file_path)
-        if path is not None:
-            fh = _make_file_handler(
-                path,
-                level=logging.DEBUG,  # keep file verbose
-                fmt=fmt_file,
-                use_json=bool(use_json),
-                use_utc=bool(use_utc),
-                datefmt=datefmt_file,
-                max_bytes=int(max_bytes),
-                backups=int(backups),
-            )
-            logger.addHandler(fh)
+        _add_file_handler(
+            logger, file_path, fmt_file, json=uj, utc=uu, datefmt=datefmt_file, max_bytes=mb, backups=bk,
+        )
 
-    # Attach any extra filters
     if extra_filters:
         for flt in extra_filters:
             logger.addFilter(flt)
@@ -361,7 +318,7 @@ def get_logger(name: str = LOG_DEFAULT_NAME) -> logging.Logger:
 
 
 class _ContextFilter(logging.Filter):
-    """Static key-value context injector. Useful for adding component/model identifiers."""
+    """Static key-value context injector."""
 
     def __init__(self, **static_context: object) -> None:
         super().__init__()
@@ -374,7 +331,7 @@ class _ContextFilter(logging.Filter):
 
 
 def add_context(logger: logging.Logger, **context: object) -> None:
-    """Attach static context (e.g., component='encoder', model='esm2') to a logger."""
+    """Attach static context to a logger."""
     if not context:
         return
     logger.addFilter(_ContextFilter(**context))
@@ -391,18 +348,13 @@ def set_global_level(level: int | str, name: str = LOG_DEFAULT_NAME) -> None:
 
 def silence_external() -> None:
     """Lower verbosity of common external libraries."""
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("transformers").setLevel(logging.WARNING)
-    logging.getLogger("accelerate").setLevel(logging.WARNING)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    for lib in ("urllib3", "transformers", "accelerate", "httpx"):
+        logging.getLogger(lib).setLevel(logging.WARNING)
 
 
 def reset_logging(name: str = LOG_DEFAULT_NAME) -> None:
-    """Remove all handlers for the given logger name and mark it as unconfigured.
-    Useful for test teardown or dynamic reconfiguration.
-    """
+    """Remove all handlers for the given logger name and mark it as unconfigured."""
     logger = logging.getLogger(name)
     for h in list(logger.handlers):
         logger.removeHandler(h)
     _CONFIGURED_ROOTS.discard(name)
-

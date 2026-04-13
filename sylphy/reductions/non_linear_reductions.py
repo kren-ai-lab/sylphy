@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import logging
 import traceback
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 import umap.umap_ as umap
 from clustpy.partition import DipExt
@@ -15,6 +15,14 @@ from .reduction_methods import Preprocess, Reductions, ReturnType
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
+
+
+class _SupportsFitTransform(Protocol):
+    def fit_transform(self, X: Any, y: Any = None) -> Any:  # noqa: ANN401
+        ...
+
+
+ModelT = TypeVar("ModelT", bound=_SupportsFitTransform)
 
 
 class NonLinearReductions(Reductions):
@@ -51,7 +59,7 @@ class NonLinearReductions(Reductions):
     # -----------------------------
     # Helpers
     # -----------------------------
-    def _init_with_seed(self, cls: type[object], kwargs: dict[str, object]) -> object:
+    def _init_with_seed(self, cls: type[ModelT], kwargs: dict[str, object]) -> ModelT:
         sig = inspect.signature(cls.__init__)
         params = set(sig.parameters.keys())
         k = dict(kwargs)
@@ -60,7 +68,7 @@ class NonLinearReductions(Reductions):
         return cls(**k)
 
     def _apply_model(
-        self, model: object, method_name: str, n_components: int | None = None,
+        self, model: ModelT, method_name: str, n_components: int | None = None,
     ) -> np.ndarray | pd.DataFrame | None:
         try:
             params = getattr(model, "get_params", dict)()
@@ -89,37 +97,41 @@ class NonLinearReductions(Reductions):
             self.__logger__.warning("t-SNE perplexity=%s >= n=%s; using %s instead.", perplexity, n, new_p)
             kwargs["perplexity"] = new_p
         model = self._init_with_seed(TSNE, kwargs)
-        return self._apply_model(model, "t-SNE", kwargs.get("n_components"))
+        return self._apply_model(model, "t-SNE", cast("int | None", kwargs.get("n_components")))
 
     def apply_isomap(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
-        model = Isomap(**kwargs)  # no random_state
-        return self._apply_model(model, "Isomap", kwargs.get("n_components"))
+        model = Isomap(**cast("Any", kwargs))  # no random_state
+        return self._apply_model(model, "Isomap", cast("int | None", kwargs.get("n_components")))
 
     def apply_mds(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(MDS, kwargs)
-        return self._apply_model(model, "MDS", kwargs.get("n_components"))
+        return self._apply_model(model, "MDS", cast("int | None", kwargs.get("n_components")))
 
     def apply_lle(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(LocallyLinearEmbedding, kwargs)
-        return self._apply_model(model, "LLE", kwargs.get("n_components"))
+        return self._apply_model(model, "LLE", cast("int | None", kwargs.get("n_components")))
 
     def apply_spectral(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(SpectralEmbedding, kwargs)
-        return self._apply_model(model, "SpectralEmbedding", kwargs.get("n_components"))
+        return self._apply_model(model, "SpectralEmbedding", cast("int | None", kwargs.get("n_components")))
 
     def apply_umap(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         # umap-learn supports 'random_state'
         model = self._init_with_seed(umap.UMAP, kwargs)
-        return self._apply_model(model, "UMAP", kwargs.get("n_components"))
+        return self._apply_model(model, "UMAP", cast("int | None", kwargs.get("n_components")))
 
     def apply_dictionary_learning(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(DictionaryLearning, kwargs)
-        return self._apply_model(model, "DictionaryLearning", kwargs.get("n_components"))
+        return self._apply_model(model, "DictionaryLearning", cast("int | None", kwargs.get("n_components")))
 
-    def apply_mini_batch_dictionary_learning(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_mini_batch_dictionary_learning(
+        self, **kwargs: object,
+    ) -> np.ndarray | pd.DataFrame | None:
         model = self._init_with_seed(MiniBatchDictionaryLearning, kwargs)
-        return self._apply_model(model, "MiniBatchDictionaryLearning", kwargs.get("n_components"))
+        return self._apply_model(
+            model, "MiniBatchDictionaryLearning", cast("int | None", kwargs.get("n_components")),
+        )
 
     def apply_dip_ext(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
-        model = DipExt(**kwargs)  # library-specific, no random_state in __init__
-        return self._apply_model(model, "DipExt", kwargs.get("n_components"))
+        model = DipExt(**cast("Any", kwargs))  # library-specific, no random_state in __init__
+        return self._apply_model(model, "DipExt", cast("int | None", kwargs.get("n_components")))

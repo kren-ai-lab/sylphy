@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -43,7 +43,7 @@ def test_frequency_invariants() -> None:
     X = enc.coded_dataset
 
     feat_cols = [c for c in X.columns if c != "sequence"]
-    loc = cast("object", X.loc)
+    loc = cast("Any", X.loc)
     v = (
         loc[0, LIST_RESIDUES].to_numpy()
         if set(LIST_RESIDUES).issubset(feat_cols)

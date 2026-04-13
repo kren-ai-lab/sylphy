@@ -91,7 +91,7 @@ class UtilsLib:
             raise ValueError(msg)
 
         # Determine the set of labels to consider
-        present = pd.unique(df[label_name])
+        present = cast("np.ndarray", pd.unique(df[label_name]))
         use_labels = cls._resolve_labels(present, labels, label_name)
 
         if per_label:
@@ -156,7 +156,7 @@ class UtilsLib:
             _LOG.warning("No rows matched labels; returning empty frame.")
             return df.iloc[0:0].copy()
 
-        alloc = cast("pd.Series", (counts / total * n).round().astype(int))
+        alloc = cast("pd.Series", (cast("Any", counts / total) * n).round().astype(int))
         alloc = alloc.mask((counts > 0) & (alloc == 0), 1)
         diff = int(n - int(alloc.sum()))
         if diff != 0:

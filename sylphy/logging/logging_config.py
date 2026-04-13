@@ -9,7 +9,15 @@ from typing import TYPE_CHECKING
 try:
     from appdirs import user_log_dir
 except Exception:  # noqa: BLE001 # pragma: no cover
-    user_log_dir = None  # type: ignore[assignment]
+    def user_log_dir(
+        _appname: str | None = None,
+        _appauthor: str | None = None,
+        _version: str | None = None,
+        *,
+        _opinion: bool = True,
+    ) -> str:
+        """Dummy fallback if appdirs is missing."""
+        return ""
 
 # Import lightweight constants/helpers (avoid cycles)
 from sylphy.constants.logging_constants import (

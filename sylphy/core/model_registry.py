@@ -223,7 +223,6 @@ def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
         revision=revision,
         local_dir=str(dst),
     )
-    return dst
 
 def _download_other(ref: str, dst: Path) -> None:
     """Download or copy a non-HF model into `dst`.

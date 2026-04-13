@@ -3,22 +3,17 @@ from __future__ import annotations
 
 import os
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING
 
 import pytest
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
 
 @pytest.fixture(autouse=True)
-def _quiet_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _quiet_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Redirect logs to a temporary file and clean SYLPHY_LOG_* environment variables."""
     for k in list(os.environ.keys()):
         if k.startswith("SYLPHY_LOG_"):
             monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(tmp_path / "cli.log"))
-    return
 
 
 @pytest.fixture(autouse=True)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import pandas as pd
 import pytest
@@ -19,7 +19,7 @@ def test_prot5_missing_sentencepiece_suggests_embeddings_extra(monkeypatch: pyte
             msg,
         )
 
-    tokenizer_cls = cast("object", __import__("transformers")).T5Tokenizer
+    tokenizer_cls = cast("Any", __import__("transformers")).T5Tokenizer
     monkeypatch.setattr(tokenizer_cls, "from_pretrained", _boom)
 
     with pytest.raises(ImportError, match=r"sylphy\[embeddings\]"):

@@ -1,5 +1,6 @@
 # Sylphy 🧬
-[![Release](https://img.shields.io/github/v/release/kren-ai-lab/sylphy?style=flat-square)](https://github.com/kren-ai-lab/sylphy/releases)
+[![PyPI](https://img.shields.io/pypi/v/sylphy?style=flat-square)](https://pypi.org/project/sylphy/)
+[![PyVersions](https://img.shields.io/pypi/pyversions/sylphy?style=flat-square)](https://github.com/kren-ai-lab/sylphy)
 [![Tests](https://img.shields.io/github/actions/workflow/status/kren-ai-lab/sylphy/tests.yml?style=flat-square)](https://github.com/kren-ai-lab/sylphy/actions/workflows/tests.yml)
 ![License](https://img.shields.io/github/license/kren-ai-lab/sylphy?style=flat-square)
 

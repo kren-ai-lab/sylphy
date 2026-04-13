@@ -72,5 +72,5 @@ def test_factory_nonlinear_numpy(X_small: np.ndarray, caplog: pytest.LogCaptureF
 
 def test_factory_unknown_raises(X_small: np.ndarray) -> None:
     """Unknown method should raise a ValueError."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Unknown reduction method"):
         reduce_dimensionality("nope", X_small)

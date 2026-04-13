@@ -73,7 +73,7 @@ class NonLinearReductions(Reductions):
             )
             self.__logger__.info("%s successful. Output shape=%s", method_name, transformed.shape)
             return self.generate_dataset_post_reduction(transformed, k)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.__logger__.error("%s failed: %s", method_name, e)
             self.__logger__.debug(traceback.format_exc())
             return None

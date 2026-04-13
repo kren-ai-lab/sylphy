@@ -23,8 +23,8 @@ class _FakeConfig:
 
 class _FakeTokenizer:
     pad_token_id: int = 0
-    pad_token: str = "[PAD]"
-    eos_token: str = "[EOS]"
+    pad_token: str = "[PAD]"  # noqa: S105
+    eos_token: str = "[EOS]"  # noqa: S105
 
     @classmethod
     def from_pretrained(
@@ -64,8 +64,8 @@ class _FakeTokenizer:
         batch_ids = [encode(s) for s in sequences]
         max_len = min(max((len(x) for x in batch_ids), default=1), max_length)
         padded, mask = [], []
-        for ids in batch_ids:
-            ids = ids[:max_len]
+        for row_ids in batch_ids:
+            ids = row_ids[:max_len]
             pad = [self.pad_token_id] * (max_len - len(ids))
             padded.append(ids + pad)
             mask.append([1] * len(ids) + [0] * len(pad))
@@ -77,7 +77,9 @@ class _FakeTokenizer:
 
 class _FakeOutput:
     def __init__(
-        self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...] | None = None,
+        self,
+        last_hidden_state: torch.Tensor,
+        hidden_states: tuple[torch.Tensor, ...] | None = None,
     ) -> None:
         self.last_hidden_state = last_hidden_state
         self.hidden_states = hidden_states or (last_hidden_state,)

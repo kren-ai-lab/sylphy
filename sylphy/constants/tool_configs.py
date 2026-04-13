@@ -1,6 +1,7 @@
 # tool_configs.py
 from __future__ import annotations
 
+import logging
 import os
 import platform
 from dataclasses import dataclass, field
@@ -12,6 +13,8 @@ from .logging_constants import env_log_level
 DEFAULT_CACHE_APP = "sylphy"
 DEFAULT_CACHE_ROOT_ENV = "SYLPHY_CACHE_ROOT"
 DEFAULT_CACHE_DIR_ENV = "SYLPHY_CACHE_DIR"
+
+_logger = logging.getLogger(__name__)
 
 def _default_cache_parent() -> Path:
     """Return the platform-specific parent directory used for application caches."""
@@ -48,10 +51,13 @@ def _detect_cuda_available() -> bool:
     """
     try:
         import torch  # noqa: PLC0415
-
-        return bool(getattr(torch, "cuda", None)) and torch.cuda.is_available()
-    except Exception:
+    except ImportError:
         return False
+    except Exception as e:  # noqa: BLE001
+        _logger.debug("Unexpected error checking CUDA availability: %s", e)
+        return False
+    else:
+        return bool(getattr(torch, "cuda", None)) and torch.cuda.is_available()
 
 
 def _default_device() -> str:
@@ -81,25 +87,33 @@ class ToolConfig:
     seed: int = int(os.getenv("SYLPHY_SEED", "42"))
 
 
-# Global singleton for convenience (simple and testable)
-_GLOBAL: ToolConfig | None = None
+class _ConfigStore:
+    """Internal container for the global ToolConfig singleton."""
+
+    _instance: ToolConfig | None = None
+
+    @classmethod
+    def get(cls) -> ToolConfig:
+        if cls._instance is None:
+            cls._instance = ToolConfig()
+            cls._instance.cache_paths.ensure_all()
+        return cls._instance
+
+    @classmethod
+    def set(cls, cfg: ToolConfig) -> None:
+        cls._instance = cfg
+        cls._instance.cache_paths.ensure_all()
 
 
 def get_config() -> ToolConfig:
     """Return the global ToolConfig, creating it on first use.
     Ensures cache directories exist.
     """
-    global _GLOBAL
-    if _GLOBAL is None:
-        _GLOBAL = ToolConfig()
-        _GLOBAL.cache_paths.ensure_all()
-    return _GLOBAL
+    return _ConfigStore.get()
 
 
 def set_config(cfg: ToolConfig) -> None:
     """Replace the global ToolConfig with a custom instance.
     Ensures cache directories exist.
     """
-    global _GLOBAL
-    _GLOBAL = cfg
-    _GLOBAL.cache_paths.ensure_all()
+    _ConfigStore.set(cfg)

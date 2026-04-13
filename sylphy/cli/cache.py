@@ -91,10 +91,10 @@ def _console() -> Console | None:
     """Return a rich Console if available, else None (lazy import)."""
     try:
         from rich.console import Console  # noqa: PLC0415
-
-        return Console(stderr=False)
-    except Exception:
+    except ImportError:
         return None
+    else:
+        return Console(stderr=False)
 
 
 def _table() -> tuple[type[Table], Any] | tuple[None, None]:
@@ -102,10 +102,10 @@ def _table() -> tuple[type[Table], Any] | tuple[None, None]:
     try:
         from rich import box  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
-
-        return Table, box
-    except Exception:
+    except ImportError:
         return None, None
+    else:
+        return Table, box
 
 # ----------------------------
 # Data Structures

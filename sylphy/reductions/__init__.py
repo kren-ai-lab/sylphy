@@ -10,7 +10,7 @@ Public API:
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 

@@ -52,12 +52,12 @@ class FrequencyEncoder(Encoders):
         try:
             self.__logger__.info("Starting frequency encoding (alphabet size=%d).", len(self._alpha))
             matrix = [
-                self.__encode_sequence(cast("str", self.dataset.at[i, self.sequence_column]))
+                self.__encode_sequence(cast("str", self.dataset.loc[i, self.sequence_column]))
                 for i in self.dataset.index
             ]
             header = pd.Index([f"freq_{r}" for r in self._alpha])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
-            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
+            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
             self.__logger__.info(
                 "Frequency encoding completed with %d features.", self.coded_dataset.shape[1],
             )

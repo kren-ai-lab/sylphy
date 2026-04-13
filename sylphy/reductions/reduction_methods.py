@@ -67,9 +67,9 @@ class Reductions:
 
         # Normalize dataset → np.ndarray (float32), validate 2D numeric
         if isinstance(dataset, pd.DataFrame):
-            dataset = dataset.values
+            dataset = dataset.to_numpy()
         arr = np.asarray(dataset)
-        if arr.ndim != 2:
+        if arr.ndim != 2:  # noqa: PLR2004
             msg = f"Expected 2D array, got shape {arr.shape}"
             raise ValueError(msg)
         if not np.issubdtype(arr.dtype, np.number):
@@ -128,19 +128,19 @@ class Reductions:
         - If ``return_type='numpy'`` → returns a numpy array (N, K).
         - If ``return_type='pandas'`` → returns a DataFrame with columns ``p_1..p_K``.
         """
+        transform_array = np.asarray(transform_values)
+        if transform_array.ndim != 2:  # noqa: PLR2004
+            msg = f"Expected 2D reduced array, got shape {transform_array.shape}"
+            raise ValueError(msg)
+
+        k = transform_array.shape[1]
+        if n_components is None:
+            n_components = k
+        if k != n_components:
+            msg = f"Expected {n_components} components, but got {k}"
+            raise ValueError(msg)
+
         try:
-            transform_array = np.asarray(transform_values)
-            if transform_array.ndim != 2:
-                msg = f"Expected 2D reduced array, got shape {transform_array.shape}"
-                raise ValueError(msg)
-
-            k = transform_array.shape[1]
-            if n_components is None:
-                n_components = k
-            if k != n_components:
-                msg = f"Expected {n_components} components, but got {k}"
-                raise ValueError(msg)
-
             if self.return_type == "numpy":
                 self.__logger__.info("Prepared NumPy output with %d components.", n_components)
                 return transform_array

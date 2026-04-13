@@ -30,4 +30,4 @@ def _stub_model_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 
     from sylphy.core import model_registry as reg
 
-    monkeypatch.setattr(reg, "resolve_model", lambda name: model_dir, raising=True)
+    monkeypatch.setattr(reg, "resolve_model", lambda _: model_dir, raising=True)

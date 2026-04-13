@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -87,7 +87,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
             local_dir: str | None = None
             try:
                 local_dir = self._register_and_resolve()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 local_dir = None
 
             load_ref = local_dir or self.name_model
@@ -116,10 +116,12 @@ class ESMCBasedEmbedding(EmbeddingBased):
         - embeddings: (1, L, H) or None
         - hidden_states: list of (1, L, H) or None.
         """
-        try:
-            self.ensure_loaded()
-            assert self.model is not None, "ESM-C model not loaded."
+        self.ensure_loaded()
+        if self.model is None:
+            msg = "ESM-C model not loaded."
+            raise RuntimeError(msg)
 
+        try:
             protein = ESMProtein(sequence=sequence)
 
             cfg = LogitsConfig(
@@ -137,12 +139,13 @@ class ESMCBasedEmbedding(EmbeddingBased):
                 pt = pt.to(self.device)
                 out = self.model.logits(pt, cfg)
 
+        except Exception as e:  # noqa: BLE001
+            self.__logger__.warning("Failed to embed one sequence: %s", e)
+            return None, None
+        else:
             emb = out.embeddings  # (1, L, H) or None
             hs = getattr(out, "hidden_states", None)
             return emb, hs
-        except Exception as e:
-            self.__logger__.warning("Failed to embed one sequence: %s", e)
-            return None, None
 
     def embedding_process(
         self,
@@ -202,9 +205,10 @@ class ESMCBasedEmbedding(EmbeddingBased):
                     emb, hs = self._embed_one(seq, return_hidden_states=True)
 
                     if self._has_hidden_states(hs):  # hidden states available
-                        assert hs is not None
-                        n_layers = len(hs)
-                        select = EmbeddingBased._parse_layers(layers, n_layers)
+                        # cast for mypy/type checkers if needed, but logic is safe
+                        hs_seq = cast("Sequence[torch.Tensor]", hs)
+                        n_layers = len(hs_seq)
+                        select = self._parse_layers(layers, n_layers)
                         chosen = [hs[j] for j in select]  # each (1,L,H)
                         if layer_agg == "concat":
                             stacked = torch.cat(chosen, dim=-1)
@@ -257,6 +261,6 @@ class ESMCBasedEmbedding(EmbeddingBased):
         mat = np.stack(out_vecs, axis=0)  # (N, H')
         headers = [f"p_{k + 1}" for k in range(mat.shape[1])]
         df_emb = pd.DataFrame(mat, columns=pd.Index(headers), index=self.dataset.index)
-        df_emb[self.column_seq] = self.dataset[self.column_seq].values
+        df_emb[self.column_seq] = self.dataset[self.column_seq].to_numpy()
         self.__logger__.info("ESM-C embedding completed. Shape: %s", df_emb.shape)
         return df_emb

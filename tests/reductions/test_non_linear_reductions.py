@@ -10,14 +10,14 @@ try:
     import umap  # noqa: F401
 
     HAS_UMAP = True
-except Exception:
+except Exception:  # noqa: BLE001
     HAS_UMAP = False
 
 try:
     import clustpy  # noqa: F401
 
     HAS_CLUSTPY = True
-except Exception:
+except Exception:  # noqa: BLE001
     HAS_CLUSTPY = False
 
 

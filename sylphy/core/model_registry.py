@@ -138,46 +138,62 @@ def resolve_model(name: str) -> Path:
     if env_path is not None:
         return env_path
 
-    cfg = get_config()
     spec = get_model_spec(name)
-
     provider = spec.provider.lower()
-    try:
-        if provider == "huggingface":
-            org, model = _split_org_model(spec.ref)
-            # Use revision-aware path layout to isolate snapshots
-            local_dir = cfg.cache_paths.hf_model_dir(org, model, revision=spec.revision)
-            if spec.subdir:
-                local_dir = local_dir / spec.subdir
-            local_dir.mkdir(parents=True, exist_ok=True)
 
-            # If directory is non-empty, assume already present
-            if any(local_dir.iterdir()):
-                logger.info("Resolved HF model (cached): %s", local_dir)
-                return local_dir
+    # Provider registry
+    handlers = {
+        "huggingface": _resolve_huggingface,
+        "other": _resolve_other_provider,
+    }
 
-            _download_huggingface(ref=spec.ref, revision=spec.revision, dst=local_dir)
-            return local_dir
-
-        if provider == "other":
-            local_dir = cfg.cache_paths.other_model_dir("custom", spec.name)
-            if spec.subdir:
-                local_dir = local_dir / spec.subdir
-            local_dir.mkdir(parents=True, exist_ok=True)
-
-            if any(local_dir.iterdir()):
-                logger.info("Resolved OTHER model (cached): %s", local_dir)
-                return local_dir
-
-            _download_other(spec.ref, local_dir)
-            return local_dir
-
+    if provider not in handlers:
         msg = f"Unsupported provider '{spec.provider}' for model '{name}'"
-        raise ValueError(msg)
+        raise ModelDownloadError(msg)
 
+    try:
+        return handlers[provider](spec)
     except Exception as e:
+        if isinstance(e, ModelDownloadError):
+            raise
         msg = f"Failed to resolve model '{name}': {e}"
         raise ModelDownloadError(msg) from e
+
+
+def _resolve_huggingface(spec: ModelSpec) -> Path:
+    """Resolve a Hugging Face model."""
+    cfg = get_config()
+    org, model = _split_org_model(spec.ref)
+
+    # Use revision-aware path layout to isolate snapshots
+    local_dir = cfg.cache_paths.hf_model_dir(org, model, revision=spec.revision)
+    if spec.subdir:
+        local_dir = local_dir / spec.subdir
+    local_dir.mkdir(parents=True, exist_ok=True)
+
+    # If directory is non-empty, assume already present
+    if any(local_dir.iterdir()):
+        logger.info("Resolved HF model (cached): %s", local_dir)
+        return local_dir
+
+    _download_huggingface(ref=spec.ref, revision=spec.revision, dst=local_dir)
+    return local_dir
+
+
+def _resolve_other_provider(spec: ModelSpec) -> Path:
+    """Resolve a model from a generic URL or local path."""
+    cfg = get_config()
+    local_dir = cfg.cache_paths.other_model_dir("custom", spec.name)
+    if spec.subdir:
+        local_dir = local_dir / spec.subdir
+    local_dir.mkdir(parents=True, exist_ok=True)
+
+    if any(local_dir.iterdir()):
+        logger.info("Resolved OTHER model (cached): %s", local_dir)
+        return local_dir
+
+    _download_other(spec.ref, local_dir)
+    return local_dir
 
 
 def _split_org_model(ref: str) -> tuple[str, str]:
@@ -206,9 +222,8 @@ def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
         ref,
         revision=revision,
         local_dir=str(dst),
-        # token=os.getenv("HF_TOKEN")  # Uncomment if you want to force auth via env
     )
-
+    return dst
 
 def _download_other(ref: str, dst: Path) -> None:
     """Download or copy a non-HF model into `dst`.
@@ -217,8 +232,6 @@ def _download_other(ref: str, dst: Path) -> None:
     - Else treat `ref` as a URL and download; if archive, extract.
     """
     import shutil  # noqa: PLC0415
-    import tarfile  # noqa: PLC0415
-    import zipfile  # noqa: PLC0415
     from urllib.parse import urlparse  # noqa: PLC0415
 
     import requests  # noqa: PLC0415
@@ -246,19 +259,27 @@ def _download_other(ref: str, dst: Path) -> None:
     logger.info("Downloading model from %s", ref)
     with requests.get(ref, stream=True, timeout=60) as r:
         r.raise_for_status()
-        with open(tmp, "wb") as f:
+        with tmp.open("wb") as f:
             for chunk in r.iter_content(chunk_size=1 << 20):
                 if chunk:
                     f.write(chunk)
 
+    import tarfile  # noqa: PLC0415
+    import zipfile  # noqa: PLC0415
+
     try:
         if tarfile.is_tarfile(tmp):
             with tarfile.open(tmp) as tf:
-                tf.extractall(dst)
+                # Use 'data' filter if available (Python 3.12+ or patched 3.11)
+                try:
+                    tf.extractall(dst, filter="data")
+                except (TypeError, AttributeError):
+                    # Fallback for older Python versions
+                    tf.extractall(dst)  # noqa: S202
             tmp.unlink(missing_ok=True)
         elif zipfile.is_zipfile(tmp):
-            with zipfile.ZipFile(tmp) as zf:
-                zf.extractall(dst)
+            with zipfile.ZipFile(tmp) as zip_ref:
+                zip_ref.extractall(dst)  # noqa: S202
             tmp.unlink(missing_ok=True)
         else:
             logger.debug("Downloaded file is not an archive; leaving as-is: %s", tmp)

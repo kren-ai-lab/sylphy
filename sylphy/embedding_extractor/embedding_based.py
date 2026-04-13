@@ -313,9 +313,10 @@ class EmbeddingBased:
                 return list(range(max(0, n_layers - 4), n_layers))
             try:
                 i = int(spec)
-                return [i]
             except ValueError:
                 pass
+            else:
+                return [i]
         msg = f"Invalid layer spec: {spec!r}"
         raise ValueError(msg)
 
@@ -410,7 +411,7 @@ class EmbeddingBased:
             import gc  # noqa: PLC0415
 
             gc.collect()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.__logger__.debug("clean_memory() warning: %s", e)
 
     def release_resources(self) -> None:
@@ -444,12 +445,12 @@ class EmbeddingBased:
           delegate to that pipeline (non-HF backends).
         - Else, use the HF path (tokenizer + model).
         """
-        try:
-            self.ensure_loaded()
-            if not self._is_ready():
-                msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
-                raise RuntimeError(msg)
+        self.ensure_loaded()
+        if not self._is_ready():
+            msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
+            raise RuntimeError(msg)
 
+        try:
             if not self.requires_tokenizer:
                 df = self.embedding_process(
                     batch_size=batch_size,
@@ -513,7 +514,7 @@ class EmbeddingBased:
             header: list[str] = [f"p_{i}" for i in range(Xall.shape[1])]
             columns_index = pd.Index(header)
             self.coded_dataset = pd.DataFrame(Xall, columns=columns_index, index=self.dataset.index)
-            self.coded_dataset[self.column_seq] = self.dataset[self.column_seq].values
+            self.coded_dataset[self.column_seq] = self.dataset[self.column_seq].to_numpy()
             self.status = True
             self.message = "OK"
             self.__logger__.info(

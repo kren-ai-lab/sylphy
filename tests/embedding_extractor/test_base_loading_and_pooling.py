@@ -25,7 +25,11 @@ def test_load_and_pool_mean_cls_eos_and_layers() -> None:
         assert out.shape == (3, 4)
 
     out_concat = inst.encode_batch_layers(
-        seqs, max_length=16, layers="last4", layer_agg="concat", pool="mean",
+        seqs,
+        max_length=16,
+        layers="last4",
+        layer_agg="concat",
+        pool="mean",
     )
     assert out_concat.shape == (3, 16)
 

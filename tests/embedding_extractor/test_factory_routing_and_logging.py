@@ -33,5 +33,5 @@ def test_factory_selects_backend(model_name: str, cls: type) -> None:
 def test_factory_unknown_raises() -> None:
     """Verify factory raises ValueError for unknown model names."""
     df = pd.DataFrame({"sequence": ["AAAA"]})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Unknown model name"):
         EmbeddingFactory(model_name="unknown/model", dataset=df, column_seq="sequence", name_device="cpu")

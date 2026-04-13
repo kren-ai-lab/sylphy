@@ -223,7 +223,10 @@ def get_embedding(
                 else:
                     layers_spec = int(ls)
             except ValueError:
-                msg = "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | comma-separated integers."
+                msg = (
+                    "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | "
+                    "comma-separated integers."
+                )
                 raise typer.BadParameter(
                     msg,
                 ) from None

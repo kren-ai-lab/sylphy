@@ -5,6 +5,8 @@ import logging
 import sys
 from pathlib import Path
 
+import pytest
+
 from sylphy.logging import (
     add_context,
     get_logger,
@@ -31,13 +33,13 @@ def _find_console_handler(logger: logging.Logger) -> logging.Handler | None:
     return None
 
 
-def _read_console(capsys: CaptureFixture[str]) -> tuple[str, str, str]:
+def _read_console(capsys: pytest.CaptureFixture[str]) -> tuple[str, str, str]:
     cap = capsys.readouterr()
     both = (cap.out or "") + (cap.err or "")
     return cap.out, cap.err, both
 
 
-def test_setup_logger_idempotent(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_setup_logger_idempotent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     log_path = tmp_path / "idempotent.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -56,7 +58,9 @@ def test_setup_logger_idempotent(monkeypatch: MonkeyPatch, tmp_path: Path) -> No
     assert log_path.parent.exists()
 
 
-def test_env_level_override(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
+def test_env_level_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """
     If a console handler exists, ensure ERROR messages are visible.
     Some implementations do not apply SYLPHY_LOG_LEVEL to the console handler;
@@ -76,8 +80,6 @@ def test_env_level_override(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: Ca
     logger.error("error-visible")
 
     if not _find_console_handler(logger):
-        import pytest
-
         pytest.skip("No console handler present; skipping console assertions.")
 
     _out, _err, both = _read_console(capsys)
@@ -87,7 +89,9 @@ def test_env_level_override(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: Ca
     # ignore SYLPHY_LOG_LEVEL for the console handler and inherit logger level instead.
 
 
-def test_json_console_output_and_stderr(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
+def test_json_console_output_and_stderr(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     log_path = tmp_path / "jsonconsole.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "1")
@@ -98,8 +102,6 @@ def test_json_console_output_and_stderr(monkeypatch: MonkeyPatch, tmp_path: Path
     logger = setup_logger(name=PKG_LOGGER_NAME, level="INFO")
 
     if not _find_console_handler(logger):
-        import pytest
-
         pytest.skip("No console handler present; skipping console JSON assertions.")
 
     logger.info("hello-json", extra={"run_id": "abc123"})
@@ -116,7 +118,7 @@ def test_json_console_output_and_stderr(monkeypatch: MonkeyPatch, tmp_path: Path
     assert PKG_LOGGER_NAME in payload.get("name", PKG_LOGGER_NAME)
 
 
-def test_file_handler_writes_and_rotates(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_file_handler_writes_and_rotates(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     log_path = tmp_path / "rotate.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     # Try to force rotation if supported
@@ -140,7 +142,9 @@ def test_file_handler_writes_and_rotates(monkeypatch: MonkeyPatch, tmp_path: Pat
         assert log_path.stat().st_size > 0
 
 
-def test_console_formatter_utc_suffix(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
+def test_console_formatter_utc_suffix(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     log_path = tmp_path / "utc.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "0")
@@ -152,8 +156,6 @@ def test_console_formatter_utc_suffix(monkeypatch: MonkeyPatch, tmp_path: Path, 
     logger.info("utc-line")
 
     if not _find_console_handler(logger):
-        import pytest
-
         pytest.skip("No console handler present; skipping console format assertions.")
 
     out, err, _both = _read_console(capsys)
@@ -163,7 +165,9 @@ def test_console_formatter_utc_suffix(monkeypatch: MonkeyPatch, tmp_path: Path, 
     # assert "Z" in line or True
 
 
-def test_add_context_injection_with_json(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
+def test_add_context_injection_with_json(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     log_path = tmp_path / "ctx.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     monkeypatch.setenv("SYLPHY_LOG_JSON", "1")
@@ -173,8 +177,6 @@ def test_add_context_injection_with_json(monkeypatch: MonkeyPatch, tmp_path: Pat
     reset_logging(PKG_LOGGER_NAME)
     logger = setup_logger(name=PKG_LOGGER_NAME, level="INFO")
     if not _find_console_handler(logger):
-        import pytest
-
         pytest.skip("No console handler present; skipping console JSON assertions.")
 
     add_context(logger, project="pr", phase="train")
@@ -187,10 +189,9 @@ def test_add_context_injection_with_json(monkeypatch: MonkeyPatch, tmp_path: Pat
     assert payload.get("message", "") == "ctx-msg"
     assert payload.get("epoch") == 1
     # Context fields may or may not be present depending on add_context + filters
-    # if "project" in payload: assert payload["project"] == "pr"
 
 
-def test_reset_logging_removes_handlers(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_reset_logging_removes_handlers(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     log_path = tmp_path / "reset.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -207,7 +208,7 @@ def test_reset_logging_removes_handlers(monkeypatch: MonkeyPatch, tmp_path: Path
     assert _count_handlers(lg3) >= 1
 
 
-def test_get_logger_lazy_config(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_get_logger_lazy_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     log_path = tmp_path / "lazy.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
 
@@ -231,7 +232,9 @@ def test_silence_external_changes_level() -> None:
     assert logging.getLogger("urllib3").level >= logging.WARNING
 
 
-def test_global_disable(monkeypatch: MonkeyPatch, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
+def test_global_disable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     log_path = tmp_path / "disable.log"
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(log_path))
     # If your implementation honors this flag, great; if not, the test still works

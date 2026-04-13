@@ -65,5 +65,5 @@ def test_factory_known_aliases(toy_df: pd.DataFrame, mock_cache: Path) -> None:
 
 def test_factory_unknown_raises() -> None:
     """Verify factory raises ValueError for unknown encoder names."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Unknown encoder 'nope'"):
         create_encoder("nope", dataset=pd.DataFrame({"sequence": ["AAA"]}))

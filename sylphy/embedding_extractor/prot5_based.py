@@ -95,8 +95,8 @@ class Prot5Based(EmbeddingBased):
     def _pre_tokenize(self, batch: list[str]) -> list[str]:
         # Replace uncommon amino acids and space-separate
         formatted = []
-        for seq in batch:
-            seq = (seq or "").strip()
+        for s in batch:
+            seq = (s or "").strip()
             clean = re.sub(r"[UZOB]", "X", seq)
             formatted.append(" ".join(clean))
         return formatted

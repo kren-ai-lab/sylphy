@@ -191,4 +191,3 @@ def test_config_temporary_cache_root(tmp_path: Path) -> None:
     with temporary_cache_root(tmp_path / "alt"):
         assert get_config().cache_paths.cache_root != original
     assert get_config().cache_paths.cache_root == original
-

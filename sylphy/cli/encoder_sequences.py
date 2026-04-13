@@ -167,6 +167,9 @@ def encode_sequences(
     - Alphabet and length validation are handled by the shared base encoder.
 
     """
+    def _fail(m: str) -> None:
+        raise RuntimeError(m)
+
     try:
         # Cheap validations (no heavy imports yet)
         enc_choice = validate_choice(encoder, ENCODER_CHOICES, "encoder")
@@ -200,8 +203,7 @@ def encode_sequences(
             )
             phys.run_process()
             if phys.coded_dataset is None or phys.coded_dataset.empty:
-                msg = "Physicochemical step produced empty features."
-                raise RuntimeError(msg)
+                _fail("Physicochemical step produced empty features.")
 
             fft = cast(
                 "FFTEncoder",

@@ -90,7 +90,7 @@ class LinearReduction(Reductions):
             )
             self.__logger__.info("%s successful. Output shape=%s", method_name, transformed.shape)
             return model, self.generate_dataset_post_reduction(transformed, k)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.__logger__.error("%s failed: %s", method_name, e)
             self.__logger__.debug(traceback.format_exc())
             return model, None
@@ -102,7 +102,9 @@ class LinearReduction(Reductions):
         model = self._init_with_seed(PCA, kwargs)
         return self._apply_model(model, "PCA", kwargs.get("n_components"))
 
-    def apply_incremental_pca(self, **kwargs: object) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
+    def apply_incremental_pca(
+        self, **kwargs: object,
+    ) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(IncrementalPCA, kwargs)
         return self._apply_model(model, "IncrementalPCA", kwargs.get("n_components"))
 
@@ -124,7 +126,9 @@ class LinearReduction(Reductions):
         model = self._init_with_seed(TruncatedSVD, kwargs)
         return self._apply_model(model, "TruncatedSVD", kwargs.get("n_components"))
 
-    def apply_factor_analysis(self, **kwargs: object) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
+    def apply_factor_analysis(
+        self, **kwargs: object,
+    ) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
         model = self._init_with_seed(FactorAnalysis, kwargs)
         return self._apply_model(model, "FactorAnalysis", kwargs.get("n_components"))
 

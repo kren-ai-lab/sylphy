@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 
 
 def test_parquet_export_missing_engine_suggests_parquet_extra(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     df = pd.DataFrame({"sequence": ["AAAA"]})
 

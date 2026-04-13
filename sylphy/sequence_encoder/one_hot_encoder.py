@@ -48,7 +48,7 @@ class OneHotEncoder(Encoders):
                 allow_unknown=self.allow_unknown,
             )
             v[pos] = 1
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             # Unknown residue: keep zero vector
             pass
         return v
@@ -73,12 +73,12 @@ class OneHotEncoder(Encoders):
         try:
             self.__logger__.info("Starting one-hot encoding for %d sequences.", len(self.dataset))
             matrix = [
-                self.__encode_sequence(cast("str", self.dataset.at[i, self.sequence_column]))
+                self.__encode_sequence(cast("str", self.dataset.loc[i, self.sequence_column]))
                 for i in self.dataset.index
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
-            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
+            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
             self.__logger__.info("One-hot encoding completed with %d features.", self.coded_dataset.shape[1])
         except Exception as e:
             self.status = False

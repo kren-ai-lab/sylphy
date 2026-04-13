@@ -99,7 +99,7 @@ class Encoders:
 
         try:
             self.make_revisions()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.status = False
             self.message = f"[ERROR] Initialization failed: {e}"
             self.__logger__.exception(self.message)

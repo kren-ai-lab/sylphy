@@ -54,14 +54,10 @@ __all__ = [
     "LOG_DEFAULT_MAX_BYTES",
     "LOG_DEFAULT_NAME",
     "LOG_DEFAULT_STDERR",
-    # logging_constants
     "LOG_ENV_PREFIX",
     "LOG_LEVEL_MAP",
-    # tool_constants
     "SYLPHY_ENV_PREFIX",
-    # config_constants
     "CachePaths",
-    # tool_configs
     "ToolConfig",
     "env_log_json",
     "env_log_level",

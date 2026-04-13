@@ -158,12 +158,12 @@ class UtilsLib:
             if k <= 0:
                 continue
             subset = df.loc[df[label_name] == lab]
-            k = k if replace else min(k, len(subset))
-            if k <= 0:
+            actual_k = k if replace else min(k, len(subset))
+            if actual_k <= 0:
                 continue
-            sampled = subset.sample(n=k, replace=replace, random_state=random_state)
+            sampled = subset.sample(n=actual_k, replace=replace, random_state=random_state)
             parts.append(sampled)
-            _LOG.info("Sampled %d rows for label '%s' (global mode).", k, lab)
+            _LOG.info("Sampled %d rows for label '%s' (global mode).", actual_k, lab)
 
         out = pd.concat(parts, axis=0).reset_index(drop=True)
         _LOG.info("Total sampled rows (global): %d", len(out))
@@ -224,7 +224,7 @@ class UtilsLib:
         Returns
         -------
         np.ndarray
-            Square matrix of pairwise distances (shape: n_samples × n_samples).
+            Square matrix of pairwise distances (shape: n_samples x n_samples).
 
         Raises
         ------
@@ -239,7 +239,7 @@ class UtilsLib:
             _LOG.error("Input must be a NumPy ndarray.")
             msg = "Input must be a NumPy ndarray."
             raise TypeError(msg)
-        if matrix_data.ndim != 2:
+        if matrix_data.ndim != 2:  # noqa: PLR2004
             msg = f"matrix_data must be 2D; got shape {matrix_data.shape}"
             raise ValueError(msg)
 
@@ -366,7 +366,7 @@ class UtilsLib:
         forbidden = {Path("/").resolve(), Path.home().resolve()}
         if os.name == "nt":
             # best-effort Windows safeguards
-            forbidden.add(Path(os.environ.get("SystemDrive", "C:") + "\\").resolve())
+            forbidden.add(Path(os.environ.get("SYSTEMDRIVE", "C:") + "\\").resolve())
 
         if folder in forbidden or str(folder).strip() in {"", ".", ".."}:
             msg = f"Refusing to delete unsafe path: {folder}"
@@ -451,28 +451,28 @@ class UtilsLib:
             msg = f"Destination exists: {dest}"
             raise FileExistsError(msg)
 
+        if file_format not in {"csv", "npy", "npz", "parquet"}:
+            msg = f"Unsupported file format '{file_format}'."
+            raise ValueError(msg)
+
         try:
             if file_format == "csv":
                 df_encoded.to_csv(dest, index=False)
                 _LOG.info("%s exported to CSV: %s", base_message, dest)
 
             elif file_format == "npy":
-                np.save(dest, df_encoded.values, allow_pickle=True)
+                np.save(dest, df_encoded.to_numpy(), allow_pickle=True)
                 _LOG.info("%s exported to NPY: %s", base_message, dest)
 
             elif file_format == "npz":
                 # Save values plus column names for round-trip friendliness
-                np.savez_compressed(dest, values=df_encoded.values, columns=df_encoded.columns.to_numpy())
+                np.savez_compressed(dest, values=df_encoded.to_numpy(), columns=df_encoded.columns.to_numpy())
                 _LOG.info("%s exported to NPZ: %s", base_message, dest)
 
             elif file_format == "parquet":
                 # Requires pyarrow or fastparquet installed
                 df_encoded.to_parquet(dest, index=False)
                 _LOG.info("%s exported to Parquet: %s", base_message, dest)
-
-            else:
-                msg = f"Unsupported file format '{file_format}'."
-                raise ValueError(msg)
         except Exception as e:
             wrapped = wrap_optional_dependency_error(
                 e,

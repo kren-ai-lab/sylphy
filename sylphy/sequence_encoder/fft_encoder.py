@@ -42,7 +42,7 @@ class FFTEncoder:
 
         # Keep a copy and store sequences aside
         self.dataset = dataset.copy()
-        self.sequence_list = self.dataset[self.sequence_column].values
+        self.sequence_list = self.dataset[self.sequence_column].to_numpy()
         self.dataset = self.dataset.drop(columns=[self.sequence_column])
 
         # Determine FFT size (next power of two >= number of numeric columns)
@@ -80,7 +80,7 @@ class FFTEncoder:
             row = self.__create_row(index)
             yf = fft(row)
             return np.abs(yf[: self.stop_value // 2]).tolist()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.__logger__.error("Error applying FFT at index %d: %s", index, e)
             return [0.0] * (self.stop_value // 2)
 

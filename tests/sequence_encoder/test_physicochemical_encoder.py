@@ -54,5 +54,5 @@ def test_physicochemical_raises_on_unknown_property(mock_cache: Path) -> None:
     (cache_dir / Path(BASE_URL_AAINDEX).name).write_text("res,PROP\nA,1\n", encoding="utf-8")
 
     df = pd.DataFrame({"sequence": ["A"]})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Property 'NON_EXISTENT' not found"):
         PhysicochemicalEncoder(dataset=df, name_property="NON_EXISTENT")

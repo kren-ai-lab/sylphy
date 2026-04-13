@@ -25,7 +25,7 @@ logger = logging.getLogger("sylphy.embedding_extraction.factory")
 add_context(logger, component="embedding_extraction", backend="factory")
 
 
-def EmbeddingFactory(
+def EmbeddingFactory(  # noqa: PLR0911
     model_name: str,
     dataset: pd.DataFrame,
     column_seq: str,

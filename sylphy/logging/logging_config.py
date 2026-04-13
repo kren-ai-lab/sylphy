@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 
 try:
     from appdirs import user_log_dir
-except Exception:  # pragma: no cover
-    user_log_dir = None  # type: ignore
+except Exception:  # noqa: BLE001 # pragma: no cover
+    user_log_dir = None  # type: ignore[assignment]
 
 # Import lightweight constants/helpers (avoid cycles)
 from sylphy.constants.logging_constants import (
@@ -42,7 +42,7 @@ def _env_int(name: str, default: int) -> int:
         return default
     try:
         return int(raw)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return default
 
 
@@ -84,7 +84,7 @@ def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | No
         root = Path(get_config().cache_paths.logs())
         root.mkdir(parents=True, exist_ok=True)
         return root / default_name
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
 
     # 4) Fallback to appdirs
@@ -150,7 +150,7 @@ class _JsonFormatter(logging.Formatter):
             try:
                 json.dumps({k: v})
                 payload[k] = v
-            except Exception:
+            except Exception:  # noqa: BLE001
                 payload[k] = str(v)
 
         # Exception info, if any
@@ -196,7 +196,7 @@ def _make_file_handler(
             backupCount=backups,
             encoding="utf-8",
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         fh = logging.FileHandler(path, encoding="utf-8")
     fh.setLevel(level)
     if use_json:

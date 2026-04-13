@@ -53,7 +53,7 @@ class KMersEncoders(Encoders):
 
             vectorizer = TfidfVectorizer(
                 analyzer="word",
-                token_pattern=r"(?u)\b\w+\b",
+                token_pattern=r"(?u)\b\w+\b",  # noqa: S106
                 dtype=np.float32,
             )
             X = vectorizer.fit_transform(self.dataset["kmer_sequence"])
@@ -62,10 +62,9 @@ class KMersEncoders(Encoders):
             sparse_accessor = cast("Any", pd.DataFrame.sparse)
             self.coded_dataset = sparse_accessor.from_spmatrix(
                 X,
-                index=self.dataset.index,
                 columns=feature_names,
             )
-            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
+            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
 
             if "sequence" in self.coded_dataset.columns and self.sequence_column != "sequence":
                 self.coded_dataset = self.coded_dataset.drop(columns=["sequence"])

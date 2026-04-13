@@ -35,9 +35,8 @@ def __getattr__(name: str) -> object:
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
         if name == "create_embedding":
-            from .embedding_factory import EmbeddingFactory
-
-            return EmbeddingFactory
+            module = import_module(".embedding_factory", package=__name__)
+            return module.EmbeddingFactory
         msg = f"module '{__name__}' has no attribute '{name}'"
         raise AttributeError(msg)
     mod_name, attr = spec

@@ -58,7 +58,7 @@ class KMersEncoders(Encoders):
 
             vectorizer = TfidfVectorizer(
                 analyzer="word",
-                token_pattern=r"(?u)\b\w+\b",
+                token_pattern=r"(?u)\b\w+\b",  # noqa: S106
                 dtype=np.float32,
             )
             X = vectorizer.fit_transform(self.dataset["kmer_sequence"])

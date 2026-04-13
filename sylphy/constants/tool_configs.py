@@ -52,10 +52,10 @@ def _detect_cuda_available() -> bool:
     Returns False if torch cannot be imported.
     """
     try:
-        import torch
+        import torch  # noqa: PLC0415
     except ImportError:
         return False
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _logger.debug("Unexpected error checking CUDA availability: %s", e)
         return False
     else:

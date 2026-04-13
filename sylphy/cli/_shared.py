@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
-from typing import TYPE_CHECKING
+from pathlib import Path  # noqa: TC003
 
+import pandas as pd
 import typer
-
-if TYPE_CHECKING:
-    import pandas as pd
 
 HELP_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
@@ -39,12 +36,6 @@ def load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
     if input_path.suffix.lower() != ".csv":
         msg = "Only CSV is supported as input."
         raise typer.BadParameter(msg)
-    try:
-        import pandas as pd
-    except Exception as exc:
-        msg = "pandas is required to read CSV input."
-        raise typer.BadParameter(msg) from exc
-
     df = pd.read_csv(input_path)
     if seq_col not in df.columns:
         msg = f"Column '{seq_col}' not found. Available: {list(df.columns)}"

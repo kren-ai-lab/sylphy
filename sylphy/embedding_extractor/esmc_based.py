@@ -80,7 +80,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
             local_dir: str | None = None
             try:
                 local_dir = self._register_and_resolve()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 local_dir = None
 
             load_ref = local_dir or self.name_model
@@ -122,7 +122,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
             else:
                 pt = self.model.encode(protein).to(self.device)
                 out = self.model.logits(pt, cfg)
-        except Exception as e:
+        except (TypeError, ValueError, RuntimeError) as e:
             self.__logger__.warning("Failed to embed sequence: %s", e)
             return None, None
         else:

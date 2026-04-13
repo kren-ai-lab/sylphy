@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import gc
 import logging
 import os
 from collections.abc import Callable, Sequence
@@ -413,10 +414,8 @@ class EmbeddingBased:
                 torch.cuda.empty_cache()
                 with contextlib.suppress(Exception):
                     torch.cuda.reset_peak_memory_stats()
-            import gc
-
             gc.collect()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.__logger__.debug("clean_memory() warning: %s", e)
 
     def release_resources(self) -> None:

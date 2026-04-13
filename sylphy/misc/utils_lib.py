@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from sylphy.types import FileFormat
 
 _LOG = logging.getLogger("sylphy.misc.utils")
+_MATRIX_NDIM = 2
 
 
 class UtilsLib:
@@ -228,7 +229,7 @@ class UtilsLib:
             _LOG.error("Input must be a NumPy ndarray.")
             msg = "Input must be a NumPy ndarray."
             raise TypeError(msg)
-        if matrix_data.ndim != 2:
+        if matrix_data.ndim != _MATRIX_NDIM:
             msg = f"matrix_data must be 2D; got shape {matrix_data.shape}"
             raise ValueError(msg)
 

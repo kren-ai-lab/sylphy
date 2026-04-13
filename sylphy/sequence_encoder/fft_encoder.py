@@ -83,7 +83,7 @@ class FFTEncoder:
             row = self.__create_row(index)
             yf = fft(row)
             return np.abs(yf[: self.stop_value // 2]).tolist()
-        except Exception as e:
+        except (TypeError, ValueError, RuntimeError) as e:
             self.__logger__.error("Error applying FFT at index %d: %s", index, e)
             return [0.0] * (self.stop_value // 2)
 

@@ -12,7 +12,6 @@ import re
 import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import typer
@@ -22,6 +21,7 @@ from sylphy.constants.tool_configs import DEFAULT_CACHE_DIR_ENV, DEFAULT_CACHE_R
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
     from rich.console import Console
     from rich.table import Table
@@ -90,7 +90,7 @@ def _parse_timedelta(text: str) -> timedelta:
 def _console() -> Console | None:
     """Return a rich Console if available, else None (lazy import)."""
     try:
-        from rich.console import Console
+        from rich.console import Console  # noqa: PLC0415
     except ImportError:
         return None
     else:
@@ -100,8 +100,8 @@ def _console() -> Console | None:
 def _table() -> tuple[type[Table], Any] | tuple[None, None]:
     """Return (Table, box) lazily if rich is available, else (None, None)."""
     try:
-        from rich import box
-        from rich.table import Table
+        from rich import box  # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
     except ImportError:
         return None, None
     else:
@@ -288,12 +288,12 @@ def _callback() -> None:
 def cmd_ls(
     *,
     pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob pattern (e.g., '**/*.pt')."),
-    recursive: bool = typer.Option(False, "--recursive", "-r", help="Recurse into subdirectories."),
+    recursive: bool = typer.Option(False, "--recursive", "-r", help="Recurse into subdirectories."),  # noqa: FBT003
     sort: str = typer.Option("name", "--sort", case_sensitive=False, help="Sort by: name | size | mtime"),
-    reverse: bool = typer.Option(False, "--reverse", help="Reverse sort order."),
-    human_readable: bool = typer.Option(True, "--human-readable/--bytes", help="Pretty sizes."),
+    reverse: bool = typer.Option(False, "--reverse", help="Reverse sort order."),  # noqa: FBT003
+    human_readable: bool = typer.Option(True, "--human-readable/--bytes", help="Pretty sizes."),  # noqa: FBT003
     limit: int | None = typer.Option(None, "--limit", help="Show only first N entries."),
-    json_out: bool = typer.Option(False, "--json", help="Output JSON instead of a table."),
+    json_out: bool = typer.Option(False, "--json", help="Output JSON instead of a table."),  # noqa: FBT003
 ) -> None:
     """List cache files with filtering, sorting, and optional JSON output."""
     sort = sort.lower()
@@ -362,8 +362,8 @@ def cmd_rm(
     older_than: str | None = typer.Option(
         None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h').",
     ),
-    dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation when applying."),
+    dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),  # noqa: FBT003
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation when applying."),  # noqa: FBT003
 ) -> None:
     """Delete cache files by pattern and/or age with dry-run support."""
     mgr = CacheManager()
@@ -391,9 +391,9 @@ def cmd_prune(
         None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB).",
     ),
     remove_empty_dirs: bool = typer.Option(
-        True, "--prune-empty/--keep-empty", help="Remove empty directories.",
+        True, "--prune-empty/--keep-empty", help="Remove empty directories.",  # noqa: FBT003
     ),
-    dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
+    dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),  # noqa: FBT003
 ) -> None:
     """Prune cache size and optionally remove empty directories."""
     mgr = CacheManager()
@@ -419,7 +419,7 @@ def cmd_prune(
                 f"Would delete {to_delete} files to reach {max_size} (free {_human_size(freed_sim)}).",
             )
         else:
-            deleted, freed = mgr.prune_to_max_size(max_bytes=max_bytes, dry_run=False)
+            deleted, freed = mgr.prune_to_max_size(max_bytes=max_bytes, dry_run=dry_run)
 
     removed_dirs = 0
     if remove_empty_dirs:
@@ -447,7 +447,7 @@ def cmd_path() -> None:
 @app.command("clear", help="Remove the entire cache directory after confirmation.")
 def cmd_clear(
     *,
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt."),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt."),  # noqa: FBT003
 ) -> None:
     """Delete the entire cache directory after optional confirmation."""
     mgr = CacheManager()

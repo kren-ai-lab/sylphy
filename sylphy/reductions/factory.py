@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from importlib import import_module
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -148,7 +149,8 @@ def reduce_dimensionality(
     log.info("Dispatching method='%s' (kind=%s) | preprocess=%s | kwargs=%s", key, kind, preprocess, kwargs)
 
     if kind == "linear":
-        from .linear_reductions import LinearReduction
+        module = import_module(".linear_reductions", package=__package__)
+        LinearReduction = module.LinearReduction
 
         runner = LinearReduction(
             dataset=dataset,
@@ -164,7 +166,8 @@ def reduce_dimensionality(
 
     # Non-linear
     try:
-        from .non_linear_reductions import NonLinearReductions
+        module = import_module(".non_linear_reductions", package=__package__)
+        NonLinearReductions = module.NonLinearReductions
     except (ImportError, ModuleNotFoundError) as exc:
         wrapped = wrap_optional_dependency_error(
             exc,

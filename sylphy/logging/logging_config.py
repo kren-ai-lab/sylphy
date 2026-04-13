@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
+from importlib import import_module
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 try:
     from appdirs import user_log_dir
-except Exception:  # pragma: no cover
+except ImportError:  # pragma: no cover
     def user_log_dir(
         _appname: str | None = None,
         _appauthor: str | None = None,
@@ -52,7 +55,7 @@ def _env_int(name: str, default: int) -> int:
         return default
     try:
         return int(raw)
-    except Exception:
+    except ValueError:
         return default
 
 
@@ -78,13 +81,13 @@ def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | No
         return p
 
     try:
-        from sylphy.constants.tool_configs import get_config
-
+        module = import_module("sylphy.constants.tool_configs")
+        get_config = module.get_config
         root = Path(get_config().cache_paths.logs())
         root.mkdir(parents=True, exist_ok=True)
         return root / default_name
-    except Exception:
-        pass
+    except (AttributeError, ImportError, OSError, RuntimeError, ValueError):
+        logging.getLogger(__name__).debug("Could not resolve log file from tool config.", exc_info=True)
 
     if user_log_dir is not None:
         base = Path(user_log_dir("sylphy", "Sylphy"))
@@ -103,8 +106,6 @@ class _JsonFormatter(logging.Formatter):
 
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         if self._use_utc:
-            import time
-
             ct = time.gmtime(record.created)
             return time.strftime("%Y-%m-%dT%H:%M:%S", ct)
         return super().formatTime(record, datefmt=datefmt)
@@ -127,7 +128,7 @@ class _JsonFormatter(logging.Formatter):
             try:
                 json.dumps({k: v})
                 payload[k] = v
-            except Exception:
+            except (TypeError, ValueError):
                 payload[k] = str(v)
 
         if record.exc_info:
@@ -162,15 +163,13 @@ def _make_file_handler(
     backups: int,
 ) -> logging.Handler:
     try:
-        from logging.handlers import RotatingFileHandler
-
         fh = RotatingFileHandler(
             path,
             maxBytes=max_bytes,
             backupCount=backups,
             encoding="utf-8",
         )
-    except Exception:
+    except OSError:
         fh = logging.FileHandler(path, encoding="utf-8")
     fh.setLevel(level)
     if use_json:

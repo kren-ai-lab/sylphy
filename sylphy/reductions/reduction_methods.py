@@ -14,6 +14,7 @@ from sylphy.logging import add_context, get_logger
 
 ReturnType = Literal["numpy", "pandas"]
 Preprocess = Literal["none", "standardize", "normalize", "robust"]
+_EXPECTED_NDIM = 2
 
 
 class Reductions:
@@ -62,7 +63,7 @@ class Reductions:
         if isinstance(dataset, pd.DataFrame):
             dataset = dataset.to_numpy()
         arr = np.asarray(dataset)
-        if arr.ndim != 2:
+        if arr.ndim != _EXPECTED_NDIM:
             msg = f"Expected 2D array, got shape {arr.shape}"
             raise ValueError(msg)
         if not np.issubdtype(arr.dtype, np.number):
@@ -122,7 +123,7 @@ class Reductions:
         - If ``return_type='pandas'`` → returns a DataFrame with columns ``p_1..p_K``.
         """
         transform_array = np.asarray(transform_values)
-        if transform_array.ndim != 2:
+        if transform_array.ndim != _EXPECTED_NDIM:
             msg = f"Expected 2D reduced array, got shape {transform_array.shape}"
             raise ValueError(msg)
 

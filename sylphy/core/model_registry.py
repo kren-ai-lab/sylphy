@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import os
+import shutil
+import tarfile
+import zipfile
 from dataclasses import replace
 from pathlib import Path
 from threading import RLock
+from urllib.parse import urlparse
 
 from sylphy.constants.tool_constants import _ENV_PREFIX
 from sylphy.logging import get_logger
@@ -213,7 +217,7 @@ def _split_org_model(ref: str) -> tuple[str, str]:
 def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
     """Download a model snapshot into `dst` using huggingface_hub with a local cache."""
     try:
-        from huggingface_hub import snapshot_download
+        from huggingface_hub import snapshot_download  # noqa: PLC0415
     except Exception as e:  # pragma: no cover
         msg = (
             "huggingface_hub is required to download models from HF. "
@@ -246,7 +250,6 @@ def _download_other(ref: str, dst: Path) -> None:
 
 def _handle_local_copy(src: Path, dst: Path) -> None:
     """Copy local path or directory contents to destination."""
-    import shutil
     logger.info("Copying local model from %s to %s", src, dst)
     if src.is_dir():
         for item in src.iterdir():
@@ -261,11 +264,7 @@ def _handle_local_copy(src: Path, dst: Path) -> None:
 
 def _download_url_and_extract(url: str, dst: Path) -> None:
     """Download file from URL and extract if it's an archive."""
-    import tarfile
-    import zipfile
-    from urllib.parse import urlparse
-
-    import requests
+    import requests  # noqa: PLC0415
 
     parsed = urlparse(url)
     if not parsed.scheme:
@@ -287,11 +286,11 @@ def _download_url_and_extract(url: str, dst: Path) -> None:
                 try:
                     tf.extractall(dst, filter="data")
                 except (TypeError, AttributeError):
-                    tf.extractall(dst)
+                    tf.extractall(dst)  # noqa: S202
             tmp.unlink(missing_ok=True)
         elif zipfile.is_zipfile(tmp):
             with zipfile.ZipFile(tmp) as zip_ref:
-                zip_ref.extractall(dst)
+                zip_ref.extractall(dst)  # noqa: S202
             tmp.unlink(missing_ok=True)
         else:
             logger.debug("Downloaded file is not an archive; leaving as-is: %s", tmp)

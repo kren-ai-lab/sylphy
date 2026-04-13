@@ -106,7 +106,7 @@ class PhysicochemicalEncoder(Encoders):
         except KeyError:
             self.__logger__.warning("Residue '%s' not in property table. Using 0.0", residue)
             return 0.0
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             self.__logger__.error("Unexpected error during residue encoding: %s", e)
             return 0.0
 
@@ -118,7 +118,7 @@ class PhysicochemicalEncoder(Encoders):
             if pad > 0:
                 vec.extend([0.0] * pad)
             return vec[: self.max_length]
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             self.__logger__.error("Failed to encode sequence '%s': %s", sequence, e)
             return [0.0] * self.max_length
 

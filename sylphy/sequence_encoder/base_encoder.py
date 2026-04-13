@@ -82,7 +82,7 @@ class Encoders:
 
         try:
             self.make_revisions()
-        except Exception as e:
+        except (RuntimeError, ValueError) as e:
             self.status = False
             self.message = f"[ERROR] Initialization failed: {e}"
             self.__logger__.exception(self.message)

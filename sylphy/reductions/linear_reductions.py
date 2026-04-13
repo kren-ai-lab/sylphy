@@ -5,8 +5,9 @@ from __future__ import annotations
 import inspect
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Callable, TypeVar, cast  # noqa: UP035
 
+import numpy as np
 from sklearn.decomposition import (
     NMF,
     PCA,
@@ -23,16 +24,10 @@ from sklearn.decomposition import (
 from .reduction_methods import Preprocess, Reductions, ReturnType
 
 if TYPE_CHECKING:
-    import numpy as np
     import pandas as pd
 
 
-class _SupportsFitTransform(Protocol):
-    def fit_transform(self, X: Any, y: Any = None) -> Any:
-        ...
-
-
-ModelT = TypeVar("ModelT", bound=_SupportsFitTransform)
+ModelT = TypeVar("ModelT")
 
 
 class LinearReduction(Reductions):
@@ -84,9 +79,11 @@ class LinearReduction(Reductions):
     ) -> tuple[ModelT, np.ndarray | pd.DataFrame | None]:
         """Fit/transform wrapper with logging and error handling."""
         try:
-            params = getattr(model, "get_params", dict)()
+            params_getter = cast("Callable[[], object]", getattr(model, "get_params", dict))
+            params = params_getter()
             self.__logger__.info("Applying %s with params=%s", method_name, params)
-            transformed = model.fit_transform(self.dataset)
+            fit_transform = cast("Callable[[np.ndarray], object]", getattr(model, "fit_transform"))  # noqa: B009
+            transformed = np.asarray(fit_transform(self.dataset))
             k = (
                 n_components
                 if n_components is not None
@@ -94,7 +91,7 @@ class LinearReduction(Reductions):
             )
             self.__logger__.info("%s successful. Output shape=%s", method_name, transformed.shape)
             return model, self.generate_dataset_post_reduction(transformed, k)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.__logger__.error("%s failed: %s", method_name, e)
             self.__logger__.debug(traceback.format_exc())
             return model, None

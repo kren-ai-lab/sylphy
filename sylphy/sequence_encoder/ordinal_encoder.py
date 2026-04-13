@@ -53,7 +53,7 @@ class OrdinalEncoder(Encoders):
                         allow_unknown=self.allow_unknown,
                     ),
                 )
-            except Exception:
+            except KeyError:
                 coded.append(0)
         if len(sequence) < self.max_length:
             coded += self.__zero_padding(len(coded))

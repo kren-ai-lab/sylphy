@@ -52,9 +52,9 @@ class OneHotEncoder(Encoders):
                 allow_unknown=self.allow_unknown,
             )
             v[pos] = 1
-        except Exception:
+        except KeyError:
             # Unknown residue: keep zero vector
-            pass
+            self.__logger__.debug("Unknown residue '%s' encoded as zero vector.", residue)
         return v
 
     def __zero_padding(self, current_length: int) -> list[int]:

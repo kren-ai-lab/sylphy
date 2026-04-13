@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from importlib import import_module
 from typing import TYPE_CHECKING
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
@@ -27,7 +28,7 @@ logger = logging.getLogger("sylphy.embedding_extraction.factory")
 add_context(logger, component="embedding_extraction", backend="factory")
 
 
-def EmbeddingFactory(
+def EmbeddingFactory(  # noqa: PLR0911
     model_name: str,
     dataset: pd.DataFrame,
     column_seq: str,
@@ -48,7 +49,8 @@ def EmbeddingFactory(
 
     if "esm2" in name or name.startswith("facebook/esm2"):
         logger.info("Selecting ESM2 backend", extra={"model": model_name})
-        from .esm_based import ESMBasedEmbedding
+        module = import_module(".esm_based", package=__package__)
+        ESMBasedEmbedding = module.ESMBasedEmbedding
 
         return ESMBasedEmbedding(
             name_device=name_device,
@@ -64,7 +66,8 @@ def EmbeddingFactory(
 
     if "ankh2" in name or name.startswith("elnaggarlab/ankh2"):
         logger.info("Selecting Ankh2 backend", extra={"model": model_name})
-        from .ankh2_based import Ankh2BasedEmbedding
+        module = import_module(".ankh2_based", package=__package__)
+        Ankh2BasedEmbedding = module.Ankh2BasedEmbedding
 
         return Ankh2BasedEmbedding(
             dataset=dataset,
@@ -81,7 +84,8 @@ def EmbeddingFactory(
 
     if "ankh3" in name or name.startswith("elnaggarlab/ankh3"):
         logger.info("Selecting Ankh2 backend", extra={"model": model_name})
-        from .ankh2_based import Ankh2BasedEmbedding
+        module = import_module(".ankh2_based", package=__package__)
+        Ankh2BasedEmbedding = module.Ankh2BasedEmbedding
 
         return Ankh2BasedEmbedding(
             dataset=dataset,
@@ -98,7 +102,8 @@ def EmbeddingFactory(
 
     if "t5" in name or "prot_t5" in name or name.startswith("rostlab/prot_t5"):
         logger.info("Selecting ProtT5 backend", extra={"model": model_name})
-        from .prot5_based import Prot5Based
+        module = import_module(".prot5_based", package=__package__)
+        Prot5Based = module.Prot5Based
 
         return Prot5Based(
             name_device=name_device,
@@ -114,7 +119,8 @@ def EmbeddingFactory(
 
     if "bert" in name or "prot_bert" in name or name.startswith("rostlab/prot_bert"):
         logger.info("Selecting ProtBERT backend", extra={"model": model_name})
-        from .bert_based import BertBasedEmbedding
+        module = import_module(".bert_based", package=__package__)
+        BertBasedEmbedding = module.BertBasedEmbedding
 
         return BertBasedEmbedding(
             name_device=name_device,
@@ -130,7 +136,8 @@ def EmbeddingFactory(
 
     if "mistral" in name or "mistral-prot" in name:
         logger.info("Selecting Mistral-Prot backend", extra={"model": model_name})
-        from .mistral_based import MistralBasedEmbedding
+        module = import_module(".mistral_based", package=__package__)
+        MistralBasedEmbedding = module.MistralBasedEmbedding
 
         return MistralBasedEmbedding(
             name_device=name_device,
@@ -147,7 +154,8 @@ def EmbeddingFactory(
     if "esmc" in name:
         logger.info("Selecting ESM-C backend", extra={"model": model_name})
         try:
-            from .esmc_based import ESMCBasedEmbedding
+            module = import_module(".esmc_based", package=__package__)
+            ESMCBasedEmbedding = module.ESMCBasedEmbedding
         except (ImportError, ModuleNotFoundError) as exc:
             wrapped = wrap_optional_dependency_error(
                 exc,

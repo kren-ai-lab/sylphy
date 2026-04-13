@@ -1,3 +1,5 @@
+"""Create sequence encoders from canonical names or aliases."""
+
 from __future__ import annotations
 
 import logging
@@ -112,6 +114,7 @@ _ALLOWED: dict[str, set[str]] = {
 
 
 def _canonical(name: str) -> str:
+    """Resolve an encoder name or alias to its canonical key."""
     key = (name or "").strip().lower()
     if key in _ALIASES:
         return _ALIASES[key]
@@ -125,6 +128,7 @@ def _canonical(name: str) -> str:
 
 
 def _filter_kwargs(kind: str, kwargs: dict[str, object]) -> dict[str, object]:
+    """Filter constructor kwargs to those supported by a specific encoder."""
     allowed = _ALLOWED[kind]
     filtered = {k: v for k, v in kwargs.items() if k in allowed}
     ignored = sorted(set(kwargs.keys()) - allowed)
@@ -134,22 +138,14 @@ def _filter_kwargs(kind: str, kwargs: dict[str, object]) -> dict[str, object]:
 
 
 def create_encoder(name: str, **kwargs: object) -> EncoderInstance:
-    """Factory for sequence encoders with per-backend parameter filtering.
+    """Create a sequence encoder with backend-specific argument filtering.
 
-    Parameters
-    ----------
-    name : str
-        Encoder name or alias. Supported canonical names:
-        {'one_hot','ordinal','frequency','kmers','physicochemical','fft'}.
-        Aliases: onehot, kmer, tfidf, physchem, aaindex.
-    **kwargs : object
-        Backend-specific constructor parameters. Extra keys are ignored safely
-        (and logged at DEBUG level).
+    Args:
+        name: Encoder name or alias.
+        **kwargs: Backend-specific constructor parameters.
 
-    Returns
-    -------
-    Encoders
-        An instance of the requested encoder.
+    Returns:
+        An initialized encoder instance.
 
     """
     kind = _canonical(name)

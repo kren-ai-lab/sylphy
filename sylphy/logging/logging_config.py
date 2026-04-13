@@ -1,3 +1,5 @@
+"""Configure structured and plain-text logging for Sylphy."""
+
 from __future__ import annotations
 
 import json
@@ -8,7 +10,7 @@ from typing import TYPE_CHECKING
 
 try:
     from appdirs import user_log_dir
-except Exception:  # noqa: BLE001 # pragma: no cover
+except Exception:  # pragma: no cover
     def user_log_dir(
         _appname: str | None = None,
         _appauthor: str | None = None,
@@ -16,7 +18,7 @@ except Exception:  # noqa: BLE001 # pragma: no cover
         *,
         _opinion: bool = True,
     ) -> str:
-        """Dummy fallback if appdirs is missing."""
+        """Return an empty fallback log directory when appdirs is unavailable."""
         return ""
 
 # Import lightweight constants/helpers (avoid cycles)
@@ -50,7 +52,7 @@ def _env_int(name: str, default: int) -> int:
         return default
     try:
         return int(raw)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return default
 
 
@@ -76,12 +78,12 @@ def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | No
         return p
 
     try:
-        from sylphy.constants.tool_configs import get_config  # noqa: PLC0415
+        from sylphy.constants.tool_configs import get_config
 
         root = Path(get_config().cache_paths.logs())
         root.mkdir(parents=True, exist_ok=True)
         return root / default_name
-    except Exception:  # noqa: BLE001, S110
+    except Exception:
         pass
 
     if user_log_dir is not None:
@@ -101,7 +103,7 @@ class _JsonFormatter(logging.Formatter):
 
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
         if self._use_utc:
-            import time  # noqa: PLC0415
+            import time
 
             ct = time.gmtime(record.created)
             return time.strftime("%Y-%m-%dT%H:%M:%S", ct)
@@ -125,7 +127,7 @@ class _JsonFormatter(logging.Formatter):
             try:
                 json.dumps({k: v})
                 payload[k] = v
-            except Exception:  # noqa: BLE001
+            except Exception:
                 payload[k] = str(v)
 
         if record.exc_info:
@@ -160,7 +162,7 @@ def _make_file_handler(
     backups: int,
 ) -> logging.Handler:
     try:
-        from logging.handlers import RotatingFileHandler  # noqa: PLC0415
+        from logging.handlers import RotatingFileHandler
 
         fh = RotatingFileHandler(
             path,
@@ -168,7 +170,7 @@ def _make_file_handler(
             backupCount=backups,
             encoding="utf-8",
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         fh = logging.FileHandler(path, encoding="utf-8")
     fh.setLevel(level)
     if use_json:

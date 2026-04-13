@@ -1,17 +1,4 @@
-"""Miscellaneous Utilities for Sequence/Embedding Workflows.
-========================================================
-
-This package contains utility abstractions shared across the project such as:
-random/stratified sampling, distance computations, filesystem helpers, and export
-functions.
-
-Modules
--------
-- utils_lib : High-level utilities for sampling, distances, job IDs, safe deletion, and export.
-
-Author: KREN AI LAB
-License: GNU GENERAL PUBLIC LICENSE
-"""
+"""Expose utility helpers used across sequence and embedding workflows."""
 
 from .utils_lib import UtilsLib
 

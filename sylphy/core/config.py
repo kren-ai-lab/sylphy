@@ -1,4 +1,5 @@
-# core/config.py
+"""Provide core configuration accessors and cache root overrides."""
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -30,13 +31,13 @@ def get_config() -> ToolConfig:
 
 
 def set_cache_root(new_root: Path | str) -> None:
-    """Programmatically override the cache root directory while preserving
-    the rest of the current configuration (debug, device, log_level, seed).
+    """Programmatically override the cache root directory.
 
-    Parameters
-    ----------
-    new_root : Path or str
-        New root path. Will be expanded and resolved.
+    Preserve the rest of the current configuration (debug, device, log_level,
+    and seed).
+
+    Args:
+        new_root: New root path. It is expanded and resolved.
 
     """
     root = Path(new_root).expanduser().resolve()
@@ -55,14 +56,13 @@ def set_cache_root(new_root: Path | str) -> None:
 
 @contextmanager
 def temporary_cache_root(temp_root: Path | str) -> Generator[None, None, None]:
-    """Temporarily override the cache root (useful for tests or isolated runs).
+    """Temporarily override the cache root for the current context.
 
-    Example:
-    -------
-    >>> from pathlib import Path
-    >>> with temporary_cache_root(Path('./.tmp_cache')):
-    ...     # operations here use the temporary cache
-    ...     pass
+    Args:
+        temp_root: Temporary cache root path.
+
+    Yields:
+        Nothing. The function is used as a context manager.
 
     """
     prev_root = get_config().cache_paths.cache_root

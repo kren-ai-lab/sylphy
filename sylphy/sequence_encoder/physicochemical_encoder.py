@@ -1,3 +1,5 @@
+"""Implement physicochemical-property encoding for sequence datasets."""
+
 from __future__ import annotations
 
 import io
@@ -17,9 +19,8 @@ from .base_encoder import Encoders
 class PhysicochemicalEncoder(Encoders):
     """Encode sequences using a selected physicochemical property (e.g., AAIndex).
 
-    Notes
-    -----
-    Non-canonical residues in the table are treated as 0.0 after validation.
+    Notes:
+        Residues missing from the property table are encoded as ``0.0``.
 
     """
 
@@ -36,6 +37,7 @@ class PhysicochemicalEncoder(Encoders):
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the physicochemical encoder."""
         super().__init__(
             dataset=dataset,
             sequence_column=sequence_column or "sequence",
@@ -56,6 +58,7 @@ class PhysicochemicalEncoder(Encoders):
             raise ValueError(msg)
 
     def _load_descriptor_file(self, type_descriptor: str = "aaindex") -> pd.DataFrame:
+        """Load descriptor data from cache or download it when missing."""
         if type_descriptor not in {"aaindex", "group_based"}:
             msg = f"Unsupported descriptor type: {type_descriptor}. Must be 'aaindex' or 'group_based'."
             self.__logger__.error(msg)
@@ -103,7 +106,7 @@ class PhysicochemicalEncoder(Encoders):
         except KeyError:
             self.__logger__.warning("Residue '%s' not in property table. Using 0.0", residue)
             return 0.0
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.__logger__.error("Unexpected error during residue encoding: %s", e)
             return 0.0
 
@@ -115,7 +118,7 @@ class PhysicochemicalEncoder(Encoders):
             if pad > 0:
                 vec.extend([0.0] * pad)
             return vec[: self.max_length]
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.__logger__.error("Failed to encode sequence '%s': %s", sequence, e)
             return [0.0] * self.max_length
 
@@ -136,6 +139,7 @@ class PhysicochemicalEncoder(Encoders):
             raise RuntimeError(msg) from e
 
     def run_process(self) -> None:
+        """Encode validated sequences using the configured descriptor property."""
         if self.status:
             self.__logger__.info("Running physicochemical encoding.")
             self.__encoding_dataset()

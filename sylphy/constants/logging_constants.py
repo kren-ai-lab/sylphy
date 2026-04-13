@@ -1,3 +1,5 @@
+"""Declare logging defaults and environment parsing helpers."""
+
 import logging
 import os
 
@@ -26,11 +28,13 @@ LOG_LEVEL_MAP = {
 
 
 def env_log_level() -> int:
+    """Return the configured log level from environment variables."""
     lvl = os.getenv(f"{LOG_ENV_PREFIX}LEVEL", "").upper()
     return LOG_LEVEL_MAP.get(lvl, LOG_DEFAULT_LEVEL)
 
 
 def env_log_json(*, default: bool = LOG_DEFAULT_JSON) -> bool:
+    """Return whether JSON logging is enabled."""
     v = os.getenv(f"{LOG_ENV_PREFIX}JSON")
     if v is None:
         return default
@@ -38,6 +42,7 @@ def env_log_json(*, default: bool = LOG_DEFAULT_JSON) -> bool:
 
 
 def env_log_stderr(*, default: bool = LOG_DEFAULT_STDERR) -> bool:
+    """Return whether console logging should target stderr."""
     v = os.getenv(f"{LOG_ENV_PREFIX}STDERR")
     if v is None:
         return default

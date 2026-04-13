@@ -16,7 +16,7 @@ Design goals:
 
 from __future__ import annotations
 
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import typer
@@ -30,7 +30,7 @@ from sylphy.cli._shared import (
     load_csv,
     validate_choice,
 )
-from sylphy.types import FileFormat  # noqa: TC001
+from sylphy.types import FileFormat
 
 if TYPE_CHECKING:
     from sylphy.sequence_encoder.fft_encoder import FFTEncoder
@@ -75,12 +75,12 @@ MAX_LENGTH_OPTION = typer.Option(
     help="Max sequence length (when applicable).",
 )
 ALLOW_EXTENDED_OPTION = typer.Option(
-    False,  # noqa: FBT003
+    False,
     "--allow-extended/--no-allow-extended",
     help="Enable extended alphabet (B, Z, X, U, O).",
 )
 ALLOW_UNKNOWN_OPTION = typer.Option(
-    False,  # noqa: FBT003
+    False,
     "--allow-unknown/--no-allow-unknown",
     help="Allow 'X' when extended alphabet is not enabled.",
 )
@@ -121,7 +121,7 @@ FORMAT_OUTPUT_OPTION = typer.Option(
     show_default=True,
 )
 DEBUG_OPTION = typer.Option(
-    False,  # noqa: FBT003
+    False,
     "--debug/--no-debug",
     help="Enable verbose logs within encoders.",
 )
@@ -181,7 +181,7 @@ def encode_sequences(
         df = load_csv(input_data, sequence_identifier)
 
         # Import factory only when the user actually runs the command
-        from sylphy.sequence_encoder.factory import create_encoder  # noqa: PLC0415
+        from sylphy.sequence_encoder.factory import create_encoder
 
         # Compute final output path with ensured extension (fix for missing extensions)
         final_output = ensure_ext(output, fmt_choice)

@@ -1,4 +1,5 @@
-# core/__init__.py
+"""Expose core config and model-registry APIs."""
+
 from __future__ import annotations
 
 from importlib import metadata as _metadata

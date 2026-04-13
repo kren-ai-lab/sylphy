@@ -1,4 +1,5 @@
-# sylphy/embedding_extraction/prot5_based.py
+"""Implement the ProtT5 embedding backend."""
+
 from __future__ import annotations
 
 import logging
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
 
 
 class Prot5Based(EmbeddingBased):
+    """Extract embeddings using ProtT5 encoder models."""
+
     def __init__(
         self,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -33,6 +36,7 @@ class Prot5Based(EmbeddingBased):
         debug: bool = False,
         oom_backoff: bool = True,
     ) -> None:
+        """Initialize the ProtT5 backend."""
         if dataset is None:
             msg = "dataset must be provided"
             raise ValueError(msg)
@@ -53,6 +57,7 @@ class Prot5Based(EmbeddingBased):
         )
 
     def load_model_tokenizer(self) -> None:
+        """Load ProtT5 tokenizer and encoder model."""
         try:
             local_dir = self._register_and_resolve()
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
@@ -107,6 +112,7 @@ class Prot5Based(EmbeddingBased):
         batch: list[str],
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
+        """Embed a batch and return hidden states with an attention mask."""
         if not batch:
             msg = "Input batch is empty."
             raise ValueError(msg)

@@ -1,3 +1,5 @@
+"""Implement residue-frequency encoding for protein sequences."""
+
 from __future__ import annotations
 
 import logging
@@ -27,6 +29,7 @@ class FrequencyEncoder(Encoders):
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the frequency encoder."""
         # Note: max_length is irrelevant for frequency features; keep base validation flow
         super().__init__(
             dataset=dataset,
@@ -45,6 +48,7 @@ class FrequencyEncoder(Encoders):
         return [sequence.count(r) / L for r in self._alpha]
 
     def run_process(self) -> None:
+        """Encode each sequence as normalized residue frequencies."""
         if not self.status:
             self.__logger__.warning("Encoding skipped due to failed validation.")
             return

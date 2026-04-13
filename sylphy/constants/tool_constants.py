@@ -1,4 +1,5 @@
-# tool_constants.py
+"""Define global constants and amino-acid alphabet helpers."""
+
 from __future__ import annotations
 
 # Environment variable prefix used across the project (e.g., SYLPHY_CACHE_ROOT)
@@ -77,15 +78,11 @@ LIST_DESCRIPTORS_SEQUENCE_NON_NUMERIC: tuple[str, ...] = ("sequence", "is_canon"
 def residues(*, extended: bool = False) -> tuple[str, ...]:
     """Return the residue alphabet.
 
-    Parameters
-    ----------
-    extended : bool, optional
-        If True, include B, Z, X, U, O. Default False (canonical 20).
+    Args:
+        extended: If ``True``, include B, Z, X, U, and O.
 
-    Returns
-    -------
-    tuple[str, ...]
-        Alphabet tuple.
+    Returns:
+        The canonical or extended alphabet tuple.
 
     """
     return LIST_RESIDUES_EXTENDED if extended else LIST_RESIDUES
@@ -94,15 +91,11 @@ def residues(*, extended: bool = False) -> tuple[str, ...]:
 def position_residues(*, extended: bool = False) -> dict[str, int]:
     """Return a residue → index mapping for the selected alphabet.
 
-    Parameters
-    ----------
-    extended : bool, optional
-        If True, mapping for the extended alphabet.
+    Args:
+        extended: If ``True``, return mapping for the extended alphabet.
 
-    Returns
-    -------
-    dict[str, int]
-        Mapping of one-letter residue to 0-based index.
+    Returns:
+        A mapping of one-letter residue code to zero-based index.
 
     """
     alpha = residues(extended=extended)
@@ -112,24 +105,17 @@ def position_residues(*, extended: bool = False) -> dict[str, int]:
 def get_index(residue: str, *, extended: bool = False, allow_unknown: bool = False) -> int:
     """Return the 0-based index for a one-letter amino acid.
 
-    Parameters
-    ----------
-    residue : str
-        One-letter amino acid code.
-    extended : bool, optional
-        If True, the extended alphabet is used (B, Z, X, U, O).
-    allow_unknown : bool, optional
-        If True and `extended=False`, allow 'X' by promoting to extended set.
+    Args:
+        residue: One-letter amino acid code.
+        extended: If ``True``, use the extended alphabet.
+        allow_unknown: If ``True`` and ``extended`` is ``False``, allow ``X`` by
+            promoting lookup to the extended alphabet.
 
-    Returns
-    -------
-    int
+    Returns:
         Index in the selected alphabet.
 
-    Raises
-    ------
-    KeyError
-        If the residue is not part of the selected alphabet.
+    Raises:
+        KeyError: If the residue is not part of the selected alphabet.
 
     """
     r = residue.strip().upper()
@@ -149,22 +135,15 @@ def get_index(residue: str, *, extended: bool = False, allow_unknown: bool = Fal
 def get_residue(index: int, *, extended: bool = False) -> str:
     """Return the one-letter amino acid at the given 0-based index.
 
-    Parameters
-    ----------
-    index : int
-        Position in the selected alphabet.
-    extended : bool, optional
-        If True, the extended alphabet is used.
+    Args:
+        index: Position in the selected alphabet.
+        extended: If ``True``, use the extended alphabet.
 
-    Returns
-    -------
-    str
+    Returns:
         One-letter amino acid code.
 
-    Raises
-    ------
-    IndexError
-        If the index is out of bounds.
+    Raises:
+        IndexError: If the index is out of bounds.
 
     """
     alpha = residues(extended=extended)

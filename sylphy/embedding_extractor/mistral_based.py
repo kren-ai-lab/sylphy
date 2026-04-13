@@ -1,4 +1,5 @@
-# sylphy/embedding_extraction/mistral_based.py
+"""Implement the Mistral-Prot embedding backend."""
+
 from __future__ import annotations
 
 import logging
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
 
 
 class MistralBasedEmbedding(EmbeddingBased):
+    """Extract embeddings using Mistral-Prot models."""
+
     def __init__(
         self,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -29,6 +32,7 @@ class MistralBasedEmbedding(EmbeddingBased):
         debug: bool = False,
         oom_backoff: bool = True,
     ) -> None:
+        """Initialize the Mistral-Prot backend."""
         if dataset is None:
             msg = "dataset must be provided"
             raise ValueError(msg)
@@ -49,6 +53,7 @@ class MistralBasedEmbedding(EmbeddingBased):
         )
 
     def load_model_tokenizer(self) -> None:
+        """Load Mistral tokenizer and model from the resolved model directory."""
         try:
             local_dir = self._register_and_resolve()
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
@@ -79,6 +84,7 @@ class MistralBasedEmbedding(EmbeddingBased):
         batch: list[str],
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
+        """Embed a batch and return hidden states with an attention mask."""
         if not batch:
             msg = "Input batch is empty."
             raise ValueError(msg)

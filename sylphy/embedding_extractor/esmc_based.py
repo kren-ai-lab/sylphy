@@ -1,4 +1,5 @@
-# sylphy/embedding_extraction/esmc_based.py
+"""Implement the ESM-C backend using Meta's ESM SDK."""
+
 from __future__ import annotations
 
 import contextlib
@@ -36,6 +37,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
         debug: bool = False,
         oom_backoff: bool = True,
     ) -> None:
+        """Initialize the ESM-C backend."""
         if dataset is None:
             msg = "dataset must be provided"
             raise ValueError(msg)
@@ -73,11 +75,12 @@ class ESMCBasedEmbedding(EmbeddingBased):
             self.load_model_tokenizer()
 
     def load_model_tokenizer(self) -> None:
+        """Load an ESM-C model from the registry path or model identifier."""
         try:
             local_dir: str | None = None
             try:
                 local_dir = self._register_and_resolve()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 local_dir = None
 
             load_ref = local_dir or self.name_model
@@ -119,7 +122,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
             else:
                 pt = self.model.encode(protein).to(self.device)
                 out = self.model.logits(pt, cfg)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.__logger__.warning("Failed to embed sequence: %s", e)
             return None, None
         else:
@@ -128,7 +131,7 @@ class ESMCBasedEmbedding(EmbeddingBased):
     def _process_sequence(
         self, seq: str, layers: LayerSpec, layer_agg: LayerAgg, pool: Pool,
     ) -> np.ndarray | None:
-        """Internal logic to embed and pool a single sequence."""
+        """Embed and pool a single sequence."""
         emb, hs = self._embed_one(seq, return_hidden_states=True)
 
         if self._has_hidden_states(hs):

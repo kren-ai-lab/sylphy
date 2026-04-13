@@ -1,4 +1,5 @@
-# sylphy/embedding_extraction/embedding_based.py
+"""Provide the shared base implementation for embedding backends."""
+
 from __future__ import annotations
 
 import contextlib
@@ -52,6 +53,7 @@ class EmbeddingBased:
         trust_remote_code: bool = False,
         oom_backoff: bool = True,
     ) -> None:
+        """Initialize common state for embedding backends."""
         self._cache_root = resolve_cache_dir()
         self._wire_cache_envs(self._cache_root)
 
@@ -92,6 +94,7 @@ class EmbeddingBased:
 
     @property
     def device(self) -> torch.device:
+        """Return the torch device used for model execution."""
         return cast("torch.device", self._device)
 
     @staticmethod
@@ -116,8 +119,11 @@ class EmbeddingBased:
     # ---------------------------------------------------------------------
 
     def _register_and_resolve(self) -> str:
-        """Resolve the model via the registry. If missing and provider is HF
-        and `name_model` looks like 'org/model', register it, then resolve.
+        """Resolve a model through the registry.
+
+        If missing and provider is HF and ``name_model`` looks like ``org/model``,
+        register it dynamically and resolve again.
+
         Returns a local directory path to the model.
         """
         try:
@@ -179,9 +185,11 @@ class EmbeddingBased:
         return True
 
     def ensure_loaded(self) -> None:
-        """Idempotent loader. If not ready, tries:
-        - subclass's `load_model_tokenizer()` if present (custom backends),
-        - else falls back to `load_hf_tokenizer_and_model()` (HF backends).
+        """Load model resources when they are not already loaded.
+
+        Preference order:
+        - subclass ``load_model_tokenizer()`` when provided
+        - fallback to ``load_hf_tokenizer_and_model()`` for HF backends
         """
         if self._is_ready():
             return
@@ -203,7 +211,7 @@ class EmbeddingBased:
     # ---------------------------------------------------------------------
 
     def _pre_tokenize(self, batch: list[str]) -> list[str]:
-        """Optional hook to adjust raw strings before tokenization (e.g., insert spaces)."""
+        """Adjust raw input sequences before tokenization."""
         return [s.strip() for s in batch]
 
     def _amp_dtype(self) -> torch.dtype | None:
@@ -222,7 +230,7 @@ class EmbeddingBased:
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
     ) -> pd.DataFrame:
-        """Hook for non-tokenizer backends.
+        """Process embeddings for non-tokenizer backends.
 
         Subclasses that set ``requires_tokenizer = False`` must override this method.
         """
@@ -245,12 +253,9 @@ class EmbeddingBased:
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
         """Tokenize → forward pass with `output_hidden_states=True`.
 
-        Returns
-        -------
-        hidden_states : tuple of Tensors
-            Tuple of length n_layers: each (B, L, H).
-        attention_mask : torch.Tensor
-            (B, L) attention mask (1 for real tokens).
+        Returns:
+            Tuple of ``(hidden_states, attention_mask)`` where hidden states are
+            ``(B, L, H)`` per layer and attention mask is ``(B, L)``.
 
         """
         if (self.model is None) or (self.requires_tokenizer and self.tokenizer is None):
@@ -372,10 +377,9 @@ class EmbeddingBased:
     ) -> np.ndarray:
         """Encode a batch returning pooled, layer-aggregated embeddings.
 
-        Returns
-        -------
-        np.ndarray
-            (B, H') with H' depending on `layer_agg` and the number of selected layers.
+        Returns:
+            Array of shape ``(B, H')`` where ``H'`` depends on layer selection
+            and aggregation.
 
         """
         if not self.requires_tokenizer:
@@ -401,6 +405,7 @@ class EmbeddingBased:
         return pooled.detach().cpu().numpy()
 
     def clean_memory(self) -> None:
+        """Release Python and CUDA memory caches when available."""
         try:
             if torch.cuda.is_available():
                 with contextlib.suppress(Exception):
@@ -408,13 +413,14 @@ class EmbeddingBased:
                 torch.cuda.empty_cache()
                 with contextlib.suppress(Exception):
                     torch.cuda.reset_peak_memory_stats()
-            import gc  # noqa: PLC0415
+            import gc
 
             gc.collect()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.__logger__.debug("clean_memory() warning: %s", e)
 
     def release_resources(self) -> None:
+        """Move model off-device and clear model/tokenizer references."""
         try:
             model = getattr(self, "model", None)
             if model is not None:

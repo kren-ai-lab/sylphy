@@ -1,4 +1,5 @@
-# sylphy/embedding_extraction/esm_based.py
+"""Implement the ESM2 embedding backend."""
+
 from __future__ import annotations
 
 import logging
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
 
 
 class ESMBasedEmbedding(EmbeddingBased):
+    """Extract embeddings using ESM2 Hugging Face models."""
+
     def __init__(
         self,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -29,6 +32,7 @@ class ESMBasedEmbedding(EmbeddingBased):
         debug: bool = False,
         oom_backoff: bool = True,
     ) -> None:
+        """Initialize the ESM backend."""
         if dataset is None:
             msg = "dataset must be provided"
             raise ValueError(msg)
@@ -49,6 +53,7 @@ class ESMBasedEmbedding(EmbeddingBased):
         )
 
     def load_model_tokenizer(self) -> None:
+        """Load ESM tokenizer and model from the resolved local directory."""
         try:
             local_dir = self._register_and_resolve()
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
@@ -86,9 +91,11 @@ class ESMBasedEmbedding(EmbeddingBased):
         batch: list[str],
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
-        """Return (hidden_states, attention_mask) with shapes:
-        - hidden_states: tuple of length n_layers, each (B, L, H)
-        - attention_mask: (B, L).
+        """Return hidden states and attention mask for a sequence batch.
+
+        Returns:
+            A tuple of hidden states by layer and the attention mask.
+
         """
         if not batch:
             msg = "Input batch is empty."

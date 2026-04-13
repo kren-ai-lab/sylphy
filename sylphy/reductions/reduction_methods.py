@@ -1,3 +1,5 @@
+"""Define shared base behavior for dimensionality-reduction classes."""
+
 from __future__ import annotations
 
 import logging
@@ -17,30 +19,20 @@ Preprocess = Literal["none", "standardize", "normalize", "robust"]
 class Reductions:
     """Base utilities for dimensionality reduction workflows.
 
-    Responsibilities
-    ----------------
-    - Hold and validate the input matrix (2D numeric array).
-    - Optional preprocessing: standardization/normalization/robust scaling.
-    - Provide a unified logger consistent with the library.
-    - Convert transformed arrays into **NumPy** (default) or **pandas** outputs
-      with standardized column names (``p_1, p_2, ...``).
+    Responsibilities:
+        - Hold and validate the input matrix (2D numeric array).
+        - Apply optional preprocessing.
+        - Provide unified component logging.
+        - Convert transformed arrays into NumPy or pandas outputs.
 
-    Parameters
-    ----------
-    dataset : np.ndarray | pd.DataFrame
-        Input feature matrix of shape (N, D).
-    return_type : {"numpy", "pandas"}, default "numpy"
-        Output container used by helper methods.
-    preprocess : {"none","standardize","normalize","robust"}, default "none"
-        Optional preprocessing to apply before the reduction.
-    random_state : int | None, default None
-        Random seed for models that accept it. If None, uses ToolConfig.seed.
-    debug : bool, default True
-        If True, enable this component's logger (child logger).
-    debug_mode : int, default logging.INFO
-        Logging level when ``debug=True`` (e.g., ``logging.DEBUG``).
-    name_logging : str, default="Reductions"
-        Suffix used for the child logger name ``sylphy.reductions.<name_logging>``.
+    Args:
+        dataset: Input feature matrix of shape ``(N, D)``.
+        return_type: Output container used by helper methods.
+        preprocess: Optional preprocessing strategy.
+        random_state: Random seed for supported models.
+        debug: Whether to enable this component logger.
+        debug_mode: Logging level used when ``debug`` is enabled.
+        name_logging: Child logger suffix under ``sylphy.reductions``.
 
     """
 
@@ -55,6 +47,7 @@ class Reductions:
         debug_mode: int = logging.INFO,
         name_logging: str = "Reductions",
     ) -> None:
+        """Initialize reduction state, logger, validation, and preprocessing."""
         # Ensure the package logger exists exactly once, then get a child
         _ = get_logger("sylphy")
         self.__logger__ = logging.getLogger(f"sylphy.reductions.{name_logging}")
@@ -69,7 +62,7 @@ class Reductions:
         if isinstance(dataset, pd.DataFrame):
             dataset = dataset.to_numpy()
         arr = np.asarray(dataset)
-        if arr.ndim != 2:  # noqa: PLR2004
+        if arr.ndim != 2:
             msg = f"Expected 2D array, got shape {arr.shape}"
             raise ValueError(msg)
         if not np.issubdtype(arr.dtype, np.number):
@@ -129,7 +122,7 @@ class Reductions:
         - If ``return_type='pandas'`` → returns a DataFrame with columns ``p_1..p_K``.
         """
         transform_array = np.asarray(transform_values)
-        if transform_array.ndim != 2:  # noqa: PLR2004
+        if transform_array.ndim != 2:
             msg = f"Expected 2D reduced array, got shape {transform_array.shape}"
             raise ValueError(msg)
 

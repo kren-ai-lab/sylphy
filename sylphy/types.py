@@ -1,3 +1,5 @@
+"""Declare shared type aliases used throughout Sylphy."""
+
 from __future__ import annotations
 
 from typing import Literal

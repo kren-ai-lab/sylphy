@@ -1,30 +1,11 @@
-# protein_representation/embedding_extraction/__init__.py
+"""Expose embedding backends with lazy imports."""
+
 from __future__ import annotations
 
 from importlib import import_module
 from typing import TYPE_CHECKING
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
-
-"""
-Embedding Extraction
-====================
-
-Unified interface to extract embeddings from protein sequence models.
-
-- Lazy-loaded backends to keep imports fast.
-- The factory logs which backend was selected.
-
-Public API
-----------
-Base:
-    EmbeddingBased
-Backends:
-    ESMBasedEmbedding, Prot5Based, BertBasedEmbedding,
-    MistralBasedEmbedding, ESMCBasedEmbedding, Ankh2BasedEmbedding
-Factory:
-    EmbeddingFactory, create_embedding
-"""
 
 __all__ = [
     "Ankh2BasedEmbedding",
@@ -50,10 +31,11 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 def __getattr__(name: str) -> object:
+    """Resolve lazy exports and cache the loaded symbol."""
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
         if name == "create_embedding":
-            from .embedding_factory import EmbeddingFactory  # noqa: PLC0415
+            from .embedding_factory import EmbeddingFactory
 
             return EmbeddingFactory
         msg = f"module '{__name__}' has no attribute '{name}'"
@@ -77,6 +59,7 @@ def __getattr__(name: str) -> object:
 
 
 def __dir__() -> list[str]:
+    """Return available public exports for this package."""
     return sorted(__all__)
 
 

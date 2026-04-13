@@ -1,4 +1,5 @@
-# tool_configs.py
+"""Provide global runtime configuration and cache resolution helpers."""
+
 from __future__ import annotations
 
 import logging
@@ -47,13 +48,14 @@ def default_cache_paths() -> CachePaths:
 
 def _detect_cuda_available() -> bool:
     """Best-effort CUDA availability check without hard dependency on torch.
+
     Returns False if torch cannot be imported.
     """
     try:
-        import torch  # noqa: PLC0415
+        import torch
     except ImportError:
         return False
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _logger.debug("Unexpected error checking CUDA availability: %s", e)
         return False
     else:
@@ -62,6 +64,7 @@ def _detect_cuda_available() -> bool:
 
 def _default_device() -> str:
     """Default device to use for model-backed features.
+
     Priority:
       1) Respect SYLPHY_DEVICE if set (e.g., 'cpu', 'cuda').
       2) Use 'cuda' only if available.
@@ -107,6 +110,7 @@ class _ConfigStore:
 
 def get_config() -> ToolConfig:
     """Return the global ToolConfig, creating it on first use.
+
     Ensures cache directories exist.
     """
     return _ConfigStore.get()
@@ -114,6 +118,7 @@ def get_config() -> ToolConfig:
 
 def set_config(cfg: ToolConfig) -> None:
     """Replace the global ToolConfig with a custom instance.
+
     Ensures cache directories exist.
     """
     _ConfigStore.set(cfg)

@@ -1,4 +1,5 @@
-# config_constants.py
+"""Define cache path helpers shared across configuration code."""
+
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,10 +16,12 @@ class CachePaths:
     tool_name: str = "sylphy"
 
     def base(self) -> Path:
+        """Return the root directory for this tool's cache tree."""
         return self.cache_root / self.tool_name
 
     # Subtrees
     def models(self) -> Path:
+        """Return the directory that stores model artifacts."""
         return self.base() / "models"
 
     def hf_model_dir(self, org: str, model: str, revision: str | None = None) -> Path:
@@ -31,12 +34,15 @@ class CachePaths:
         return self.models() / "other" / provider / name
 
     def data(self) -> Path:
+        """Return the directory that stores cached data outputs."""
         return self.base() / "data"
 
     def tmp(self) -> Path:
+        """Return the directory used for temporary cache files."""
         return self.base() / "tmp"
 
     def logs(self) -> Path:
+        """Return the directory that stores log files."""
         return self.base() / "logs"
 
     def ensure_all(self) -> None:

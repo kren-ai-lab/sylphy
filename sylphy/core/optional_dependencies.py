@@ -1,3 +1,5 @@
+"""Handle optional-dependency detection and friendly error messages."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -12,6 +14,17 @@ def build_optional_dependency_error(
     extra: str,
     packages: Iterable[str] | None = None,
 ) -> ImportError:
+    """Build a standardized ImportError for an optional feature dependency.
+
+    Args:
+        feature: Human-readable feature name.
+        extra: Extras group name used in installation hint.
+        packages: Missing package names.
+
+    Returns:
+        An ImportError with guidance for installing required extras.
+
+    """
     pkg_list = [pkg for pkg in packages or () if pkg]
     if not pkg_list:
         pkg_text = "optional dependencies"
@@ -28,6 +41,7 @@ def build_optional_dependency_error(
 
 
 def is_missing_optional_dependency(exc: BaseException, packages: Iterable[str]) -> bool:
+    """Return whether an exception indicates one of the packages is missing."""
     pkg_list = tuple(pkg.lower() for pkg in packages if pkg)
     if not pkg_list:
         return False
@@ -48,6 +62,7 @@ def wrap_optional_dependency_error(
     extra: str,
     packages: Iterable[str],
 ) -> ImportError | None:
+    """Wrap an exception into a user-facing optional-dependency ImportError."""
     pkg_list = tuple(packages)
     if not is_missing_optional_dependency(exc, pkg_list):
         return None

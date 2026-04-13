@@ -1,21 +1,11 @@
-# sylphy/__init__.py
+"""Expose Sylphy's public top-level API."""
+
 from __future__ import annotations
-
-"""
-Sylphy public package surface.
-
-Re-exports core registry/config symbols at the top-level so that users can:
-    import sylphy as pr
-    pr.ModelSpec
-    pr.register_model(...)
-    pr.resolve_model(...)
-    pr.get_config()
-"""
 
 __version__ = "0.1.3"
 
 # Public core API (re-export)
-from .core import (  # noqa: E402
+from .core import (
     ModelSpec,
     clear_registry,
     get_config,

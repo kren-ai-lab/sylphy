@@ -1,3 +1,5 @@
+"""Implement FFT-based encoding over numeric sequence features."""
+
 from __future__ import annotations
 
 import logging
@@ -19,10 +21,9 @@ if TYPE_CHECKING:
 class FFTEncoder:
     """Apply FFT to each numeric row (after removing the `sequence_column`).
 
-    Notes
-    -----
-    Expects a numeric matrix in the dataframe except for the `sequence_column`,
-    which is preserved and re-attached to the output.
+    Notes:
+        Expects a numeric matrix in the dataframe except for ``sequence_column``,
+        which is preserved and re-attached to the output.
 
     """
 
@@ -34,6 +35,7 @@ class FFTEncoder:
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the FFT encoder and precompute padding parameters."""
         self.sequence_column = sequence_column
         _ = get_logger("sylphy")
         self.__logger__ = logging.getLogger("sylphy.sequence_encoder.FFTEncoder")
@@ -68,6 +70,7 @@ class FFTEncoder:
             self.dataset = pd.concat([self.dataset, padding_df], axis=1)
 
     def init_process(self) -> None:
+        """Compute FFT length and zero-padding setup for the dataset."""
         self.__logger__.info("Initializing FFT encoding process.")
         self.__get_near_pow()
         self.__complete_zero_padding()
@@ -80,11 +83,12 @@ class FFTEncoder:
             row = self.__create_row(index)
             yf = fft(row)
             return np.abs(yf[: self.stop_value // 2]).tolist()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.__logger__.error("Error applying FFT at index %d: %s", index, e)
             return [0.0] * (self.stop_value // 2)
 
     def encoding_dataset(self) -> None:
+        """Encode the dataset by applying FFT to each row."""
         try:
             self.__logger__.info("Encoding dataset with FFT.")
             matrix = [self.__apply_fft(i) for i in self.dataset.index]
@@ -98,7 +102,7 @@ class FFTEncoder:
             raise RuntimeError(msg) from e
 
     def run_process(self) -> None:
-        """Convenience to mirror other encoders."""
+        """Run FFT encoding."""
         self.encoding_dataset()
 
     def export_encoder(
@@ -108,6 +112,7 @@ class FFTEncoder:
         *,
         df_encoder: pd.DataFrame | None = None,
     ) -> None:
+        """Export encoded FFT features to disk."""
         data = df_encoder if df_encoder is not None else self.coded_dataset
         if data is None:
             msg = "No encoded FFT dataset available for export."

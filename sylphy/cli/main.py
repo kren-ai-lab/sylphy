@@ -1,4 +1,5 @@
-# protein_representation/cli/main.py
+"""Register the main Typer entrypoint and top-level CLI commands."""
+
 from __future__ import annotations
 
 import typer
@@ -17,7 +18,7 @@ app = typer.Typer(
 )
 
 
-def version_callback(value: bool) -> None:  # noqa: FBT001
+def version_callback(value: bool) -> None:
     """Show version and exit."""
     if value:
         typer.echo(f"sylphy {__version__}")
@@ -26,7 +27,7 @@ def version_callback(value: bool) -> None:  # noqa: FBT001
 
 @app.callback()
 def main(
-    _version: bool = typer.Option(  # noqa: FBT001
+    _version: bool = typer.Option(
         None,
         "--version",
         "-v",

@@ -20,7 +20,7 @@ Backends are selected by the factory from the model name. See:
 
 from __future__ import annotations
 
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
 from typing import cast
 
 import typer
@@ -34,7 +34,7 @@ from sylphy.cli._shared import (
     load_csv,
     validate_choice,
 )
-from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType  # noqa: TC001
+from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
 
 app = typer.Typer(
     name="get-embedding",
@@ -87,7 +87,7 @@ MAX_LENGTH_OPTION = typer.Option(
     show_default=True,
 )
 OOM_BACKOFF_OPTION = typer.Option(
-    True,  # noqa: FBT003
+    True,
     "--oom-backoff/--no-oom-backoff",
     help="Auto-reduce batch size on CUDA OOM and retry.",
     show_default=True,
@@ -135,7 +135,7 @@ FORMAT_OUTPUT_OPTION = typer.Option(
     show_default=True,
 )
 DEBUG_OPTION = typer.Option(
-    False,  # noqa: FBT003
+    False,
     "--debug/--no-debug",
     help="Enable verbose logs for this command.",
     show_default=True,
@@ -232,7 +232,7 @@ def get_embedding(
                 ) from None
 
         # Lazy import: factory chooses backend based on model name.
-        from sylphy.embedding_extractor import create_embedding  # noqa: PLC0415
+        from sylphy.embedding_extractor import create_embedding
 
         embedder = create_embedding(
             model_name=model,

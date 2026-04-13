@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
@@ -40,7 +40,7 @@ def load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
         msg = "Only CSV is supported as input."
         raise typer.BadParameter(msg)
     try:
-        import pandas as pd  # noqa: PLC0415
+        import pandas as pd
     except Exception as exc:
         msg = "pandas is required to read CSV input."
         raise typer.BadParameter(msg) from exc

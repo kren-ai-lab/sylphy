@@ -1,4 +1,5 @@
-# core/model_registry.py
+"""Implement model registration, aliasing, and provider resolution."""
+
 from __future__ import annotations
 
 import os
@@ -77,10 +78,11 @@ def clear_registry() -> None:
 def list_registered_models(*, include_aliases: bool = False) -> list[str]:
     """List registered model names.
 
-    Parameters
-    ----------
-    include_aliases : bool, default=False
-        If False, return only canonical names.
+    Args:
+        include_aliases: Whether aliases should be included.
+
+    Returns:
+        Sorted list of model names.
 
     """
     with _LOCK:
@@ -91,10 +93,14 @@ def list_registered_models(*, include_aliases: bool = False) -> list[str]:
 def get_model_spec(name: str) -> ModelSpec:
     """Get the spec for a model or alias.
 
-    Raises
-    ------
-    ModelNotFoundError
-        If `name` is missing.
+    Args:
+        name: Registered model name or alias.
+
+    Returns:
+        The resolved model specification.
+
+    Raises:
+        ModelNotFoundError: If ``name`` is not registered.
 
     """
     with _LOCK:
@@ -207,7 +213,7 @@ def _split_org_model(ref: str) -> tuple[str, str]:
 def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
     """Download a model snapshot into `dst` using huggingface_hub with a local cache."""
     try:
-        from huggingface_hub import snapshot_download  # noqa: PLC0415
+        from huggingface_hub import snapshot_download
     except Exception as e:  # pragma: no cover
         msg = (
             "huggingface_hub is required to download models from HF. "
@@ -240,7 +246,7 @@ def _download_other(ref: str, dst: Path) -> None:
 
 def _handle_local_copy(src: Path, dst: Path) -> None:
     """Copy local path or directory contents to destination."""
-    import shutil  # noqa: PLC0415
+    import shutil
     logger.info("Copying local model from %s to %s", src, dst)
     if src.is_dir():
         for item in src.iterdir():
@@ -255,11 +261,11 @@ def _handle_local_copy(src: Path, dst: Path) -> None:
 
 def _download_url_and_extract(url: str, dst: Path) -> None:
     """Download file from URL and extract if it's an archive."""
-    import tarfile  # noqa: PLC0415
-    import zipfile  # noqa: PLC0415
-    from urllib.parse import urlparse  # noqa: PLC0415
+    import tarfile
+    import zipfile
+    from urllib.parse import urlparse
 
-    import requests  # noqa: PLC0415
+    import requests
 
     parsed = urlparse(url)
     if not parsed.scheme:
@@ -281,11 +287,11 @@ def _download_url_and_extract(url: str, dst: Path) -> None:
                 try:
                     tf.extractall(dst, filter="data")
                 except (TypeError, AttributeError):
-                    tf.extractall(dst)  # noqa: S202
+                    tf.extractall(dst)
             tmp.unlink(missing_ok=True)
         elif zipfile.is_zipfile(tmp):
             with zipfile.ZipFile(tmp) as zip_ref:
-                zip_ref.extractall(dst)  # noqa: S202
+                zip_ref.extractall(dst)
             tmp.unlink(missing_ok=True)
         else:
             logger.debug("Downloaded file is not an archive; leaving as-is: %s", tmp)

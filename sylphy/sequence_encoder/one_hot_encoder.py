@@ -1,3 +1,5 @@
+"""Implement one-hot encoding for protein sequences."""
+
 from __future__ import annotations
 
 import logging
@@ -11,8 +13,9 @@ from .base_encoder import Encoders
 
 
 class OneHotEncoder(Encoders):
-    """One-hot encode sequences; |alphabet|-dim per residue, zero-padded to `max_length`.
-    Supports canonical or extended alphabet via base class flags.
+    """Encode sequences as one-hot residue vectors padded to ``max_length``.
+
+    Supports canonical or extended alphabets configured by base-class flags.
     """
 
     def __init__(
@@ -26,6 +29,7 @@ class OneHotEncoder(Encoders):
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the one-hot encoder."""
         super().__init__(
             dataset=dataset,
             sequence_column=sequence_column or "sequence",
@@ -48,7 +52,7 @@ class OneHotEncoder(Encoders):
                 allow_unknown=self.allow_unknown,
             )
             v[pos] = 1
-        except Exception:  # noqa: BLE001, S110
+        except Exception:
             # Unknown residue: keep zero vector
             pass
         return v
@@ -66,6 +70,7 @@ class OneHotEncoder(Encoders):
         return coded
 
     def run_process(self) -> None:
+        """Encode all validated sequences using one-hot representation."""
         if not self.status:
             self.__logger__.warning("Encoding skipped; dataset validation failed.")
             return

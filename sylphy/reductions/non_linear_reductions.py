@@ -1,3 +1,5 @@
+"""Implement non-linear dimensionality-reduction wrappers."""
+
 from __future__ import annotations
 
 import inspect
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class _SupportsFitTransform(Protocol):
-    def fit_transform(self, X: Any, y: Any = None) -> Any:  # noqa: ANN401
+    def fit_transform(self, X: Any, y: Any = None) -> Any:
         ...
 
 
@@ -45,6 +47,7 @@ class NonLinearReductions(Reductions):
         debug: bool = True,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize non-linear reduction utilities."""
         super().__init__(
             dataset=dataset,
             return_type=return_type,
@@ -81,7 +84,7 @@ class NonLinearReductions(Reductions):
             )
             self.__logger__.info("%s successful. Output shape=%s", method_name, transformed.shape)
             return self.generate_dataset_post_reduction(transformed, k)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.__logger__.error("%s failed: %s", method_name, e)
             self.__logger__.debug(traceback.format_exc())
             return None
@@ -90,6 +93,7 @@ class NonLinearReductions(Reductions):
     # Public API (one wrapper per method)
     # -----------------------------
     def apply_tsne(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+        """Apply t-SNE and return transformed data."""
         n = self.dataset.shape[0]
         perplexity = kwargs.get("perplexity", 30)
         if isinstance(perplexity, (int, float)) and perplexity >= max(1, n):
@@ -100,38 +104,46 @@ class NonLinearReductions(Reductions):
         return self._apply_model(model, "t-SNE", cast("int | None", kwargs.get("n_components")))
 
     def apply_isomap(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+        """Apply Isomap and return transformed data."""
         model = Isomap(**cast("Any", kwargs))  # no random_state
         return self._apply_model(model, "Isomap", cast("int | None", kwargs.get("n_components")))
 
     def apply_mds(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+        """Apply MDS and return transformed data."""
         model = self._init_with_seed(MDS, kwargs)
         return self._apply_model(model, "MDS", cast("int | None", kwargs.get("n_components")))
 
     def apply_lle(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+        """Apply LLE and return transformed data."""
         model = self._init_with_seed(LocallyLinearEmbedding, kwargs)
         return self._apply_model(model, "LLE", cast("int | None", kwargs.get("n_components")))
 
     def apply_spectral(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+        """Apply SpectralEmbedding and return transformed data."""
         model = self._init_with_seed(SpectralEmbedding, kwargs)
         return self._apply_model(model, "SpectralEmbedding", cast("int | None", kwargs.get("n_components")))
 
     def apply_umap(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+        """Apply UMAP and return transformed data."""
         # umap-learn supports 'random_state'
         model = self._init_with_seed(umap.UMAP, kwargs)
         return self._apply_model(model, "UMAP", cast("int | None", kwargs.get("n_components")))
 
     def apply_dictionary_learning(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+        """Apply DictionaryLearning and return transformed data."""
         model = self._init_with_seed(DictionaryLearning, kwargs)
         return self._apply_model(model, "DictionaryLearning", cast("int | None", kwargs.get("n_components")))
 
     def apply_mini_batch_dictionary_learning(
         self, **kwargs: object,
     ) -> np.ndarray | pd.DataFrame | None:
+        """Apply MiniBatchDictionaryLearning and return transformed data."""
         model = self._init_with_seed(MiniBatchDictionaryLearning, kwargs)
         return self._apply_model(
             model, "MiniBatchDictionaryLearning", cast("int | None", kwargs.get("n_components")),
         )
 
     def apply_dip_ext(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+        """Apply DipExt and return transformed data."""
         model = DipExt(**cast("Any", kwargs))  # library-specific, no random_state in __init__
         return self._apply_model(model, "DipExt", cast("int | None", kwargs.get("n_components")))

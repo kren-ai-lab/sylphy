@@ -1,3 +1,5 @@
+"""Expose logging setup and helper functions for Sylphy."""
+
 from __future__ import annotations
 
 from .logging_config import (

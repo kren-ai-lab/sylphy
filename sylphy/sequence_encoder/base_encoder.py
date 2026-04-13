@@ -1,3 +1,5 @@
+"""Implement the shared base class for sequence encoders."""
+
 from __future__ import annotations
 
 import logging
@@ -21,45 +23,25 @@ class Encoders:
     This class validates the input alphabet and maximum length constraints,
     preserving selected columns for downstream encoders.
 
-    Parameters
-    ----------
-    dataset : pd.DataFrame, optional
-        Input dataset containing sequences in `sequence_column`. If None, the
-        instance is created with `status=False` and a message is logged.
-    sequence_column : str, default="sequence"
-        Column that holds the sequence strings.
-    max_length : int, default=1024
-        Maximum allowed sequence length; longer sequences are filtered out.
-    allow_extended : bool, default=False
-        If True, accept extended amino acids (B, Z, X, U, O).
-    allow_unknown : bool, default=False
-        If True, allow 'X' even when `allow_extended=False`.
-    debug : bool, default=False
-        If True, the child logger is set to `debug_mode`.
-    debug_mode : int, default=logging.INFO
-        Logging level for this encoder's child logger (e.g., logging.DEBUG).
-    name_logging : str, default="sequence_encoder.encoder"
-        Child logger suffix; emitted as
-        ``sylphy.sequence_encoder.<name_logging>``.
+    Args:
+        dataset: Input dataset containing sequences in ``sequence_column``.
+        sequence_column: Column that holds sequence strings.
+        max_length: Maximum allowed sequence length.
+        allow_extended: Whether extended amino acids are accepted.
+        allow_unknown: Whether ``X`` is allowed when extended alphabet is disabled.
+        debug: Whether to set the child logger level to ``debug_mode``.
+        debug_mode: Logging level for the child encoder logger.
+        name_logging: Child logger suffix under ``sylphy.sequence_encoder``.
 
-    Attributes
-    ----------
-    dataset : pd.DataFrame
-        Cleaned & validated dataset. Unchanged if validation fails.
-    coded_dataset : pd.DataFrame
-        Output feature matrix (to be filled by concrete encoders).
-    status : bool
-        Validation status.
-    message : str
-        Last status/error message.
-    max_length : int
-        Maximum permitted sequence length.
-    allow_extended : bool
-        Whether extended alphabet is enabled.
-    allow_unknown : bool
-        Whether 'X' is allowed when not using extended alphabet.
-    __logger__ : logging.Logger
-        Child logger for this encoder.
+    Attributes:
+        dataset: Cleaned and validated dataset.
+        coded_dataset: Output feature matrix populated by subclasses.
+        status: Validation status flag.
+        message: Last status or error message.
+        max_length: Maximum permitted sequence length.
+        allow_extended: Whether extended alphabet mode is enabled.
+        allow_unknown: Whether ``X`` is allowed when not using extended mode.
+        __logger__: Child logger for this encoder.
 
     """
 
@@ -75,6 +57,7 @@ class Encoders:
         debug_mode: int = logging.INFO,
         name_logging: str = "sequence_encoder.encoder",
     ) -> None:
+        """Initialize the base encoder and run input validation."""
         # Ensure top-level logger is initialized once and create a child logger
         _ = get_logger("sylphy")
         self.__logger__ = logging.getLogger(f"sylphy.sequence_encoder.{name_logging}")
@@ -99,7 +82,7 @@ class Encoders:
 
         try:
             self.make_revisions()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.status = False
             self.message = f"[ERROR] Initialization failed: {e}"
             self.__logger__.exception(self.message)
@@ -170,7 +153,7 @@ class Encoders:
     # ----------------------------
 
     def run_process(self) -> None:
-        """Subclasses must implement their encoding routine."""
+        """Run the encoder-specific processing routine."""
         msg = "Encoders subclasses must implement run_process()."
         raise NotImplementedError(msg)
 

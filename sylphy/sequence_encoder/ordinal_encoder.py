@@ -1,3 +1,5 @@
+"""Implement ordinal residue encoding for protein sequences."""
+
 from __future__ import annotations
 
 import logging
@@ -11,9 +13,7 @@ from .base_encoder import Encoders
 
 
 class OrdinalEncoder(Encoders):
-    """Ordinally encode residues as their index in the selected amino-acid alphabet,
-    zero-padding up to `max_length`.
-    """
+    """Encode residues as alphabet indices padded to ``max_length``."""
 
     def __init__(
         self,
@@ -26,6 +26,7 @@ class OrdinalEncoder(Encoders):
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the ordinal encoder."""
         super().__init__(
             dataset=dataset,
             sequence_column=sequence_column or "sequence",
@@ -52,13 +53,14 @@ class OrdinalEncoder(Encoders):
                         allow_unknown=self.allow_unknown,
                     ),
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 coded.append(0)
         if len(sequence) < self.max_length:
             coded += self.__zero_padding(len(coded))
         return coded
 
     def run_process(self) -> None:
+        """Encode all validated sequences using ordinal representation."""
         if not self.status:
             self.__logger__.warning("Encoding skipped; dataset validation failed.")
             return

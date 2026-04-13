@@ -1,4 +1,5 @@
-# sylphy/embedding_extraction/ankh2_based.py
+"""Implement the Ankh2 embedding backend."""
+
 from __future__ import annotations
 
 import logging
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
 
 
 class Ankh2BasedEmbedding(EmbeddingBased):
+    """Extract embeddings using Ankh2 models."""
+
     def __init__(
         self,
         dataset: pd.DataFrame,
@@ -33,6 +36,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
         precision: PrecisionType = "fp32",
         oom_backoff: bool = True,
     ) -> None:
+        """Initialize the Ankh2 backend."""
         super().__init__(
             dataset=dataset,
             name_device=name_device,
@@ -50,6 +54,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
         self.use_encoder_only = use_encoder_only
 
     def load_model_tokenizer(self) -> None:
+        """Load the Ankh2 tokenizer and encoder model."""
         self.release_resources()
         try:
             local_dir = self._register_and_resolve()
@@ -98,6 +103,7 @@ class Ankh2BasedEmbedding(EmbeddingBased):
         batch: list[str],
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
+        """Embed a batch and return hidden states with an attention mask."""
         if not batch:
             msg = "Input batch is empty."
             raise ValueError(msg)

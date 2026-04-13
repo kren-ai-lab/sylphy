@@ -1,10 +1,4 @@
-# protein_representation/sequence_encoder/__init__.py
-"""Sequence Encoding Toolkit.
-=========================
-
-Encoders to transform protein/peptide sequences into numerical representations:
-one-hot, ordinal, frequency, k-mer TF-IDF, physicochemical (AAIndex), and FFT.
-"""
+"""Expose sequence encoder classes and the encoder factory."""
 
 from .base_encoder import Encoders
 from .factory import create_encoder

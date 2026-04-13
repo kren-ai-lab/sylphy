@@ -1,3 +1,5 @@
+"""Implement TF-IDF k-mer encoding for sequence datasets."""
+
 from __future__ import annotations
 
 import logging
@@ -24,6 +26,7 @@ class KMersEncoders(Encoders):
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the k-mer encoder."""
         super().__init__(
             dataset=dataset,
             sequence_column=sequence_column or "sequence",
@@ -38,9 +41,11 @@ class KMersEncoders(Encoders):
 
     @staticmethod
     def kmer(seq: str, k: int = 3) -> str:
+        """Split a sequence into whitespace-separated overlapping k-mers."""
         return " ".join(seq[i : i + k] for i in range(max(0, len(seq) - k + 1)))
 
     def run_process(self) -> None:
+        """Vectorize k-mer text with TF-IDF and store the encoded dataset."""
         if not self.status:
             self.__logger__.warning("Encoding aborted due to failed validation.")
             return
@@ -53,7 +58,7 @@ class KMersEncoders(Encoders):
 
             vectorizer = TfidfVectorizer(
                 analyzer="word",
-                token_pattern=r"(?u)\b\w+\b",  # noqa: S106
+                token_pattern=r"(?u)\b\w+\b",
                 dtype=np.float32,
             )
             X = vectorizer.fit_transform(self.dataset["kmer_sequence"])

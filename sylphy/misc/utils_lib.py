@@ -1,4 +1,5 @@
-# utils_lib.py
+"""Provide utility helpers for sampling, distance, IDs, and exports."""
+
 from __future__ import annotations
 
 import datetime as dt
@@ -84,7 +85,7 @@ class UtilsLib:
         replace: bool,
         random_state: int | None,
     ) -> pd.DataFrame:
-        """Internal helper for stratified selection logic."""
+        """Select rows using stratified sampling rules."""
         if label_name not in df.columns:
             _LOG.error("Label column '%s' not found.", label_name)
             msg = f"Label column '{label_name}' not found in DataFrame."
@@ -227,7 +228,7 @@ class UtilsLib:
             _LOG.error("Input must be a NumPy ndarray.")
             msg = "Input must be a NumPy ndarray."
             raise TypeError(msg)
-        if matrix_data.ndim != 2:  # noqa: PLR2004
+        if matrix_data.ndim != 2:
             msg = f"matrix_data must be 2D; got shape {matrix_data.shape}"
             raise ValueError(msg)
 

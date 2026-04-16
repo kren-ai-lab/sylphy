@@ -1,42 +1,22 @@
-# protein_representation/embedding_extraction/__init__.py
+"""Expose embedding backends with lazy imports."""
+
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-"""
-Embedding Extraction
-====================
-
-Unified interface to extract embeddings from protein sequence models.
-
-- Lazy-loaded backends to keep imports fast.
-- The factory logs which backend was selected.
-
-Public API
-----------
-Base:
-    EmbeddingBased
-Backends:
-    ESMBasedEmbedding, Prot5Based, BertBasedEmbedding,
-    MistralBasedEmbedding, ESMCBasedEmbedding, Ankh2BasedEmbedding
-Factory:
-    EmbeddingFactory, create_embedding
-Meta:
-    SUPPORTED_FAMILIES
-"""
+from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
 __all__ = [
-    "EmbeddingBased",
-    "ESMBasedEmbedding",
-    "Prot5Based",
-    "BertBasedEmbedding",
-    "MistralBasedEmbedding",
-    "ESMCBasedEmbedding",
     "Ankh2BasedEmbedding",
+    "BertBasedEmbedding",
+    "ESMBasedEmbedding",
+    "ESMCBasedEmbedding",
+    "EmbeddingBased",
     "EmbeddingFactory",
+    "MistralBasedEmbedding",
+    "Prot5Based",
     "create_embedding",
-    "SUPPORTED_FAMILIES",
 ]
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
@@ -50,26 +30,36 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "EmbeddingFactory": (".embedding_factory", "EmbeddingFactory"),
 }
 
-SUPPORTED_FAMILIES = ("esm2", "ankh2", "prot_t5", "prot_bert", "mistral_prot", "esmc")
-
-
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> object:
+    """Resolve lazy exports and cache the loaded symbol."""
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
         if name == "create_embedding":
-            from .embedding_factory import EmbeddingFactory  # lazy import
-
-            return EmbeddingFactory
-        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+            module = import_module(".embedding_factory", package=__name__)
+            return module.EmbeddingFactory
+        msg = f"module '{__name__}' has no attribute '{name}'"
+        raise AttributeError(msg)
     mod_name, attr = spec
-    module = import_module(mod_name, package=__name__)
+    try:
+        module = import_module(mod_name, package=__name__)
+    except (ImportError, ModuleNotFoundError) as exc:
+        wrapped = wrap_optional_dependency_error(
+            exc,
+            feature="Embedding features",
+            extra="embeddings",
+            packages=("torch", "transformers", "sentencepiece", "esm"),
+        )
+        if wrapped is not None:
+            raise wrapped from exc
+        raise
     value = getattr(module, attr)
     globals()[name] = value  # cache
     return value
 
 
-def __dir__():
-    return sorted(list(__all__))
+def __dir__() -> list[str]:
+    """Return available public exports for this package."""
+    return sorted(__all__)
 
 
 # Optional typing-only exposure (keeps runtime lazy)

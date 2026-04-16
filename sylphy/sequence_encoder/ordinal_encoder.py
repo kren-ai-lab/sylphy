@@ -1,3 +1,5 @@
+"""Implement ordinal residue encoding for protein sequences."""
+
 from __future__ import annotations
 
 import logging
@@ -11,21 +13,20 @@ from .base_encoder import Encoders
 
 
 class OrdinalEncoder(Encoders):
-    """
-    Ordinally encode residues as their index in the selected amino-acid alphabet,
-    zero-padding up to `max_length`.
-    """
+    """Encode residues as alphabet indices padded to ``max_length``."""
 
     def __init__(
         self,
         dataset: pd.DataFrame | None = None,
         sequence_column: str | None = "sequence",
         max_length: int = 1024,
+        *,
         allow_extended: bool = False,
         allow_unknown: bool = False,
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the ordinal encoder."""
         super().__init__(
             dataset=dataset,
             sequence_column=sequence_column or "sequence",
@@ -50,15 +51,16 @@ class OrdinalEncoder(Encoders):
                         r,
                         extended=(self.allow_extended or self.allow_unknown),
                         allow_unknown=self.allow_unknown,
-                    )
+                    ),
                 )
-            except Exception:
+            except KeyError:
                 coded.append(0)
         if len(sequence) < self.max_length:
             coded += self.__zero_padding(len(coded))
         return coded
 
     def run_process(self) -> None:
+        """Encode all validated sequences using ordinal representation."""
         if not self.status:
             self.__logger__.warning("Encoding skipped; dataset validation failed.")
             return
@@ -66,12 +68,12 @@ class OrdinalEncoder(Encoders):
         try:
             self.__logger__.info("Starting ordinal encoding for %d sequences.", len(self.dataset))
             matrix = [
-                self.__encode_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                self.__encode_sequence(cast("str", self.dataset.loc[i, self.sequence_column]))
                 for i in self.dataset.index
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
-            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
+            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
             self.__logger__.info("Ordinal encoding completed with %d features.", self.coded_dataset.shape[1])
         except Exception as e:
             self.status = False

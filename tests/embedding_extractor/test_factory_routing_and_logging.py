@@ -13,7 +13,7 @@ from sylphy.embedding_extractor.prot5_based import Prot5Based
 
 
 @pytest.mark.parametrize(
-    "model_name, cls",
+    ("model_name", "cls"),
     [
         ("facebook/esm2_t6_8M_UR50D", ESMBasedEmbedding),
         ("ElnaggarLab/ankh2-ext1", Ankh2BasedEmbedding),
@@ -23,15 +23,15 @@ from sylphy.embedding_extractor.prot5_based import Prot5Based
         ("esmc_300m", ESMCBasedEmbedding),
     ],
 )
-def test_factory_selects_backend(model_name, cls):
+def test_factory_selects_backend(model_name: str, cls: type) -> None:
     """Verify factory routes model names to the correct backend class."""
     df = pd.DataFrame({"sequence": ["AAAA"]})
     inst = EmbeddingFactory(model_name=model_name, dataset=df, column_seq="sequence", name_device="cpu")
     assert isinstance(inst, cls)
 
 
-def test_factory_unknown_raises():
+def test_factory_unknown_raises() -> None:
     """Verify factory raises ValueError for unknown model names."""
     df = pd.DataFrame({"sequence": ["AAAA"]})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Unknown model name"):
         EmbeddingFactory(model_name="unknown/model", dataset=df, column_seq="sequence", name_device="cpu")

@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import pytest
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 @pytest.fixture(autouse=True)
-def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
+def _quiet_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Redirect logs to a temporary file and clean SYLPHY_LOG_* environment variables."""
     for k in list(os.environ.keys()):
         if k.startswith("SYLPHY_LOG_"):
             monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(tmp_path / "reductions.log"))
-    yield
 
 
 @pytest.fixture
@@ -33,7 +35,7 @@ def X_nonneg() -> np.ndarray:
 
 
 @pytest.fixture
-def df_small(X_small) -> pd.DataFrame:
+def df_small(X_small: np.ndarray) -> pd.DataFrame:
     """Wrap X_small in a DataFrame with feature columns."""
     columns = pd.Index([f"f{i}" for i in range(X_small.shape[1])])
     return pd.DataFrame(X_small, columns=columns)

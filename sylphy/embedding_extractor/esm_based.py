@@ -1,18 +1,24 @@
-# sylphy/embedding_extraction/esm_based.py
+"""Implement the ESM2 embedding backend."""
+
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-import pandas as pd
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from sylphy.types import PrecisionType
-
 from .embedding_based import EmbeddingBased
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from sylphy.types import PrecisionType
 
 
 class ESMBasedEmbedding(EmbeddingBased):
+    """Extract embeddings using ESM2 Hugging Face models."""
+
     def __init__(
         self,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -20,13 +26,16 @@ class ESMBasedEmbedding(EmbeddingBased):
         name_tokenizer: str = "facebook/esm2_t6_8M_UR50D",
         dataset: pd.DataFrame | None = None,
         column_seq: str | None = "sequence",
-        debug: bool = False,
         debug_mode: int = logging.INFO,
         precision: PrecisionType = "fp32",
+        *,
+        debug: bool = False,
         oom_backoff: bool = True,
     ) -> None:
+        """Initialize the ESM backend."""
         if dataset is None:
-            raise ValueError("dataset must be provided")
+            msg = "dataset must be provided"
+            raise ValueError(msg)
 
         super().__init__(
             dataset=dataset,
@@ -36,22 +45,22 @@ class ESMBasedEmbedding(EmbeddingBased):
             provider="huggingface",
             revision=None,
             column_seq=column_seq or "sequence",
-            debug=debug,
             debug_mode=debug_mode,
-            name_logging=ESMBasedEmbedding.__name__,
-            trust_remote_code=False,
             precision=precision,
+            debug=debug,
+            trust_remote_code=False,
             oom_backoff=oom_backoff,
         )
 
     def load_model_tokenizer(self) -> None:
+        """Load ESM tokenizer and model from the resolved local directory."""
         try:
             local_dir = self._register_and_resolve()
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
 
             self.__logger__.info("Loading ESM tokenizer from: %s", local_dir)
             tokenizer = AutoTokenizer.from_pretrained(
-                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=False
+                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=False,
             )
             if getattr(tokenizer, "pad_token_id", None) is None:
                 tokenizer.add_special_tokens({"pad_token": "<pad>"})
@@ -70,7 +79,7 @@ class ESMBasedEmbedding(EmbeddingBased):
             raise
 
     def _pre_tokenize(self, batch: list[str]) -> list[str]:
-        vocab = getattr(self.tokenizer, "get_vocab", lambda: {})()
+        vocab = getattr(self.tokenizer, "get_vocab", dict)()
         has_cls = "<cls>" in vocab
         if has_cls:
             return [f"<cls> {' '.join(seq.strip())}" for seq in batch]
@@ -82,12 +91,14 @@ class ESMBasedEmbedding(EmbeddingBased):
         batch: list[str],
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
-        """
-        Return (hidden_states, attention_mask) with shapes:
-          - hidden_states: tuple of length n_layers, each (B, L, H)
-          - attention_mask: (B, L)
+        """Return hidden states and attention mask for a sequence batch.
+
+        Returns:
+            A tuple of hidden states by layer and the attention mask.
+
         """
         if not batch:
-            raise ValueError("Input batch is empty.")
+            msg = "Input batch is empty."
+            raise ValueError(msg)
         self.ensure_loaded()
         return self._forward_hidden_states(batch, max_length=max_length)

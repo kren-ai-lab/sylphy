@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,7 +9,7 @@ import pytest
 from sylphy.sequence_encoder import FrequencyEncoder, OneHotEncoder, OrdinalEncoder
 
 
-def test_ordinal_shapes_and_padding(toy_df):
+def test_ordinal_shapes_and_padding(toy_df: pd.DataFrame) -> None:
     """Verify ordinal encoding produces correct shape with zero padding."""
     enc = OrdinalEncoder(dataset=toy_df, max_length=6)
     enc.run_process()
@@ -19,7 +21,7 @@ def test_ordinal_shapes_and_padding(toy_df):
     assert all(int(v) == v and v >= 0 for v in X.iloc[0, :6])
 
 
-def test_onehot_shapes_and_sums(toy_df):
+def test_onehot_shapes_and_sums(toy_df: pd.DataFrame) -> None:
     """Verify one-hot encoding produces binary matrix with expected shape."""
     enc = OneHotEncoder(dataset=toy_df, max_length=5)
     enc.run_process()
@@ -31,7 +33,7 @@ def test_onehot_shapes_and_sums(toy_df):
     assert set(np.unique(row0)) <= {0, 1}
 
 
-def test_frequency_invariants():
+def test_frequency_invariants() -> None:
     """Verify frequency encoder produces normalized residue frequencies."""
     from sylphy.constants.tool_constants import LIST_RESIDUES
 
@@ -41,10 +43,11 @@ def test_frequency_invariants():
     X = enc.coded_dataset
 
     feat_cols = [c for c in X.columns if c != "sequence"]
+    loc = cast("Any", X.loc)
     v = (
-        X.loc[0, LIST_RESIDUES].to_numpy()  # type: ignore[missing-attribute, bad-index]
+        loc[0, LIST_RESIDUES].to_numpy()
         if set(LIST_RESIDUES).issubset(feat_cols)
-        else X.loc[0, feat_cols[:20]].to_numpy()  # type: ignore[missing-attribute, bad-index]
+        else loc[0, feat_cols[:20]].to_numpy()
     )
 
     assert len(v) == 20

@@ -1,12 +1,13 @@
+"""Implement linear dimensionality-reduction wrappers."""
+
 from __future__ import annotations
 
 import inspect
 import logging
 import traceback
-from typing import Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar, cast  # noqa: UP035
 
 import numpy as np
-import pandas as pd
 from sklearn.decomposition import (
     NMF,
     PCA,
@@ -22,17 +23,15 @@ from sklearn.decomposition import (
 
 from .reduction_methods import Preprocess, Reductions, ReturnType
 
+if TYPE_CHECKING:
+    import pandas as pd
 
-class _SupportsFitTransform(Protocol):
-    def fit_transform(self, X: Any, y: Any = None) -> np.ndarray: ...
 
-
-ModelT = TypeVar("ModelT", bound=_SupportsFitTransform)
+ModelT = TypeVar("ModelT")
 
 
 class LinearReduction(Reductions):
-    """
-    Linear dimensionality reductions (PCA/ICA/NMF/LDA/etc.) with a consistent API.
+    """Linear dimensionality reductions (PCA/ICA/NMF/LDA/etc.) with a consistent API.
 
     All methods log their parameters and shapes, return either NumPy arrays or
     DataFrames depending on ``return_type``. For estimators where the trained model
@@ -49,6 +48,7 @@ class LinearReduction(Reductions):
         debug: bool = True,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize linear-reduction utilities."""
         super().__init__(
             dataset=dataset,
             return_type=return_type,
@@ -63,7 +63,7 @@ class LinearReduction(Reductions):
     # -----------------------------
     # Helpers
     # -----------------------------
-    def _init_with_seed(self, cls: type[ModelT], kwargs: dict[str, Any]) -> ModelT:
+    def _init_with_seed(self, cls: type[ModelT], kwargs: dict[str, object]) -> ModelT:
         sig = inspect.signature(cls.__init__)
         params = set(sig.parameters.keys())
         k = dict(kwargs)
@@ -79,9 +79,11 @@ class LinearReduction(Reductions):
     ) -> tuple[ModelT, np.ndarray | pd.DataFrame | None]:
         """Fit/transform wrapper with logging and error handling."""
         try:
-            params = getattr(model, "get_params", lambda: {})()
+            params_getter = cast("Callable[[], object]", getattr(model, "get_params", dict))
+            params = params_getter()
             self.__logger__.info("Applying %s with params=%s", method_name, params)
-            transformed = model.fit_transform(self.dataset)
+            fit_transform = cast("Callable[[np.ndarray], object]", getattr(model, "fit_transform"))  # noqa: B009
+            transformed = np.asarray(fit_transform(self.dataset))
             k = (
                 n_components
                 if n_components is not None
@@ -89,7 +91,7 @@ class LinearReduction(Reductions):
             )
             self.__logger__.info("%s successful. Output shape=%s", method_name, transformed.shape)
             return model, self.generate_dataset_post_reduction(transformed, k)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.__logger__.error("%s failed: %s", method_name, e)
             self.__logger__.debug(traceback.format_exc())
             return model, None
@@ -97,47 +99,63 @@ class LinearReduction(Reductions):
     # -----------------------------
     # Public API
     # -----------------------------
-    def apply_pca(self, **kwargs) -> tuple[PCA, np.ndarray | pd.DataFrame | None]:
+    def apply_pca(self, **kwargs: object) -> tuple[PCA, np.ndarray | pd.DataFrame | None]:
+        """Apply PCA and return the fitted model with transformed data."""
         model = self._init_with_seed(PCA, kwargs)
-        return self._apply_model(model, "PCA", kwargs.get("n_components"))
+        return self._apply_model(model, "PCA", cast("int | None", kwargs.get("n_components")))
 
-    def apply_incremental_pca(self, **kwargs) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
+    def apply_incremental_pca(
+        self, **kwargs: object,
+    ) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
+        """Apply IncrementalPCA and return the fitted model with transformed data."""
         model = self._init_with_seed(IncrementalPCA, kwargs)
-        return self._apply_model(model, "IncrementalPCA", kwargs.get("n_components"))
+        return self._apply_model(model, "IncrementalPCA", cast("int | None", kwargs.get("n_components")))
 
-    def apply_sparse_pca(self, **kwargs) -> tuple[SparsePCA, np.ndarray | pd.DataFrame | None]:
+    def apply_sparse_pca(self, **kwargs: object) -> tuple[SparsePCA, np.ndarray | pd.DataFrame | None]:
+        """Apply SparsePCA and return the fitted model with transformed data."""
         model = self._init_with_seed(SparsePCA, kwargs)
-        return self._apply_model(model, "SparsePCA", kwargs.get("n_components"))
+        return self._apply_model(model, "SparsePCA", cast("int | None", kwargs.get("n_components")))
 
     def apply_minibatch_sparse_pca(
-        self, **kwargs
+        self, **kwargs: object,
     ) -> tuple[MiniBatchSparsePCA, np.ndarray | pd.DataFrame | None]:
+        """Apply MiniBatchSparsePCA and return the fitted model with transformed data."""
         model = self._init_with_seed(MiniBatchSparsePCA, kwargs)
-        return self._apply_model(model, "MiniBatchSparsePCA", kwargs.get("n_components"))
+        return self._apply_model(model, "MiniBatchSparsePCA", cast("int | None", kwargs.get("n_components")))
 
-    def apply_fast_ica(self, **kwargs) -> tuple[FastICA, np.ndarray | pd.DataFrame | None]:
+    def apply_fast_ica(self, **kwargs: object) -> tuple[FastICA, np.ndarray | pd.DataFrame | None]:
+        """Apply FastICA and return the fitted model with transformed data."""
         model = self._init_with_seed(FastICA, kwargs)
-        return self._apply_model(model, "FastICA", kwargs.get("n_components"))
+        return self._apply_model(model, "FastICA", cast("int | None", kwargs.get("n_components")))
 
-    def apply_truncated_svd(self, **kwargs) -> tuple[TruncatedSVD, np.ndarray | pd.DataFrame | None]:
+    def apply_truncated_svd(self, **kwargs: object) -> tuple[TruncatedSVD, np.ndarray | pd.DataFrame | None]:
+        """Apply TruncatedSVD and return the fitted model with transformed data."""
         model = self._init_with_seed(TruncatedSVD, kwargs)
-        return self._apply_model(model, "TruncatedSVD", kwargs.get("n_components"))
+        return self._apply_model(model, "TruncatedSVD", cast("int | None", kwargs.get("n_components")))
 
-    def apply_factor_analysis(self, **kwargs) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
+    def apply_factor_analysis(
+        self, **kwargs: object,
+    ) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
+        """Apply FactorAnalysis and return the fitted model with transformed data."""
         model = self._init_with_seed(FactorAnalysis, kwargs)
-        return self._apply_model(model, "FactorAnalysis", kwargs.get("n_components"))
+        return self._apply_model(model, "FactorAnalysis", cast("int | None", kwargs.get("n_components")))
 
-    def apply_nmf(self, **kwargs) -> tuple[NMF, np.ndarray | pd.DataFrame | None]:
+    def apply_nmf(self, **kwargs: object) -> tuple[NMF, np.ndarray | pd.DataFrame | None]:
+        """Apply NMF and return the fitted model with transformed data."""
         # NMF requires non-negative data; users should ensure this upstream or via preprocess
         model = self._init_with_seed(NMF, kwargs)
-        return self._apply_model(model, "NMF", kwargs.get("n_components"))
+        return self._apply_model(model, "NMF", cast("int | None", kwargs.get("n_components")))
 
-    def apply_minibatch_nmf(self, **kwargs) -> tuple[MiniBatchNMF, np.ndarray | pd.DataFrame | None]:
+    def apply_minibatch_nmf(self, **kwargs: object) -> tuple[MiniBatchNMF, np.ndarray | pd.DataFrame | None]:
+        """Apply MiniBatchNMF and return the fitted model with transformed data."""
         model = self._init_with_seed(MiniBatchNMF, kwargs)
-        return self._apply_model(model, "MiniBatchNMF", kwargs.get("n_components"))
+        return self._apply_model(model, "MiniBatchNMF", cast("int | None", kwargs.get("n_components")))
 
     def apply_latent_dirichlet_allocation(
-        self, **kwargs
+        self, **kwargs: object,
     ) -> tuple[LatentDirichletAllocation, np.ndarray | pd.DataFrame | None]:
+        """Apply LatentDirichletAllocation and return model with transformed data."""
         model = self._init_with_seed(LatentDirichletAllocation, kwargs)
-        return self._apply_model(model, "LatentDirichletAllocation", kwargs.get("n_components"))
+        return self._apply_model(
+            model, "LatentDirichletAllocation", cast("int | None", kwargs.get("n_components")),
+        )

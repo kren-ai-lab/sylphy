@@ -5,11 +5,15 @@ on:
     paths:
       - "sylphy/**"
       - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/tests.yml"
   pull_request:
     paths:
       - "sylphy/**"
       - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/tests.yml"
 
 jobs:

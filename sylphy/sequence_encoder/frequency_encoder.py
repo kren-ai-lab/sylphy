@@ -1,3 +1,5 @@
+"""Implement residue-frequency encoding for protein sequences."""
+
 from __future__ import annotations
 
 import logging
@@ -11,8 +13,7 @@ from .base_encoder import Encoders
 
 
 class FrequencyEncoder(Encoders):
-    """
-    Encode sequences by normalized per-residue frequency over the selected alphabet.
+    """Encode sequences by normalized per-residue frequency over the selected alphabet.
 
     Output is a single |alphabet|-dimensional vector per sequence:
     freq[r] = count(r in sequence) / len(sequence), r in alphabet.
@@ -22,11 +23,13 @@ class FrequencyEncoder(Encoders):
         self,
         dataset: pd.DataFrame | None = None,
         sequence_column: str = "sequence",
+        *,
         allow_extended: bool = False,
         allow_unknown: bool = False,
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the frequency encoder."""
         # Note: max_length is irrelevant for frequency features; keep base validation flow
         super().__init__(
             dataset=dataset,
@@ -45,6 +48,7 @@ class FrequencyEncoder(Encoders):
         return [sequence.count(r) / L for r in self._alpha]
 
     def run_process(self) -> None:
+        """Encode each sequence as normalized residue frequencies."""
         if not self.status:
             self.__logger__.warning("Encoding skipped due to failed validation.")
             return
@@ -52,14 +56,14 @@ class FrequencyEncoder(Encoders):
         try:
             self.__logger__.info("Starting frequency encoding (alphabet size=%d).", len(self._alpha))
             matrix = [
-                self.__encode_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                self.__encode_sequence(cast("str", self.dataset.loc[i, self.sequence_column]))
                 for i in self.dataset.index
             ]
             header = pd.Index([f"freq_{r}" for r in self._alpha])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
-            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
+            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
             self.__logger__.info(
-                "Frequency encoding completed with %d features.", self.coded_dataset.shape[1]
+                "Frequency encoding completed with %d features.", self.coded_dataset.shape[1],
             )
         except Exception as e:
             self.status = False

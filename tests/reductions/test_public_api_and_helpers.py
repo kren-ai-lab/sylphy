@@ -3,7 +3,7 @@ from __future__ import annotations
 import sylphy.reductions as r
 
 
-def test_public_surface():
+def test_public_surface() -> None:
     """The reductions module should expose the main symbols."""
     assert hasattr(r, "Reductions")
     assert hasattr(r, "LinearReduction")
@@ -14,15 +14,18 @@ def test_public_surface():
     assert hasattr(r, "is_nonlinear_method")
 
 
-def test_get_available_and_kind_helpers():
+def test_get_available_and_kind_helpers() -> None:
     """Helper queries for available methods and kind classification."""
     all_methods = r.get_available_methods()
-    assert "pca" in all_methods and "isomap" in all_methods
+    assert "pca" in all_methods
+    assert "isomap" in all_methods
 
     linear = r.get_available_methods("linear")
     nonlinear = r.get_available_methods("nonlinear")
-    assert "pca" in linear and "pca" not in nonlinear
-    assert "isomap" in nonlinear and "isomap" not in linear
+    assert "pca" in linear
+    assert "pca" not in nonlinear
+    assert "isomap" in nonlinear
+    assert "isomap" not in linear
 
     assert r.is_linear_method("pca") is True
     assert r.is_nonlinear_method("pca") is False

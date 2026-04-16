@@ -2,23 +2,22 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+from pathlib import Path  # noqa: TC003
 
 import pytest
 
 
 @pytest.fixture(autouse=True)
-def _quiet_logs(tmp_path, monkeypatch) -> Iterator[None]:
+def _quiet_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Redirect logs to a temporary file and clean SYLPHY_LOG_* environment variables."""
     for k in list(os.environ.keys()):
         if k.startswith("SYLPHY_LOG_"):
             monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("SYLPHY_LOG_FILE", str(tmp_path / "cli.log"))
-    yield
 
 
 @pytest.fixture(autouse=True)
-def _stub_model_registry(tmp_path, monkeypatch):
+def _stub_model_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point model resolution to a temporary directory to avoid network calls."""
     model_dir = tmp_path / "fake_model_dir"
     model_dir.mkdir(parents=True, exist_ok=True)
@@ -26,5 +25,4 @@ def _stub_model_registry(tmp_path, monkeypatch):
 
     from sylphy.core import model_registry as reg
 
-    monkeypatch.setattr(reg, "resolve_model", lambda name: model_dir, raising=True)
-    yield
+    monkeypatch.setattr(reg, "resolve_model", lambda _: model_dir, raising=True)

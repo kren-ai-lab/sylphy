@@ -1,4 +1,4 @@
-"""sylphy/cli/encoder_sequences.py
+"""sylphy/cli/encoder_sequences.py.
 
 Unified CLI to encode protein/peptide sequences with:
 - one_hot
@@ -16,15 +16,28 @@ Design goals:
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import cast
+from pathlib import Path  # noqa: TC003
+from typing import TYPE_CHECKING, cast
 
 import typer
 
-from sylphy.types import FileFormat
+from sylphy.cli._shared import (
+    EXPORT_CHOICES,
+    HELP_CONTEXT_SETTINGS,
+    LOG_LEVELS,
+    ensure_ext,
+    level_from_str,
+    load_csv,
+    validate_choice,
+)
+
+if TYPE_CHECKING:
+    from sylphy.sequence_encoder.fft_encoder import FFTEncoder
+    from sylphy.types import FileFormat
 
 app = typer.Typer(
     name="encode-sequences",
+    context_settings=HELP_CONTEXT_SETTINGS,
     help=(
         "Encode sequences with one-hot, ordinal, frequency, k-mers, "
         "physicochemical (AAIndex/group_based) or FFT."
@@ -35,8 +48,6 @@ app = typer.Typer(
 # ---- Declarative option sets (keep stdlib-only at import-time) ----
 ENCODER_CHOICES = ("one_hot", "ordinal", "frequency", "kmers", "physicochemical", "fft")
 DESCRIPTOR_CHOICES = ("aaindex", "group_based")
-EXPORT_CHOICES = ("csv", "npy", "npz", "parquet")
-LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
 ENCODER_OPTION = typer.Option(
     "physicochemical",
@@ -64,12 +75,12 @@ MAX_LENGTH_OPTION = typer.Option(
     help="Max sequence length (when applicable).",
 )
 ALLOW_EXTENDED_OPTION = typer.Option(
-    False,
+    False,  # noqa: FBT003
     "--allow-extended/--no-allow-extended",
     help="Enable extended alphabet (B, Z, X, U, O).",
 )
 ALLOW_UNKNOWN_OPTION = typer.Option(
-    False,
+    False,  # noqa: FBT003
     "--allow-unknown/--no-allow-unknown",
     help="Allow 'X' when extended alphabet is not enabled.",
 )
@@ -110,7 +121,7 @@ FORMAT_OUTPUT_OPTION = typer.Option(
     show_default=True,
 )
 DEBUG_OPTION = typer.Option(
-    False,
+    False,  # noqa: FBT003
     "--debug/--no-debug",
     help="Enable verbose logs within encoders.",
 )
@@ -122,57 +133,12 @@ LOG_LEVEL_OPTION = typer.Option(
 )
 
 
-def _level_from_str(name: str) -> int:
-    """Map string log level to logging constant (lazy import)."""
-    import logging
-
-    return getattr(logging, (name or "INFO").upper(), logging.INFO)
-
-
-def _validate_choice(value: str, choices: tuple[str, ...], opt: str) -> str:
-    """Validate a CLI option against a list of choices (case-insensitive)."""
-    v = (value or "").strip().lower()
-    allowed = {c.lower(): c for c in choices}
-    if v not in allowed:
-        raise typer.BadParameter(f"Invalid {opt}: {value!r}. Allowed: {', '.join(choices)}")
-    return allowed[v]
-
-
-def _load_csv(input_path: Path, seq_col: str):
-    """Lazy-load CSV via pandas and validate the sequence column."""
-    if not input_path.exists():
-        raise typer.BadParameter(f"Input file not found: {input_path}")
-    if input_path.suffix.lower() != ".csv":
-        raise typer.BadParameter("Only CSV is supported as input.")
-    try:
-        import pandas as pd  # lazy
-    except Exception as exc:
-        raise typer.BadParameter("pandas is required to read CSV input.") from exc
-
-    df = pd.read_csv(input_path)
-    if seq_col not in df.columns:
-        raise typer.BadParameter(f"Column '{seq_col}' not found. Available: {list(df.columns)}")
-    df[seq_col] = df[seq_col].astype(str).fillna("")
-    return df
-
-
-def _ensure_ext(path: Path, fmt: str) -> Path:
-    """Ensure output path has the correct extension based on fmt.
-
-    Rules:
-    - If path already has a suffix and it matches fmt (case-insensitive), keep it.
-    - If path has a different suffix, keep user's suffix (do NOT override).
-    - If path has no suffix, append .fmt
-    """
-    fmt = fmt.lower().lstrip(".")
-    if path.suffix:
-        # Keep user's explicit suffix
-        return path
-    return path.with_suffix(f".{fmt}")
-
-
-@app.command("run")
-def run(
+@app.command(
+    "encode-sequences",
+    help="Encode sequences and export feature matrices using Sylphy's encoders.",
+)
+def encode_sequences(
+    *,
     # encoder / pipeline
     encoder: str = ENCODER_OPTION,
     # dataset options
@@ -199,26 +165,29 @@ def run(
     - 'fft' runs as a pipeline: physicochemical (AAIndex/group_based) first, then FFT,
       so the signal is numerical before spectral analysis.
     - Alphabet and length validation are handled by the shared base encoder.
+
     """
+    def _fail(m: str) -> None:
+        raise RuntimeError(m)
+
     try:
         # Cheap validations (no heavy imports yet)
-        enc_choice = _validate_choice(encoder, ENCODER_CHOICES, "encoder")
-        fmt_choice = cast(FileFormat, _validate_choice(format_output, EXPORT_CHOICES, "format-output"))
-        if enc_choice == "physicochemical" or enc_choice == "fft":
-            _validate_choice(type_descriptor or "aaindex", DESCRIPTOR_CHOICES, "type-descriptor")
+        enc_choice = validate_choice(encoder, ENCODER_CHOICES, "encoder")
+        fmt_choice = cast("FileFormat", validate_choice(format_output, EXPORT_CHOICES, "format-output"))
+        if enc_choice in {"physicochemical", "fft"}:
+            validate_choice(type_descriptor or "aaindex", DESCRIPTOR_CHOICES, "type-descriptor")
 
-        level = _level_from_str(log_level)
-        df = _load_csv(input_data, sequence_identifier)
+        level = level_from_str(log_level)
+        df = load_csv(input_data, sequence_identifier)
 
         # Import factory only when the user actually runs the command
-        from sylphy.sequence_encoder.factory import create_encoder
+        from sylphy.sequence_encoder.factory import create_encoder  # noqa: PLC0415
 
         # Compute final output path with ensured extension (fix for missing extensions)
-        final_output = _ensure_ext(output, fmt_choice)
+        final_output = ensure_ext(output, fmt_choice)
 
         # --- FFT pipeline (physicochemical -> FFT) ---
         if enc_choice == "fft":
-            from sylphy.sequence_encoder.fft_encoder import FFTEncoder
 
             phys = create_encoder(
                 "physicochemical",
@@ -234,10 +203,10 @@ def run(
             )
             phys.run_process()
             if phys.coded_dataset is None or phys.coded_dataset.empty:
-                raise RuntimeError("Physicochemical step produced empty features.")
+                _fail("Physicochemical step produced empty features.")
 
             fft = cast(
-                FFTEncoder,
+                "FFTEncoder",
                 create_encoder(
                     "fft",
                     dataset=phys.coded_dataset,
@@ -258,14 +227,14 @@ def run(
             return
 
         # --- Single-step backends ---
-        kwargs_common = dict(
-            dataset=df,
-            sequence_column=sequence_identifier,
-            allow_extended=allow_extended,
-            allow_unknown=allow_unknown,
-            debug=debug,
-            debug_mode=level,
-        )
+        kwargs_common = {
+            "dataset": df,
+            "sequence_column": sequence_identifier,
+            "allow_extended": allow_extended,
+            "allow_unknown": allow_unknown,
+            "debug": debug,
+            "debug_mode": level,
+        }
 
         if enc_choice in ("one_hot", "ordinal", "physicochemical"):
             kwargs_common["max_length"] = max_length

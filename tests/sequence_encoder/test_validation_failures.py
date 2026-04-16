@@ -5,7 +5,7 @@ import pandas as pd
 from sylphy.sequence_encoder import OrdinalEncoder
 
 
-def test_missing_sequence_column_sets_status_false():
+def test_missing_sequence_column_sets_status_false() -> None:
     """Verify encoder sets status=False when sequence column is missing."""
     df = pd.DataFrame({"seq": ["AAA"]})
     enc = OrdinalEncoder(dataset=df, sequence_column="sequence", max_length=3, debug=True)

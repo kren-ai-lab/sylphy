@@ -1,3 +1,5 @@
+"""Implement one-hot encoding for protein sequences."""
+
 from __future__ import annotations
 
 import logging
@@ -11,9 +13,9 @@ from .base_encoder import Encoders
 
 
 class OneHotEncoder(Encoders):
-    """
-    One-hot encode sequences; |alphabet|-dim per residue, zero-padded to `max_length`.
-    Supports canonical or extended alphabet via base class flags.
+    """Encode sequences as one-hot residue vectors padded to ``max_length``.
+
+    Supports canonical or extended alphabets configured by base-class flags.
     """
 
     def __init__(
@@ -21,11 +23,13 @@ class OneHotEncoder(Encoders):
         dataset: pd.DataFrame | None = None,
         sequence_column: str | None = "sequence",
         max_length: int = 1024,
+        *,
         allow_extended: bool = False,
         allow_unknown: bool = False,
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the one-hot encoder."""
         super().__init__(
             dataset=dataset,
             sequence_column=sequence_column or "sequence",
@@ -48,9 +52,9 @@ class OneHotEncoder(Encoders):
                 allow_unknown=self.allow_unknown,
             )
             v[pos] = 1
-        except Exception:
+        except KeyError:
             # Unknown residue: keep zero vector
-            pass
+            self.__logger__.debug("Unknown residue '%s' encoded as zero vector.", residue)
         return v
 
     def __zero_padding(self, current_length: int) -> list[int]:
@@ -66,6 +70,7 @@ class OneHotEncoder(Encoders):
         return coded
 
     def run_process(self) -> None:
+        """Encode all validated sequences using one-hot representation."""
         if not self.status:
             self.__logger__.warning("Encoding skipped; dataset validation failed.")
             return
@@ -73,12 +78,12 @@ class OneHotEncoder(Encoders):
         try:
             self.__logger__.info("Starting one-hot encoding for %d sequences.", len(self.dataset))
             matrix = [
-                self.__encode_sequence(cast(str, self.dataset.at[i, self.sequence_column]))
+                self.__encode_sequence(cast("str", self.dataset.loc[i, self.sequence_column]))
                 for i in self.dataset.index
             ]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
-            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].values
+            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
             self.__logger__.info("One-hot encoding completed with %d features.", self.coded_dataset.shape[1])
         except Exception as e:
             self.status = False

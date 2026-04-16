@@ -1,4 +1,4 @@
-"""sylphy/cli/cache.py
+"""sylphy/cli/cache.py.
 
 Fast-start CLI utilities to inspect and manage Sylphy's cache directory.
 
@@ -8,27 +8,38 @@ Keeps the same UX as your current version, but with lazy imports to speed up sta
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
-from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any
 
 import typer
+
+from sylphy.cli._shared import HELP_CONTEXT_SETTINGS
+from sylphy.constants.tool_configs import DEFAULT_CACHE_DIR_ENV, DEFAULT_CACHE_ROOT_ENV, resolve_cache_dir
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+    from rich.console import Console
+    from rich.table import Table
+
 
 # ----------------------------
 # Typer Application
 # ----------------------------
 app = typer.Typer(
     name="cache",
-    help="Inspect and manage Sylphy's cache directory (list, stats, prune, rm).",
+    context_settings=HELP_CONTEXT_SETTINGS,
+    help="Inspect and manage Sylphy's cache directory (list, stats, prune, remove).",
     no_args_is_help=True,
 )
 
+
 # ----------------------------
-# Utilities (pure stdlib -> fast import)
+# Utilities
 # ----------------------------
 _SIZE_UNITS = {
     "B": 1,
@@ -54,7 +65,8 @@ def _human_size(num_bytes: int) -> str:
 def _parse_size(text: str) -> int:
     m = _SIZE_RE.match(text or "")
     if not m:
-        raise typer.BadParameter(f"Invalid size: {text}")
+        msg = f"Invalid size: {text}"
+        raise typer.BadParameter(msg)
     value, unit = m.group(1), (m.group(2) or "B").upper()
     return int(value) * _SIZE_UNITS[unit]
 
@@ -62,7 +74,8 @@ def _parse_size(text: str) -> int:
 def _parse_timedelta(text: str) -> timedelta:
     m = _DELTA_RE.match(text or "")
     if not m or m.group(0).strip() == "":
-        raise typer.BadParameter(f"Invalid timedelta: {text!r} (use forms like 30d, 12h, 15m, 7d12h)")
+        msg = f"Invalid timedelta: {text!r} (use forms like 30d, 12h, 15m, 7d12h)"
+        raise typer.BadParameter(msg)
     return timedelta(
         days=int(m.group("days") or 0),
         hours=int(m.group("hours") or 0),
@@ -74,61 +87,33 @@ def _parse_timedelta(text: str) -> timedelta:
 # ----------------------------
 # Lazy helpers (avoid heavy imports at import-time)
 # ----------------------------
-def _console():
+def _console() -> Console | None:
     """Return a rich Console if available, else None (lazy import)."""
     try:
-        from rich.console import Console  # type: ignore
-
-        return Console(stderr=False)
-    except Exception:
+        from rich.console import Console  # noqa: PLC0415
+    except ImportError:
         return None
+    else:
+        return Console(stderr=False)
 
 
-def _table():
+def _table() -> tuple[type[Table], Any] | tuple[None, None]:
     """Return (Table, box) lazily if rich is available, else (None, None)."""
     try:
-        from rich import box  # type: ignore
-        from rich.table import Table  # type: ignore
-
-        return Table, box
-    except Exception:
+        from rich import box  # noqa: PLC0415
+        from rich.table import Table  # noqa: PLC0415
+    except ImportError:
         return None, None
-
-
-def _user_cache_dir(app: str, vendor: str) -> Path | None:
-    """Lazy import appdirs if present."""
-    try:
-        from appdirs import user_cache_dir  # type: ignore
-    except Exception:
-        return None
-    return Path(user_cache_dir(app, vendor)).expanduser().resolve()
-
-
-# ----------------------------
-# Cache Discovery
-# ----------------------------
-DEFAULT_VENDOR = "KREN AI LAB"
-DEFAULT_APP = "sylphy"
-ENV_CACHE = "SYLPHY_CACHE_DIR"
-
-
-def _default_cache_dir() -> Path:
-    # Priority: env var -> appdirs -> ~/.cache/sylphy
-    env = os.getenv(ENV_CACHE)
-    if env:
-        return Path(env).expanduser().resolve()
-    appdirs = _user_cache_dir(DEFAULT_APP, DEFAULT_VENDOR)
-    if appdirs is not None:
-        return appdirs
-    base = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
-    return (base / DEFAULT_APP).expanduser().resolve()
-
+    else:
+        return Table, box
 
 # ----------------------------
 # Data Structures
 # ----------------------------
 @dataclass(frozen=True)
 class CacheEntry:
+    """Represent one cache filesystem entry."""
+
     path: Path
     size: int
     mtime: float  # POSIX timestamp
@@ -136,22 +121,32 @@ class CacheEntry:
 
     @property
     def mtime_dt(self) -> datetime:
-        return datetime.fromtimestamp(self.mtime, tz=timezone.utc).astimezone()
+        """Return the modification timestamp as a local timezone datetime."""
+        return datetime.fromtimestamp(self.mtime, tz=UTC).astimezone()
 
 
 class CacheManager:
     """Helper to inspect and manipulate the cache directory (stdlib-only)."""
 
     def __init__(self, cache_dir: Path | None = None) -> None:
-        self.cache_dir = (cache_dir or _default_cache_dir()).resolve()
+        """Initialize the cache manager.
+
+        Args:
+            cache_dir: Optional explicit cache directory. If omitted, uses the
+                resolved Sylphy cache directory.
+
+        """
+        self.cache_dir = (cache_dir or resolve_cache_dir()).resolve()
 
     # ---------- Inspect ----------
     def iter_entries(
         self,
         pattern: str | None = None,
+        *,
         recursive: bool = False,
         include_dirs: bool = False,
     ) -> Iterator[CacheEntry]:
+        """Iterate cache entries filtered by glob pattern and recursion flags."""
         base = self.cache_dir
         if not base.exists():
             return
@@ -163,14 +158,15 @@ class CacheManager:
                 if p.is_dir():
                     if include_dirs:
                         st = p.stat()
-                        yield CacheEntry(p, 0, st.st_mtime, True)
+                        yield CacheEntry(p, 0, st.st_mtime, is_dir=True)
                     continue
                 st = p.stat()
-                yield CacheEntry(p, st.st_size, st.st_mtime, False)
+                yield CacheEntry(p, st.st_size, st.st_mtime, is_dir=False)
             except OSError:
                 continue  # skip unreadable entries
 
     def du(self) -> tuple[int, int]:
+        """Return the number of files and total bytes in the cache tree."""
         files = 0
         total = 0
         for e in self.iter_entries(recursive=True):
@@ -184,9 +180,21 @@ class CacheManager:
         self,
         pattern: str | None = None,
         older_than: timedelta | None = None,
+        *,
         dry_run: bool = False,
     ) -> tuple[int, int]:
-        now = datetime.now(timezone.utc)
+        """Remove files matching the provided filters.
+
+        Args:
+            pattern: Optional glob pattern to match files.
+            older_than: Optional age threshold. Only files older than this are matched.
+            dry_run: Whether to simulate deletion without removing files.
+
+        Returns:
+            A tuple of ``(deleted_count, freed_bytes)``.
+
+        """
+        now = datetime.now(UTC)
         deleted = freed = 0
         for e in list(self.iter_entries(pattern=pattern, recursive=True)):
             if e.is_dir:
@@ -203,6 +211,7 @@ class CacheManager:
         return deleted, freed
 
     def prune_empty_dirs(self) -> int:
+        """Remove empty directories under the cache root."""
         count = 0
         base = self.cache_dir
         if not base.exists():
@@ -216,7 +225,8 @@ class CacheManager:
                     pass
         return count
 
-    def prune_to_max_size(self, max_bytes: int, dry_run: bool = False) -> tuple[int, int]:
+    def prune_to_max_size(self, max_bytes: int, *, dry_run: bool = False) -> tuple[int, int]:
+        """Delete oldest files until cache size is at most ``max_bytes``."""
         entries = [e for e in self.iter_entries(recursive=True) if not e.is_dir]
         total = sum(e.size for e in entries)
         if total <= max_bytes:
@@ -242,7 +252,7 @@ class CacheManager:
 SORT_CHOICES = {"name", "size", "mtime"}
 
 
-def _sort_entries(entries: list[CacheEntry], sort: str, reverse: bool) -> list[CacheEntry]:
+def _sort_entries(entries: list[CacheEntry], sort: str, *, reverse: bool) -> list[CacheEntry]:
     key = {
         "name": lambda e: str(e.path).lower(),
         "size": lambda e: e.size,
@@ -251,7 +261,7 @@ def _sort_entries(entries: list[CacheEntry], sort: str, reverse: bool) -> list[C
     return sorted(entries, key=key, reverse=reverse)
 
 
-def _print_kv(con, key: str, value: str) -> None:
+def _print_kv(con: Console | None, key: str, value: str) -> None:
     if con:
         con.print(f"[bold]{key}[/bold] {value}")
     else:
@@ -264,30 +274,36 @@ def _print_kv(con, key: str, value: str) -> None:
 @app.callback()
 def _callback() -> None:
     con = _console()
-    msg = f"Cache dir: {_default_cache_dir()}  (set {ENV_CACHE} to override)"
+    msg = (
+        f"Cache dir: {resolve_cache_dir()}  "
+        f"(set {DEFAULT_CACHE_ROOT_ENV} to override; {DEFAULT_CACHE_DIR_ENV} is still supported)"
+    )
     if con:
         con.print(f"[dim]{msg}[/dim]")
     else:
         typer.echo(msg)
 
 
-@app.command("ls")
+@app.command("ls", help="List cached files with optional filtering, sorting, or JSON output.")
 def cmd_ls(
+    *,
     pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob pattern (e.g., '**/*.pt')."),
-    recursive: bool = typer.Option(False, "--recursive", "-r", help="Recurse into subdirectories."),
+    recursive: bool = typer.Option(False, "--recursive", "-r", help="Recurse into subdirectories."),  # noqa: FBT003
     sort: str = typer.Option("name", "--sort", case_sensitive=False, help="Sort by: name | size | mtime"),
-    reverse: bool = typer.Option(False, "--reverse", help="Reverse sort order."),
-    human_readable: bool = typer.Option(True, "--human-readable/--bytes", help="Pretty sizes."),
+    reverse: bool = typer.Option(False, "--reverse", help="Reverse sort order."),  # noqa: FBT003
+    human_readable: bool = typer.Option(True, "--human-readable/--bytes", help="Pretty sizes."),  # noqa: FBT003
     limit: int | None = typer.Option(None, "--limit", help="Show only first N entries."),
-    json_out: bool = typer.Option(False, "--json", help="Output JSON instead of a table."),
+    json_out: bool = typer.Option(False, "--json", help="Output JSON instead of a table."),  # noqa: FBT003
 ) -> None:
+    """List cache files with filtering, sorting, and optional JSON output."""
     sort = sort.lower()
     if sort not in SORT_CHOICES:
-        raise typer.BadParameter(f"--sort must be one of: {', '.join(sorted(SORT_CHOICES))}")
+        msg = f"--sort must be one of: {', '.join(sorted(SORT_CHOICES))}"
+        raise typer.BadParameter(msg)
 
     mgr = CacheManager()
     entries = [e for e in mgr.iter_entries(pattern=pattern, recursive=recursive) if not e.is_dir]
-    entries = _sort_entries(entries, sort, reverse)
+    entries = _sort_entries(entries, sort, reverse=reverse)
     if limit is not None:
         entries = entries[: max(0, limit)]
 
@@ -316,8 +332,9 @@ def cmd_ls(
             typer.echo(f"{e.path.relative_to(mgr.cache_dir)}\t{size}\t{e.mtime_dt:%Y-%m-%d %H:%M}")
 
 
-@app.command("stats")
+@app.command("stats", help="Show cache location, file count, total size, and oldest/newest entries.")
 def cmd_stats() -> None:
+    """Print cache path, file count, total size, and age summary."""
     mgr = CacheManager()
     files, total = mgr.du()
     newest: CacheEntry | None = None
@@ -338,43 +355,47 @@ def cmd_stats() -> None:
         _print_kv(con, "Oldest:", f"{oldest.path.name} @ {oldest.mtime_dt:%Y-%m-%d %H:%M}")
 
 
-@app.command("rm")
+@app.command("rm", help="Remove cached files by glob pattern and/or age, with dry-run by default.")
 def cmd_rm(
+    *,
     pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob like '**/*.tmp'."),
     older_than: str | None = typer.Option(
-        None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h')."
+        None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h').",
     ),
-    dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation when applying."),
+    dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),  # noqa: FBT003
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation when applying."),  # noqa: FBT003
 ) -> None:
+    """Delete cache files by pattern and/or age with dry-run support."""
     mgr = CacheManager()
     td = _parse_timedelta(older_than) if older_than else None
     candidates = [
         e
         for e in mgr.iter_entries(pattern=pattern, recursive=True)
-        if not e.is_dir and (td is None or (datetime.now(timezone.utc) - e.mtime_dt) >= td)
+        if not e.is_dir and (td is None or (datetime.now(UTC) - e.mtime_dt) >= td)
     ]
     total_bytes = sum(e.size for e in candidates)
     con = _console()
     _print_kv(con, "Candidates:", f"{len(candidates)} files, total {_human_size(total_bytes)}")
 
     if not dry_run and not force and not typer.confirm("Proceed with deletion?"):
-        raise typer.Abort()
+        raise typer.Abort
 
     deleted, freed = mgr.rm(pattern=pattern, older_than=td, dry_run=dry_run)
     _print_kv(con, "Result:", f"Deleted {deleted} files, freed {_human_size(freed)}")
 
 
-@app.command("prune")
+@app.command("prune", help="Shrink cache to a target size and optionally remove empty directories.")
 def cmd_prune(
+    *,
     max_size: str | None = typer.Option(
-        None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB)."
+        None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB).",
     ),
     remove_empty_dirs: bool = typer.Option(
-        True, "--prune-empty/--keep-empty", help="Remove empty directories."
+        True, "--prune-empty/--keep-empty", help="Remove empty directories.",  # noqa: FBT003
     ),
-    dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),
+    dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),  # noqa: FBT003
 ) -> None:
+    """Prune cache size and optionally remove empty directories."""
     mgr = CacheManager()
     deleted = freed = 0
 
@@ -398,7 +419,7 @@ def cmd_prune(
                 f"Would delete {to_delete} files to reach {max_size} (free {_human_size(freed_sim)}).",
             )
         else:
-            deleted, freed = mgr.prune_to_max_size(max_bytes=max_bytes, dry_run=False)
+            deleted, freed = mgr.prune_to_max_size(max_bytes=max_bytes, dry_run=dry_run)
 
     removed_dirs = 0
     if remove_empty_dirs:
@@ -417,21 +438,24 @@ def cmd_prune(
     _print_kv(con, "Removed empty dirs:", str(removed_dirs))
 
 
-@app.command("path")
+@app.command("path", help="Print the resolved cache directory path.")
 def cmd_path() -> None:
-    typer.echo(str(_default_cache_dir()))
+    """Print the resolved cache directory."""
+    typer.echo(str(resolve_cache_dir()))
 
 
-@app.command("clear")
+@app.command("clear", help="Remove the entire cache directory after confirmation.")
 def cmd_clear(
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt."),
+    *,
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt."),  # noqa: FBT003
 ) -> None:
+    """Delete the entire cache directory after optional confirmation."""
     mgr = CacheManager()
     if not mgr.cache_dir.exists():
         typer.echo("Cache directory does not exist.")
         raise typer.Exit(code=0)
     if not force and not typer.confirm(f"This will permanently remove {mgr.cache_dir}. Continue?"):
-        raise typer.Abort()
+        raise typer.Abort
     try:
         shutil.rmtree(mgr.cache_dir)
         typer.echo("Cache cleared.")

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-def test_public_surface_imports():
+def test_public_surface_imports() -> None:
     import sylphy as pr
 
     # version string

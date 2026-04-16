@@ -1,7 +1,9 @@
+"""Implement FFT-based encoding over numeric sequence features."""
+
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -9,26 +11,31 @@ from scipy.fft import fft
 
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
-from sylphy.types import FileFormat
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from sylphy.types import FileFormat
 
 
 class FFTEncoder:
-    """
-    Apply FFT to each numeric row (after removing the `sequence_column`).
+    """Apply FFT to each numeric row (after removing the `sequence_column`).
 
-    Notes
-    -----
-    Expects a numeric matrix in the dataframe except for the `sequence_column`,
-    which is preserved and re-attached to the output.
+    Notes:
+        Expects a numeric matrix in the dataframe except for ``sequence_column``,
+        which is preserved and re-attached to the output.
+
     """
 
     def __init__(
         self,
         dataset: pd.DataFrame,
         sequence_column: str = "sequence",
+        *,
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
+        """Initialize the FFT encoder and precompute padding parameters."""
         self.sequence_column = sequence_column
         _ = get_logger("sylphy")
         self.__logger__ = logging.getLogger("sylphy.sequence_encoder.FFTEncoder")
@@ -37,7 +44,7 @@ class FFTEncoder:
 
         # Keep a copy and store sequences aside
         self.dataset = dataset.copy()
-        self.sequence_list = self.dataset[self.sequence_column].values
+        self.sequence_list = self.dataset[self.sequence_column].to_numpy()
         self.dataset = self.dataset.drop(columns=[self.sequence_column])
 
         # Determine FFT size (next power of two >= number of numeric columns)
@@ -63,36 +70,39 @@ class FFTEncoder:
             self.dataset = pd.concat([self.dataset, padding_df], axis=1)
 
     def init_process(self) -> None:
+        """Compute FFT length and zero-padding setup for the dataset."""
         self.__logger__.info("Initializing FFT encoding process.")
         self.__get_near_pow()
         self.__complete_zero_padding()
 
-    def __create_row(self, index: int) -> list[float]:
-        return self.dataset.iloc[index].tolist()
+    def __create_row(self, position: int) -> list[float]:
+        return self.dataset.iloc[position].tolist()
 
-    def __apply_fft(self, index: int) -> list[float]:
+    def __apply_fft(self, position: int) -> list[float]:
         try:
-            row = self.__create_row(index)
+            row = self.__create_row(position)
             yf = fft(row)
             return np.abs(yf[: self.stop_value // 2]).tolist()
-        except Exception as e:
-            self.__logger__.error("Error applying FFT at index %d: %s", index, e)
+        except (TypeError, ValueError, RuntimeError) as e:
+            self.__logger__.error("Error applying FFT at position %d: %s", position, e)
             return [0.0] * (self.stop_value // 2)
 
     def encoding_dataset(self) -> None:
+        """Encode the dataset by applying FFT to each row."""
         try:
             self.__logger__.info("Encoding dataset with FFT.")
-            matrix = [self.__apply_fft(i) for i in self.dataset.index]
+            matrix = [self.__apply_fft(i) for i in range(len(self.dataset))]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
-            self.coded_dataset = pd.DataFrame(matrix, columns=header)
+            self.coded_dataset = pd.DataFrame(matrix, columns=header, index=self.dataset.index)
             self.coded_dataset[self.sequence_column] = self.sequence_list
             self.__logger__.info("FFT encoding complete. Output shape: %s", self.coded_dataset.shape)
         except Exception as e:
             self.__logger__.error("Failed to encode dataset with FFT: %s", e)
-            raise RuntimeError("FFT encoding failed.") from e
+            msg = "FFT encoding failed."
+            raise RuntimeError(msg) from e
 
     def run_process(self) -> None:
-        """Convenience to mirror other encoders."""
+        """Run FFT encoding."""
         self.encoding_dataset()
 
     def export_encoder(
@@ -102,9 +112,11 @@ class FFTEncoder:
         *,
         df_encoder: pd.DataFrame | None = None,
     ) -> None:
+        """Export encoded FFT features to disk."""
         data = df_encoder if df_encoder is not None else self.coded_dataset
         if data is None:
-            raise ValueError("No encoded FFT dataset available for export.")
+            msg = "No encoded FFT dataset available for export."
+            raise ValueError(msg)
 
         UtilsLib.export_data(
             df_encoded=data,

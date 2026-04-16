@@ -1,7 +1,9 @@
+"""Create sequence encoders from canonical names or aliases."""
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, cast
 
 from sylphy.logging import add_context, get_logger
 
@@ -13,14 +15,17 @@ from .one_hot_encoder import OneHotEncoder
 from .ordinal_encoder import OrdinalEncoder
 from .physicochemical_encoder import PhysicochemicalEncoder
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 __all__ = [
     "Encoders",
-    "OrdinalEncoder",
-    "OneHotEncoder",
+    "FFTEncoder",
     "FrequencyEncoder",
     "KMersEncoders",
+    "OneHotEncoder",
+    "OrdinalEncoder",
     "PhysicochemicalEncoder",
-    "FFTEncoder",
     "create_encoder",
 ]
 
@@ -54,7 +59,7 @@ _ALIASES: dict[str, str] = {
 # Class map
 EncoderInstance = Encoders | FFTEncoder
 
-_CLASSES: dict[str, type[Encoders] | type[FFTEncoder]] = {
+_CLASSES: dict[str, type[Encoders | FFTEncoder]] = {
     "one_hot": OneHotEncoder,
     "ordinal": OrdinalEncoder,
     "frequency": FrequencyEncoder,
@@ -109,16 +114,21 @@ _ALLOWED: dict[str, set[str]] = {
 
 
 def _canonical(name: str) -> str:
+    """Resolve an encoder name or alias to its canonical key."""
     key = (name or "").strip().lower()
     if key in _ALIASES:
         return _ALIASES[key]
-    raise ValueError(
+    msg = (
         f"Unknown encoder '{name}'. "
         f"Available: {sorted(set(_ALIASES.values()))} (aliases supported: {sorted(_ALIASES.keys())})"
     )
+    raise ValueError(
+        msg,
+    )
 
 
-def _filter_kwargs(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
+def _filter_kwargs(kind: str, kwargs: dict[str, object]) -> dict[str, object]:
+    """Filter constructor kwargs to those supported by a specific encoder."""
     allowed = _ALLOWED[kind]
     filtered = {k: v for k, v in kwargs.items() if k in allowed}
     ignored = sorted(set(kwargs.keys()) - allowed)
@@ -127,29 +137,21 @@ def _filter_kwargs(kind: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     return filtered
 
 
-def create_encoder(name: str, **kwargs: Any) -> EncoderInstance:
-    """
-    Factory for sequence encoders with per-backend parameter filtering.
+def create_encoder(name: str, **kwargs: object) -> EncoderInstance:
+    """Create a sequence encoder with backend-specific argument filtering.
 
-    Parameters
-    ----------
-    name : str
-        Encoder name or alias. Supported canonical names:
-        {'one_hot','ordinal','frequency','kmers','physicochemical','fft'}.
-        Aliases: onehot, kmer, tfidf, physchem, aaindex.
-    **kwargs : Any
-        Backend-specific constructor parameters. Extra keys are ignored safely
-        (and logged at DEBUG level).
+    Args:
+        name: Encoder name or alias.
+        **kwargs: Backend-specific constructor parameters.
 
-    Returns
-    -------
-    Encoders
-        An instance of the requested encoder.
+    Returns:
+        An initialized encoder instance.
+
     """
     kind = _canonical(name)
     cls = _CLASSES[kind]
     params = _filter_kwargs(kind, kwargs)
     _logger.info("Creating encoder kind=%s class=%s kwargs=%s", kind, cls.__name__, params)
     add_context(_logger, encoder=cls.__name__)  # enrich context once we know it
-    constructor = cast(Callable[..., EncoderInstance], cls)
+    constructor = cast("Callable[..., EncoderInstance]", cls)
     return constructor(**params)

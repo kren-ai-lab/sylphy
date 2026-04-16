@@ -1,30 +1,33 @@
-# utils_lib.py
+"""Provide utility helpers for sampling, distance, IDs, and exports."""
+
 from __future__ import annotations
 
 import datetime as dt
-import importlib
-import importlib.util
 import logging
 import os
 import shutil
 import uuid
-from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import pairwise_distances
 from sklearn.utils import shuffle
 
-from sylphy.types import FileFormat
+from sylphy.core.optional_dependencies import wrap_optional_dependency_error
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from sylphy.types import FileFormat
 
 _LOG = logging.getLogger("sylphy.misc.utils")
+_MATRIX_NDIM = 2
 
 
 class UtilsLib:
-    """
-    Utility collection for common data manipulation tasks used across the library.
+    """Utility collection for common data manipulation tasks used across the library.
 
     Features
     --------
@@ -37,6 +40,7 @@ class UtilsLib:
     Notes
     -----
     The methods are class methods to allow use without instantiation and to facilitate testing.
+
     """
 
     # -------------------------------------------------------------------------
@@ -54,90 +58,110 @@ class UtilsLib:
         replace: bool = False,
         random_state: int | None = 42,
     ) -> pd.DataFrame:
-        """
-        Randomly select rows from a DataFrame with optional stratification.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input table.
-        label_name : str, optional
-            Column used for stratification. If None, plain random sampling is performed.
-        labels : Sequence, optional
-            Subset of label values to include. If None and label_name is provided, all
-            unique labels present in `df[label_name]` are used.
-        n_samples : int, default=100
-            Number of rows to sample. If `per_label=True`, this is "n per label".
-        per_label : bool, default=True
-            If True, take `n_samples` *per label*. If False, take `n_samples` *in total*
-            proportionally to each label frequency (rounded; at least 1 per present label).
-        replace : bool, default=False
-            Whether to sample with replacement.
-        random_state : int or None, default=42
-            Random seed (or None for non-deterministic).
-
-        Returns
-        -------
-        pd.DataFrame
-            The sampled rows (index reset).
-
-        Raises
-        ------
-        ValueError
-            If `label_name` is provided but not found in `df`.
-            If `labels` contains values not present in `df[label_name]`.
-        """
+        """Randomly select rows from a DataFrame with optional stratification."""
         if label_name is None:
             _LOG.info("Sampling without stratification (n=%d).", n_samples)
-            return shuffle(df, random_state=random_state).head(n_samples)  # type: ignore[missing-attribute]
+            shuffled = cast("pd.DataFrame", shuffle(df, random_state=random_state))
+            return shuffled.head(n_samples)
 
+        return cls._stratified_selection(
+            df,
+            label_name=label_name,
+            labels=labels,
+            n_samples=n_samples,
+            per_label=per_label,
+            replace=replace,
+            random_state=random_state,
+        )
+
+    @classmethod
+    def _stratified_selection(
+        cls,
+        df: pd.DataFrame,
+        label_name: str,
+        labels: Sequence[Any] | None,
+        n_samples: int,
+        *,
+        per_label: bool,
+        replace: bool,
+        random_state: int | None,
+    ) -> pd.DataFrame:
+        """Select rows using stratified sampling rules."""
         if label_name not in df.columns:
             _LOG.error("Label column '%s' not found.", label_name)
-            raise ValueError(f"Label column '{label_name}' not found in DataFrame.")
+            msg = f"Label column '{label_name}' not found in DataFrame."
+            raise ValueError(msg)
 
         # Determine the set of labels to consider
-        present = pd.unique(df[label_name])
-        if labels is None:
-            use_labels = list(present)
-        else:
-            unknown = [lab for lab in labels if lab not in present]
-            if unknown:
-                _LOG.error("Unknown labels for '%s': %s", label_name, unknown)
-                raise ValueError(f"The following labels were not found in column '{label_name}': {unknown}")
-            use_labels = list(labels)
+        present = cast("np.ndarray", pd.unique(df[label_name]))
+        use_labels = cls._resolve_labels(present, labels, label_name)
 
-        # Per-label sampling
         if per_label:
-            parts: list[pd.DataFrame] = []
-            for lab in use_labels:
-                subset = df.loc[df[label_name] == lab]
-                k = n_samples if replace else min(n_samples, len(subset))
-                if k == 0:
-                    _LOG.warning("Skipping label '%s' (no rows).", lab)
-                    continue
-                sampled = subset.sample(n=k, replace=replace, random_state=random_state)
-                parts.append(sampled)
-                _LOG.info("Sampled %d rows for label '%s'.", k, lab)
-            out = pd.concat(parts, axis=0).reset_index(drop=True)
-            _LOG.info("Total sampled rows (per_label): %d", len(out))
-            return out
+            return cls._sample_per_label(
+                df, label_name, use_labels, n_samples, replace=replace, seed=random_state,
+            )
 
-        # Global proportional sampling
-        # Compute desired counts per label proportional to their frequency
-        counts = df.loc[df[label_name].isin(use_labels), label_name].value_counts().sort_index()
+        return cls._sample_globally_proportionate(
+            df, label_name, use_labels, n_samples, replace=replace, seed=random_state,
+        )
+
+    @staticmethod
+    def _resolve_labels(present: np.ndarray, requested: Sequence[Any] | None, col: str) -> list[Any]:
+        if requested is None:
+            return list(present)
+        unknown = [lab for lab in requested if lab not in present]
+        if unknown:
+            _LOG.error("Unknown labels for '%s': %s", col, unknown)
+            msg = f"The following labels were not found in column '{col}': {unknown}"
+            raise ValueError(msg)
+        return list(requested)
+
+    @staticmethod
+    def _sample_per_label(
+        df: pd.DataFrame,
+        col: str,
+        labels: list[Any],
+        n: int,
+        *,
+        replace: bool,
+        seed: int | None,
+    ) -> pd.DataFrame:
+        parts: list[pd.DataFrame] = []
+        for lab in labels:
+            subset = df.loc[df[col] == lab]
+            k = n if replace else min(n, len(subset))
+            if k <= 0:
+                _LOG.warning("Skipping label '%s' (no rows).", lab)
+                continue
+            parts.append(subset.sample(n=k, replace=replace, random_state=seed))
+            _LOG.info("Sampled %d rows for label '%s'.", k, lab)
+
+        if not parts:
+            return pd.DataFrame(columns=df.columns)
+        out = pd.concat(parts, axis=0).reset_index(drop=True)
+        _LOG.info("Total sampled rows (per_label): %d", len(out))
+        return out
+
+    @staticmethod
+    def _sample_globally_proportionate(
+        df: pd.DataFrame,
+        col: str,
+        labels: list[Any],
+        n: int,
+        *,
+        replace: bool,
+        seed: int | None,
+    ) -> pd.DataFrame:
+        counts = df.loc[df[col].isin(labels), col].value_counts().sort_index()
         total = counts.sum()
         if total == 0:
-            _LOG.warning("No rows matched the requested labels; returning empty frame.")
+            _LOG.warning("No rows matched labels; returning empty frame.")
             return df.iloc[0:0].copy()
 
-        # Initial allocation
-        alloc = (counts / total * n_samples).round().astype(int)  # type: ignore[unsupported-operation]
-        # Ensure at least 1 for present labels when possible
+        alloc = cast("pd.Series", (cast("Any", counts / total) * n).round().astype(int))
         alloc = alloc.mask((counts > 0) & (alloc == 0), 1)
-        # Adjust to match exactly n_samples
-        diff = int(n_samples - int(alloc.sum()))
+        diff = int(n - int(alloc.sum()))
         if diff != 0:
-            # Distribute the difference starting from the largest groups (or smallest)
             order = counts.sort_values(ascending=(diff < 0)).index
             for lab in order:
                 if diff == 0:
@@ -151,14 +175,14 @@ class UtilsLib:
         for lab, k in alloc.items():
             if k <= 0:
                 continue
-            subset = df.loc[df[label_name] == lab]
-            k = k if replace else min(k, len(subset))
-            if k <= 0:
-                continue
-            sampled = subset.sample(n=k, replace=replace, random_state=random_state)
-            parts.append(sampled)
-            _LOG.info("Sampled %d rows for label '%s' (global mode).", k, lab)
+            subset = df.loc[df[col] == lab]
+            actual_k = k if replace else min(k, len(subset))
+            if actual_k > 0:
+                parts.append(subset.sample(n=actual_k, replace=replace, random_state=seed))
+                _LOG.info("Sampled %d rows for label '%s' (global mode).", actual_k, lab)
 
+        if not parts:
+            return pd.DataFrame(columns=df.columns)
         out = pd.concat(parts, axis=0).reset_index(drop=True)
         _LOG.info("Total sampled rows (global): %d", len(out))
         return out
@@ -200,94 +224,42 @@ class UtilsLib:
         metric_params: dict[str, Any] | None = None,
         n_jobs: int | None = None,
     ) -> np.ndarray:
-        """
-        Compute pairwise distances between rows of a numeric matrix.
-
-        Parameters
-        ----------
-        matrix_data : np.ndarray
-            2D numeric matrix with shape (n_samples, n_features).
-        metric : str, default='euclidean'
-            Distance metric to use (as supported by sklearn.metrics.pairwise_distances).
-        metric_params : dict, optional
-            Additional keyword parameters for the distance metric, e.g.:
-              • mahalanobis: VI=np.linalg.inv(np.cov(X, rowvar=False))
-              • seuclidean : V=np.var(X, axis=0, ddof=1)
-        n_jobs : int, optional
-            Number of parallel jobs (if supported by the backend).
-
-        Returns
-        -------
-        np.ndarray
-            Square matrix of pairwise distances (shape: n_samples × n_samples).
-
-        Raises
-        ------
-        TypeError
-            If `matrix_data` is not a NumPy ndarray.
-        ValueError
-            If input is not 2D, contains non-finite values (when required),
-            or if `metric` is unsupported.
-        """
+        """Compute pairwise distances between rows of a numeric matrix."""
         if not isinstance(matrix_data, np.ndarray):
             _LOG.error("Input must be a NumPy ndarray.")
-            raise TypeError("Input must be a NumPy ndarray.")
-        if matrix_data.ndim != 2:
-            raise ValueError(f"matrix_data must be 2D; got shape {matrix_data.shape}")
+            msg = "Input must be a NumPy ndarray."
+            raise TypeError(msg)
+        if matrix_data.ndim != _MATRIX_NDIM:
+            msg = f"matrix_data must be 2D; got shape {matrix_data.shape}"
+            raise ValueError(msg)
 
         supported_metrics = {
-            "cityblock",
-            "cosine",
-            "euclidean",
-            "l1",
-            "l2",
-            "manhattan",
-            "nan_euclidean",
-            "braycurtis",
-            "canberra",
-            "chebyshev",
-            "correlation",
-            "dice",
-            "hamming",
-            "jaccard",
-            "kulsinski",
-            "mahalanobis",
-            "minkowski",
-            "rogerstanimoto",
-            "russellrao",
-            "seuclidean",
-            "sokalmichener",
-            "sokalsneath",
-            "sqeuclidean",
-            "yule",
+            "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan",
+            "nan_euclidean", "braycurtis", "canberra", "chebyshev",
+            "correlation", "dice", "hamming", "jaccard", "kulsinski",
+            "mahalanobis", "minkowski", "rogerstanimoto", "russellrao",
+            "seuclidean", "sokalmichener", "sokalsneath", "sqeuclidean", "yule",
         }
         if metric not in supported_metrics:
             _LOG.error("Unsupported metric '%s'.", metric)
-            raise ValueError(f"Unsupported metric '{metric}'. Must be one of: {sorted(supported_metrics)}")
+            msg = f"Unsupported metric '{metric}'. Must be one of: {sorted(supported_metrics)}"
+            raise ValueError(msg)
 
         params: dict[str, Any] = dict(metric_params or {})
-
-        # Provide sensible defaults for metrics that require parameters.
         if metric == "mahalanobis" and "VI" not in params:
-            # Compute inverse covariance across features (rowvar=False)
             cov = np.cov(matrix_data, rowvar=False)
             try:
                 VI = np.linalg.inv(cov)
             except np.linalg.LinAlgError:
-                # Regularize diagonal in near-singular cases
-                eps = 1e-8
-                VI = np.linalg.inv(cov + np.eye(cov.shape[0]) * eps)
+                VI = np.linalg.inv(cov + np.eye(cov.shape[0]) * 1e-8)
             params["VI"] = VI
 
         if metric == "seuclidean" and "V" not in params:
-            # Per-feature variance (ddof=1) for standardized Euclidean
             params["V"] = np.var(matrix_data, axis=0, ddof=1)
 
-        # Most metrics expect finite values (except specialized ones like nan_euclidean).
         if metric != "nan_euclidean" and not np.isfinite(matrix_data).all():
-            raise ValueError(
-                "matrix_data contains non-finite values; consider 'nan_euclidean' or clean the data."
-            )
+            msg = "matrix_data contains non-finite values; consider 'nan_euclidean' or clean the data."
+            raise ValueError(msg)
 
         _LOG.info("Computing pairwise distances with metric '%s'.", metric)
         return pairwise_distances(matrix_data, metric=metric, n_jobs=n_jobs, **params)
@@ -297,21 +269,8 @@ class UtilsLib:
     # -------------------------------------------------------------------------
     @classmethod
     def create_jobid(cls, prefix: str | None = None) -> str:
-        """
-        Create a unique job identifier composed of an UTC timestamp and a shortened UUID.
-
-        Parameters
-        ----------
-        prefix : str, optional
-            Optional string prefix (e.g., a component name).
-
-        Returns
-        -------
-        str
-            Identifier like: '20250101T120305123456Z-abcdef123456' or with prefix
-            'encoder-20250101T120305123456Z-abcdef123456'.
-        """
-        now = dt.datetime.now(dt.timezone.utc)
+        """Create a unique job identifier."""
+        now = dt.datetime.now(dt.UTC)
         ts = now.strftime("%Y%m%dT%H%M%S%fZ")
         jid = f"{ts}-{uuid.uuid4().hex[:12]}"
         if prefix:
@@ -327,57 +286,33 @@ class UtilsLib:
         missing_ok: bool = True,
         restrict_to: Path | None = None,
     ) -> bool:
-        """
-        Safely delete a folder tree with guardrails.
-
-        Parameters
-        ----------
-        path_to_folder : str | Path
-            Directory to remove recursively.
-        missing_ok : bool, default=True
-            If True, return False when the folder does not exist instead of raising.
-        restrict_to : Path, optional
-            If provided, the folder must be within this directory (resolved). This
-            is useful to restrict deletions to cache/temp roots.
-
-        Returns
-        -------
-        bool
-            True if the folder was removed; False if it did not exist.
-
-        Raises
-        ------
-        ValueError
-            If the target path is unsafe (e.g., root) or outside `restrict_to`.
-        """
+        """Safely delete a folder tree with guardrails."""
         folder = Path(path_to_folder).expanduser().resolve()
-
-        # Basic safety: do not allow dangerous targets
         forbidden = {Path("/").resolve(), Path.home().resolve()}
         if os.name == "nt":
-            # best-effort Windows safeguards
-            forbidden.add(Path(os.environ.get("SystemDrive", "C:") + "\\").resolve())
+            forbidden.add(Path(os.environ.get("SYSTEMDRIVE", "C:") + "\\").resolve())
 
         if folder in forbidden or str(folder).strip() in {"", ".", ".."}:
-            raise ValueError(f"Refusing to delete unsafe path: {folder}")
+            msg = f"Refusing to delete unsafe path: {folder}"
+            raise ValueError(msg)
 
         if restrict_to is not None:
             base = Path(restrict_to).expanduser().resolve()
             try:
                 folder.relative_to(base)
             except Exception as exc:
-                raise ValueError(
-                    f"Refusing to delete outside of restricted base: {base} (target: {folder})"
-                ) from exc
+                msg = f"Refusing to delete outside restricted base: {base} (target: {folder})"
+                raise ValueError(msg) from exc
 
         if not folder.exists():
             if missing_ok:
-                _LOG.info("Folder does not exist, nothing to delete: %s", folder)
                 return False
-            raise ValueError(f"Folder not found: {folder}")
+            msg = f"Folder not found: {folder}"
+            raise ValueError(msg)
 
         if not folder.is_dir():
-            raise ValueError(f"Not a directory: {folder}")
+            msg = f"Not a directory: {folder}"
+            raise ValueError(msg)
 
         shutil.rmtree(folder)
         _LOG.info("Deleted folder: %s", folder)
@@ -396,122 +331,49 @@ class UtilsLib:
         file_format: FileFormat | None = None,
         overwrite: bool = True,
     ) -> Path:
-        """
-        Persist an encoded table to disk.
-
-        Parameters
-        ----------
-        df_encoded : pd.DataFrame
-            Data to export.
-        path : str | Path
-            Destination path. If `file_format` is None, the format is inferred from suffix.
-        base_message : str, default="Encoded data"
-            Human-readable label for logging messages.
-        file_format : {"csv","npy","npz","parquet"} or None, optional
-            Output format. If None, inferred from file suffix; default CSV if no suffix.
-        overwrite : bool, default=True
-            If False and the target exists, raise a FileExistsError.
-
-        Returns
-        -------
-        Path
-            The actual file path written.
-
-        Raises
-        ------
-        ValueError
-            If the format is unsupported.
-        FileExistsError
-            If `overwrite=False` and destination exists.
-        """
+        """Persist an encoded table to disk."""
         dest = Path(path).expanduser()
-        suffix = dest.suffix.lower()
         if file_format is None:
-            if suffix in {".csv", ".npy", ".npz", ".parquet"}:
-                file_format = cast(FileFormat, suffix.lstrip("."))
-            else:
-                file_format = "csv"
+            file_format = cls._infer_format(dest)
 
         dest.parent.mkdir(parents=True, exist_ok=True)
         if dest.exists() and not overwrite:
-            raise FileExistsError(f"Destination exists: {dest}")
+            msg = f"Destination exists: {dest}"
+            raise FileExistsError(msg)
+
+        if file_format not in {"csv", "npy", "npz", "parquet"}:
+            msg = f"Unsupported file format '{file_format}'."
+            raise ValueError(msg)
 
         try:
-            if file_format == "csv":
-                df_encoded.to_csv(dest, index=False)
-                _LOG.info("%s exported to CSV: %s", base_message, dest)
-
-            elif file_format == "npy":
-                np.save(dest, df_encoded.values, allow_pickle=True)
-                _LOG.info("%s exported to NPY: %s", base_message, dest)
-
-            elif file_format == "npz":
-                # Save values plus column names for round-trip friendliness
-                np.savez_compressed(dest, values=df_encoded.values, columns=df_encoded.columns.to_numpy())
-                _LOG.info("%s exported to NPZ: %s", base_message, dest)
-
-            elif file_format == "parquet":
-                # Requires pyarrow or fastparquet installed
-                df_encoded.to_parquet(dest, index=False)
-                _LOG.info("%s exported to Parquet: %s", base_message, dest)
-
-            else:
-                raise ValueError(f"Unsupported file format '{file_format}'.")
+            cls._do_export(df_encoded, dest, file_format, base_message)
         except Exception as e:
-            _LOG.error("Failed to export %s to %s (%s): %s", base_message, dest, file_format, e)
+            wrapped = wrap_optional_dependency_error(
+                e, feature="Parquet export", extra="parquet", packages=("pyarrow", "fastparquet"),
+            )
+            if wrapped is not None:
+                _LOG.error("Failed export to %s (%s): %s", dest, file_format, wrapped)
+                raise wrapped from e
+            _LOG.error("Failed export to %s (%s): %s", dest, file_format, e)
             raise
 
         return dest
 
-    def get_cache_dir() -> Path:
-        env = os.getenv("SYLPHY_CACHE_DIR")
-        if env:
-            return Path(env).expanduser()
-
-        siteconfig_cache = UtilsLib._siteconfig_cache_dir()
-        if siteconfig_cache is not None:
-            return siteconfig_cache
-
-        platform_cache = UtilsLib._platformdirs_cache_dir()
-        if platform_cache is not None:
-            return platform_cache
-
-        return Path.home() / ".cache" / "sylphy"
+    @staticmethod
+    def _infer_format(dest: Path) -> FileFormat:
+        s = dest.suffix.lower()
+        if s in {".csv", ".npy", ".npz", ".parquet"}:
+            return cast("FileFormat", s.lstrip("."))
+        return "csv"
 
     @staticmethod
-    def _siteconfig_cache_dir() -> Path | None:
-        try:
-            spec = importlib.util.find_spec("sylphy._siteconfig")
-            if spec is None:
-                return None
-            module = importlib.import_module("sylphy._siteconfig")
-        except ModuleNotFoundError:
-            return None
-        except Exception:
-            return None
-
-        cache_dir = getattr(module, "CACHE_DIR", None)
-        if not cache_dir:
-            return None
-        try:
-            return Path(str(cache_dir)).expanduser()
-        except Exception:
-            return None
-
-    @staticmethod
-    def _platformdirs_cache_dir() -> Path | None:
-        try:
-            platformdirs = importlib.import_module("platformdirs")
-        except ModuleNotFoundError:
-            return None
-        except Exception:
-            return None
-
-        user_cache_dir = getattr(platformdirs, "user_cache_dir", None)
-        if not callable(user_cache_dir):
-            return None
-        try:
-            cache_dir = user_cache_dir("sylphy")
-            return Path(str(cache_dir))
-        except Exception:
-            return None
+    def _do_export(df: pd.DataFrame, dest: Path, fmt: str, msg: str) -> None:
+        if fmt == "csv":
+            df.to_csv(dest, index=False)
+        elif fmt == "npy":
+            np.save(dest, df.to_numpy(), allow_pickle=True)
+        elif fmt == "npz":
+            np.savez_compressed(dest, values=df.to_numpy(), columns=df.columns.to_numpy())
+        elif fmt == "parquet":
+            df.to_parquet(dest, index=False)
+        _LOG.info("%s exported to %s: %s", msg, fmt.upper(), dest)

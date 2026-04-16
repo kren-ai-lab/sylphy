@@ -6,7 +6,7 @@ import pandas as pd
 from sylphy.embedding_extractor import EmbeddingFactory
 
 
-def test_load_and_pool_mean_cls_eos_and_layers():
+def test_load_and_pool_mean_cls_eos_and_layers() -> None:
     """Verify different pooling strategies and layer aggregation methods."""
     df = pd.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
     inst = EmbeddingFactory(
@@ -25,7 +25,11 @@ def test_load_and_pool_mean_cls_eos_and_layers():
         assert out.shape == (3, 4)
 
     out_concat = inst.encode_batch_layers(
-        seqs, max_length=16, layers="last4", layer_agg="concat", pool="mean"
+        seqs,
+        max_length=16,
+        layers="last4",
+        layer_agg="concat",
+        pool="mean",
     )
     assert out_concat.shape == (3, 16)
 
@@ -33,7 +37,7 @@ def test_load_and_pool_mean_cls_eos_and_layers():
     assert out_mean.shape == (3, 4)
 
 
-def test_run_process_end_to_end():
+def test_run_process_end_to_end() -> None:
     """Verify complete embedding extraction pipeline produces expected output."""
     df = pd.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
     inst = EmbeddingFactory(

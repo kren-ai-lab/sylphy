@@ -1,3 +1,5 @@
+"""Define shared base behavior for dimensionality-reduction classes."""
+
 from __future__ import annotations
 
 import logging
@@ -12,36 +14,27 @@ from sylphy.logging import add_context, get_logger
 
 ReturnType = Literal["numpy", "pandas"]
 Preprocess = Literal["none", "standardize", "normalize", "robust"]
+_EXPECTED_NDIM = 2
 
 
 class Reductions:
-    """
-    Base utilities for dimensionality reduction workflows.
+    """Base utilities for dimensionality reduction workflows.
 
-    Responsibilities
-    ----------------
-    - Hold and validate the input matrix (2D numeric array).
-    - Optional preprocessing: standardization/normalization/robust scaling.
-    - Provide a unified logger consistent with the library.
-    - Convert transformed arrays into **NumPy** (default) or **pandas** outputs
-      with standardized column names (``p_1, p_2, ...``).
+    Responsibilities:
+        - Hold and validate the input matrix (2D numeric array).
+        - Apply optional preprocessing.
+        - Provide unified component logging.
+        - Convert transformed arrays into NumPy or pandas outputs.
 
-    Parameters
-    ----------
-    dataset : np.ndarray | pd.DataFrame
-        Input feature matrix of shape (N, D).
-    return_type : {"numpy", "pandas"}, default "numpy"
-        Output container used by helper methods.
-    preprocess : {"none","standardize","normalize","robust"}, default "none"
-        Optional preprocessing to apply before the reduction.
-    random_state : int | None, default None
-        Random seed for models that accept it. If None, uses ToolConfig.seed.
-    debug : bool, default True
-        If True, enable this component's logger (child logger).
-    debug_mode : int, default logging.INFO
-        Logging level when ``debug=True`` (e.g., ``logging.DEBUG``).
-    name_logging : str, default="Reductions"
-        Suffix used for the child logger name ``sylphy.reductions.<name_logging>``.
+    Args:
+        dataset: Input feature matrix of shape ``(N, D)``.
+        return_type: Output container used by helper methods.
+        preprocess: Optional preprocessing strategy.
+        random_state: Random seed for supported models.
+        debug: Whether to enable this component logger.
+        debug_mode: Logging level used when ``debug`` is enabled.
+        name_logging: Child logger suffix under ``sylphy.reductions``.
+
     """
 
     def __init__(
@@ -55,6 +48,7 @@ class Reductions:
         debug_mode: int = logging.INFO,
         name_logging: str = "Reductions",
     ) -> None:
+        """Initialize reduction state, logger, validation, and preprocessing."""
         # Ensure the package logger exists exactly once, then get a child
         _ = get_logger("sylphy")
         self.__logger__ = logging.getLogger(f"sylphy.reductions.{name_logging}")
@@ -67,12 +61,14 @@ class Reductions:
 
         # Normalize dataset → np.ndarray (float32), validate 2D numeric
         if isinstance(dataset, pd.DataFrame):
-            dataset = dataset.values
+            dataset = dataset.to_numpy()
         arr = np.asarray(dataset)
-        if arr.ndim != 2:
-            raise ValueError(f"Expected 2D array, got shape {arr.shape}")
+        if arr.ndim != _EXPECTED_NDIM:
+            msg = f"Expected 2D array, got shape {arr.shape}"
+            raise ValueError(msg)
         if not np.issubdtype(arr.dtype, np.number):
-            raise TypeError("Dataset must be numeric.")
+            msg = "Dataset must be numeric."
+            raise TypeError(msg)
         self.dataset: np.ndarray = arr.astype(np.float32, copy=False)
 
         self.__logger__.info(
@@ -97,11 +93,12 @@ class Reductions:
         if self.preprocess == "standardize":
             self._scaler = StandardScaler(with_mean=True, with_std=True)
         elif self.preprocess == "normalize":
-            self._scaler = MinMaxScaler(feature_range=(0.0, 1.0))  # type: ignore[bad-argument-type]
+            self._scaler = MinMaxScaler(feature_range=(0, 1))
         elif self.preprocess == "robust":
             self._scaler = RobustScaler(with_centering=True, with_scaling=True)
         else:
-            raise ValueError(f"Unknown preprocess option '{self.preprocess}'.")
+            msg = f"Unknown preprocess option '{self.preprocess}'."
+            raise ValueError(msg)
 
         self.__logger__.info("Applying preprocess: %s", self.preprocess)
         scaler = self._scaler
@@ -120,30 +117,30 @@ class Reductions:
         transform_values: np.ndarray | list[list[float]],
         n_components: int | None = None,
     ) -> np.ndarray | pd.DataFrame:
-        """
-        Build the final reduced output.
+        """Build the final reduced output.
 
         - If ``return_type='numpy'`` → returns a numpy array (N, K).
         - If ``return_type='pandas'`` → returns a DataFrame with columns ``p_1..p_K``.
         """
+        transform_array = np.asarray(transform_values)
+        if transform_array.ndim != _EXPECTED_NDIM:
+            msg = f"Expected 2D reduced array, got shape {transform_array.shape}"
+            raise ValueError(msg)
+
+        k = transform_array.shape[1]
+        if n_components is None:
+            n_components = k
+        if k != n_components:
+            msg = f"Expected {n_components} components, but got {k}"
+            raise ValueError(msg)
+
         try:
-            transform_array = np.asarray(transform_values)
-            if transform_array.ndim != 2:
-                raise ValueError(f"Expected 2D reduced array, got shape {transform_array.shape}")
-
-            k = transform_array.shape[1]
-            if n_components is None:
-                n_components = k
-            if k != n_components:
-                raise ValueError(f"Expected {n_components} components, but got {k}")
-
             if self.return_type == "numpy":
                 self.__logger__.info("Prepared NumPy output with %d components.", n_components)
                 return transform_array
-            else:
-                headers = self._make_headers(n_components)
-                self.__logger__.info("Prepared pandas DataFrame with %d components.", n_components)
-                return pd.DataFrame(data=transform_array, columns=pd.Index(headers))
+            headers = self._make_headers(n_components)
+            self.__logger__.info("Prepared pandas DataFrame with %d components.", n_components)
+            return pd.DataFrame(data=transform_array, columns=pd.Index(headers))
 
         except Exception as e:
             self.__logger__.error("Failed to build post-reduction output: %s", e)

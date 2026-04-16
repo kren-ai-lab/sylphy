@@ -1,30 +1,33 @@
-# protein_representation/cli/main.py
+"""Register the main Typer entrypoint and top-level CLI commands."""
+
 from __future__ import annotations
 
 import typer
 
 from sylphy import __version__
+from sylphy.cli._shared import HELP_CONTEXT_SETTINGS
 from sylphy.cli.cache import app as cache_app
-from sylphy.cli.encoder_sequences import app as encoder_sequence_app
-from sylphy.cli.get_embeddings import app as embedding_extractor_app
+from sylphy.cli.encoder_sequences import encode_sequences
+from sylphy.cli.get_embeddings import get_embedding
 
 app = typer.Typer(
     name="sylphy",
     add_completion=False,
+    context_settings=HELP_CONTEXT_SETTINGS,
     help="Tools to numerically represent protein sequences (encoders, embeddings, reductions, cache).",
 )
 
 
-def version_callback(value: bool) -> None:
+def version_callback(value: bool | None) -> None:  # noqa: FBT001
     """Show version and exit."""
     if value:
-        typer.echo(f"sylphy version {__version__}")
-        raise typer.Exit()
+        typer.echo(f"sylphy {__version__}")
+        raise typer.Exit
 
 
 @app.callback()
 def main(
-    version: bool = typer.Option(
+    _version: bool | None = typer.Option(  # noqa: FBT001
         None,
         "--version",
         "-v",
@@ -34,7 +37,6 @@ def main(
     ),
 ) -> None:
     """Sylphy CLI main callback."""
-    pass
 
 
 # Cache management
@@ -44,15 +46,15 @@ app.add_typer(
     help="Inspect and manage the library cache (list, stats, prune, remove).",
 )
 
-app.add_typer(
-    encoder_sequence_app,
+app.command(
     name="encode-sequences",
     help="Encode sequences (one-hot, ordinal, freq, kmers, physchem, FFT)",
-)
+)(encode_sequences)
 
-app.add_typer(
-    embedding_extractor_app, name="get-embedding", help="Extract embeddings from pretrained protein models"
-)
+app.command(
+    name="get-embedding",
+    help="Extract embeddings from pretrained protein models",
+)(get_embedding)
 
 if __name__ == "__main__":
     app()

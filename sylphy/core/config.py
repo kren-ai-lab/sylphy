@@ -1,10 +1,11 @@
-# core/config.py
+"""Provide core configuration accessors and cache root overrides."""
+
 from __future__ import annotations
 
-from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from threading import RLock
+from typing import TYPE_CHECKING
 
 from sylphy.constants.config_constants import CachePaths
 from sylphy.constants.tool_configs import ToolConfig
@@ -12,37 +13,38 @@ from sylphy.constants.tool_configs import get_config as _get_config
 from sylphy.constants.tool_configs import set_config as _set_config
 from sylphy.logging import get_logger
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
 _LOG = get_logger(__name__)
 _LOCK = RLock()
 
 
 def get_config() -> ToolConfig:
-    """
-    Return the global ToolConfig managed by sylphy.constants.tool_configs.
+    """Return the global ToolConfig managed by sylphy.constants.tool_configs.
 
     This is a thin wrapper to avoid duplicating global state in the 'core' package.
     """
     with _LOCK:
-        cfg = _get_config()
+        return _get_config()
         # tool_configs.get_config() already ensures cache directories exist.
-        return cfg
 
 
 def set_cache_root(new_root: Path | str) -> None:
-    """
-    Programmatically override the cache root directory while preserving
-    the rest of the current configuration (debug, device, log_level, seed).
+    """Programmatically override the cache root directory.
 
-    Parameters
-    ----------
-    new_root : Path or str
-        New root path. Will be expanded and resolved.
+    Preserve the rest of the current configuration (debug, device, log_level,
+    and seed).
+
+    Args:
+        new_root: New root path. It is expanded and resolved.
+
     """
     root = Path(new_root).expanduser().resolve()
     with _LOCK:
         old = _get_config()
         new_cfg = ToolConfig(
-            cache_paths=CachePaths(root),
+            cache_paths=CachePaths(root, tool_name=old.cache_paths.tool_name),
             debug=old.debug,
             default_device=old.default_device,
             log_level=old.log_level,
@@ -54,15 +56,14 @@ def set_cache_root(new_root: Path | str) -> None:
 
 @contextmanager
 def temporary_cache_root(temp_root: Path | str) -> Generator[None, None, None]:
-    """
-    Temporarily override the cache root (useful for tests or isolated runs).
+    """Temporarily override the cache root for the current context.
 
-    Example
-    -------
-    >>> from pathlib import Path
-    >>> with temporary_cache_root(Path('./.tmp_cache')):
-    ...     # operations here use the temporary cache
-    ...     pass
+    Args:
+        temp_root: Temporary cache root path.
+
+    Yields:
+        Nothing. The function is used as a context manager.
+
     """
     prev_root = get_config().cache_paths.cache_root
     set_cache_root(temp_root)
@@ -72,4 +73,4 @@ def temporary_cache_root(temp_root: Path | str) -> Generator[None, None, None]:
         set_cache_root(prev_root)
 
 
-__all__ = ["get_config", "set_cache_root", "temporary_cache_root", "ToolConfig", "CachePaths"]
+__all__ = ["CachePaths", "ToolConfig", "get_config", "set_cache_root", "temporary_cache_root"]

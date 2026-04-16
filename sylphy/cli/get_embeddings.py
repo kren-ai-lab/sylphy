@@ -1,4 +1,4 @@
-"""sylphy/cli/get_embeddings.py
+"""sylphy/cli/get_embeddings.py.
 
 Unified CLI to extract protein/peptide embeddings from pretrained models
 (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C), using Sylphy's
@@ -20,15 +20,27 @@ Backends are selected by the factory from the model name. See:
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import cast
+from pathlib import Path  # noqa: TC003
+from typing import TYPE_CHECKING, cast
 
 import typer
 
-from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
+from sylphy.cli._shared import (
+    EXPORT_CHOICES,
+    HELP_CONTEXT_SETTINGS,
+    LOG_LEVELS,
+    ensure_ext,
+    level_from_str,
+    load_csv,
+    validate_choice,
+)
+
+if TYPE_CHECKING:
+    from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
 
 app = typer.Typer(
     name="get-embedding",
+    context_settings=HELP_CONTEXT_SETTINGS,
     help="Extract protein sequence embeddings using a selected pretrained model.",
     no_args_is_help=True,
 )
@@ -38,8 +50,6 @@ DEVICE_CHOICES = ("cuda", "cpu")
 PRECISION_CHOICES = ("fp32", "fp16", "bf16")
 POOL_CHOICES = ("mean", "cls", "eos")
 LAYER_AGG_CHOICES = ("mean", "sum", "concat")
-EXPORT_CHOICES = ("csv", "npy", "npz", "parquet")
-LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
 MODEL_OPTION = typer.Option(
     "facebook/esm2_t6_8M_UR50D",
@@ -79,7 +89,7 @@ MAX_LENGTH_OPTION = typer.Option(
     show_default=True,
 )
 OOM_BACKOFF_OPTION = typer.Option(
-    True,
+    True,  # noqa: FBT003
     "--oom-backoff/--no-oom-backoff",
     help="Auto-reduce batch size on CUDA OOM and retry.",
     show_default=True,
@@ -127,7 +137,7 @@ FORMAT_OUTPUT_OPTION = typer.Option(
     show_default=True,
 )
 DEBUG_OPTION = typer.Option(
-    False,
+    False,  # noqa: FBT003
     "--debug/--no-debug",
     help="Enable verbose logs for this command.",
     show_default=True,
@@ -140,56 +150,13 @@ LOG_LEVEL_OPTION = typer.Option(
 )
 
 
-# ---- Small helpers -----------------------------------------------------------
-def _level_from_str(name: str) -> int:
-    """Map string log level to logging constant (lazy import)."""
-    import logging
-
-    return getattr(logging, (name or "INFO").upper(), logging.INFO)
-
-
-def _validate_choice(value: str, choices: tuple[str, ...], opt: str) -> str:
-    """Validate a CLI option against a list of choices (case-insensitive)."""
-    v = (value or "").strip().lower()
-    allowed = {c.lower(): c for c in choices}
-    if v not in allowed:
-        raise typer.BadParameter(f"Invalid {opt}: {value!r}. Allowed: {', '.join(choices)}")
-    return allowed[v]
-
-
-def _load_csv(input_path: Path, seq_col: str):
-    """Lazy-load CSV via pandas and validate the sequence column."""
-    if not input_path.exists():
-        raise typer.BadParameter(f"Input file not found: {input_path}")
-    if input_path.suffix.lower() != ".csv":
-        raise typer.BadParameter("Only CSV is supported as input.")
-    try:
-        import pandas as pd  # lazy
-    except Exception as exc:
-        raise typer.BadParameter("pandas is required to read CSV input.") from exc
-
-    df = pd.read_csv(input_path)
-    if seq_col not in df.columns:
-        raise typer.BadParameter(f"Column '{seq_col}' not found. Available: {list(df.columns)}")
-    df[seq_col] = df[seq_col].astype(str).fillna("")
-    return df
-
-
-def _ensure_ext(path: Path, fmt: str) -> Path:
-    """Ensure output path has the correct extension based on fmt.
-
-    Rules
-    -----
-    - If path already has a suffix, keep user's suffix (do NOT override).
-    - If path has no suffix, append .{fmt}.
-    """
-    fmt = fmt.lower().lstrip(".")
-    return path if path.suffix else path.with_suffix(f".{fmt}")
-
-
 # ---- Command ----------------------------------------------------------------
-@app.command("run")
-def run(
+@app.command(
+    "get-embedding",
+    help="Extract embeddings and export them to disk using the chosen format.",
+)
+def get_embedding(
+    *,
     # Model & backend
     model: str = MODEL_OPTION,
     device: str = DEVICE_OPTION,
@@ -197,7 +164,7 @@ def run(
     batch_size: int = BATCH_SIZE_OPTION,
     max_length: int = MAX_LENGTH_OPTION,
     oom_backoff: bool = OOM_BACKOFF_OPTION,
-    # Layer/Pooling controls (handled by EmbeddingBased) :contentReference[oaicite:2]{index=2}
+    # Layer/Pooling controls (handled by EmbeddingBased)
     layers: str = LAYERS_OPTION,
     layer_agg: str = LAYER_AGG_OPTION,
     pool: str = POOL_OPTION,
@@ -210,39 +177,40 @@ def run(
     debug: bool = DEBUG_OPTION,
     log_level: str = LOG_LEVEL_OPTION,
 ) -> None:
-    """Extract embeddings and export them to disk using the chosen format.
+    r"""Extract embeddings and export them to disk using the chosen format.
 
     Notes
     -----
     - Backend selection is handled by the factory from the model name
-      (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C). :contentReference[oaicite:3]{index=3}
+      (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C).
     - The EmbeddingBased pipeline manages tokenizer/model loading, AMP precision,
-      OOM backoff, layer selection/aggregation, pooling, and export. :contentReference[oaicite:4]{index=4}
+      OOM backoff, layer selection/aggregation, pooling, and export.
 
     Examples
     --------
-    sylphy get-embedding run \\
+    sylphy get-embedding \\
       -m facebook/esm2_t6_8M_UR50D -i data/demo.csv -s sequence \\
       -o results/emb_esm2 -f parquet -d cuda -p fp16 -b 16 --layers last4 --layer-agg mean --pool mean
 
-    sylphy get-embedding run \\
+    sylphy get-embedding \\
       -m Rostlab/prot_t5_xl_uniref50 -i data/demo.csv -o results/emb_t5.npy -f npy -d cuda -p bf16
 
-    sylphy get-embedding run \\
+    sylphy get-embedding \\
       -m ElnaggarLab/ankh2-ext1 -i data/demo.csv -o results/emb_ankh \\
       -f csv --layers all --layer-agg sum --pool cls
+
     """
     try:
         # Cheap validations first (keep startup fast)
-        device_v = _validate_choice(device, DEVICE_CHOICES, "device")
-        precision_v = cast(PrecisionType, _validate_choice(precision, PRECISION_CHOICES, "precision"))
-        pool_v = cast(PoolType, _validate_choice(pool, POOL_CHOICES, "pool"))
-        layer_agg_v = cast(LayerAggType, _validate_choice(layer_agg, LAYER_AGG_CHOICES, "layer-agg"))
-        fmt_v = cast(FileFormat, _validate_choice(format_output, EXPORT_CHOICES, "format-output"))
-        lvl = _level_from_str(log_level)
+        device_v = validate_choice(device, DEVICE_CHOICES, "device")
+        precision_v = cast("PrecisionType", validate_choice(precision, PRECISION_CHOICES, "precision"))
+        pool_v = cast("PoolType", validate_choice(pool, POOL_CHOICES, "pool"))
+        layer_agg_v = cast("LayerAggType", validate_choice(layer_agg, LAYER_AGG_CHOICES, "layer-agg"))
+        fmt_v = cast("FileFormat", validate_choice(format_output, EXPORT_CHOICES, "format-output"))
+        lvl = level_from_str(log_level)
 
         # CSV → DataFrame (lazy pandas)
-        df = _load_csv(input_data, sequence_identifier)
+        df = load_csv(input_data, sequence_identifier)
 
         # Parse layers spec for convenience: accept ints or CSV of ints
         layers_spec: object
@@ -257,12 +225,16 @@ def run(
                 else:
                     layers_spec = int(ls)
             except ValueError:
+                msg = (
+                    "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | "
+                    "comma-separated integers."
+                )
                 raise typer.BadParameter(
-                    "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | comma-separated integers."
+                    msg,
                 ) from None
 
         # Lazy import: factory chooses backend based on model name.
-        from sylphy.embedding_extractor import create_embedding
+        from sylphy.embedding_extractor import create_embedding  # noqa: PLC0415
 
         embedder = create_embedding(
             model_name=model,
@@ -285,7 +257,7 @@ def run(
         )
 
         # Ensure output extension and export (supports csv/npy/npz/parquet)
-        final_output = _ensure_ext(output, fmt_v)
+        final_output = ensure_ext(output, fmt_v)
         embedder.export_encoder(str(final_output), file_format=fmt_v)
 
         typer.echo(f"Embeddings saved to: {final_output}")

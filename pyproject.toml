@@ -25,7 +25,7 @@ keywords = [
     "transformers",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
@@ -42,7 +42,7 @@ dependencies = [
     "numpy>=2.3.5,<3.0",
     "pandas>=3.0.1,<4.0",
     "requests>=2.32.5,<3.0",
-    "rich>=14.3.3,<15.0",
+    "rich>=15.0,<16.0",
     "scikit-learn>=1.8.0,<2.0",
     "scipy>=1.17.1,<2.0",
     "typer>=0.24.1,<1.0",
@@ -62,13 +62,11 @@ all = [
     "umap-learn>=0.5.9,<1.0",
 ]
 dev = [
-    "build~=1.4.0",
-    "pyrefly>=0.55.0",
+    "pyrefly>=0.60.0",
     "pytest~=9.0.2",
     "ruff~=0.15.5",
     "taskipy~=1.14.0",
-    "twine~=6.2.0",
-    "ty>=0.0.21",
+    "ty>=0.0.30",
 ]
 embeddings = [
     "esm>=3.2.1,<4.0",
@@ -87,7 +85,7 @@ reductions = [
     "umap-learn>=0.5.9,<1.0",
 ]
 tests = [
-    "pytest-cov~=7.0.0",
+    "pytest-cov~=7.1.0",
     "pytest~=9.0.2",
 ]
 
@@ -114,16 +112,19 @@ line-length = 110
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["F", "W", "E", "I", "A", "B", "N"]
-ignore = ["N802", "N803", "N806"]
+select = ["ALL"]
+ignore = ["COM812", "D203", "D213", "N802", "N803", "N806", "PLR0913"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D", "PLC0415", "PLR2004", "S101"]
 
 [tool.taskipy.tasks]
-sort-imports = "ruff check --fix --select I sylphy/ tests/"
+sort-imports = "ruff check --fix --select I,F401 sylphy/ tests/"
 format = "task sort-imports && ruff format sylphy/ tests/"
 lint = "ruff check sylphy/ tests/"
 lint-fix = "ruff check --fix sylphy/ tests/"
 test = "pytest -q"
 test-v = "pytest -v"
 test-cov = "pytest --cov=sylphy --cov-report=html"
-typecheck = "pyrefly check sylphy/ tests/"
-typecheck-ty = "ty check sylphy/ tests/"
+pyrefly = "pyrefly check sylphy/ tests/"
+ty = "ty check sylphy/ tests/"

@@ -1,4 +1,5 @@
-# core/__init__.py
+"""Expose core config and model-registry APIs."""
+
 from __future__ import annotations
 
 from importlib import metadata as _metadata
@@ -19,25 +20,25 @@ from .model_registry import (
 from .model_spec import ModelSpec
 
 __all__ = [
-    # version
-    "__version__",
-    # config
-    "get_config",
-    "set_cache_root",
-    "temporary_cache_root",
-    # specs
-    "ModelSpec",
+    "ModelDownloadError",
+    "ModelNotFoundError",
     # registry API
     "ModelRegistryError",
-    "ModelNotFoundError",
-    "ModelDownloadError",
-    "register_model",
-    "register_alias",
-    "unregister",
+    # specs
+    "ModelSpec",
+    # version
+    "__version__",
     "clear_registry",
-    "list_registered_models",
+    # config
+    "get_config",
     "get_model_spec",
+    "list_registered_models",
+    "register_alias",
+    "register_model",
     "resolve_model",
+    "set_cache_root",
+    "temporary_cache_root",
+    "unregister",
 ]
 
 try:  # prefer package metadata; fallback during local dev without installed dist

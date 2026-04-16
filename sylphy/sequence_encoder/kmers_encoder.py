@@ -67,6 +67,7 @@ class KMersEncoders(Encoders):
             sparse_accessor = cast("Any", pd.DataFrame.sparse)
             self.coded_dataset = sparse_accessor.from_spmatrix(
                 X,
+                index=self.dataset.index,
                 columns=feature_names,
             )
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()

@@ -182,9 +182,9 @@ def get_embedding(
     Notes
     -----
     - Backend selection is handled by the factory from the model name
-      (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C). :contentReference[oaicite:3]{index=3}
+      (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C).
     - The EmbeddingBased pipeline manages tokenizer/model loading, AMP precision,
-      OOM backoff, layer selection/aggregation, pooling, and export. :contentReference[oaicite:4]{index=4}
+      OOM backoff, layer selection/aggregation, pooling, and export.
 
     Examples
     --------

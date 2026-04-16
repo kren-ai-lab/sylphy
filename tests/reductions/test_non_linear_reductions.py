@@ -55,7 +55,7 @@ def test_umap_if_available(X_small: np.ndarray) -> None:
 
 @pytest.mark.skipif(not HAS_CLUSTPY, reason="clustpy not installed")
 def test_dipext_if_available(X_small: np.ndarray) -> None:
-    """Verify DipExt produce expected dimensions."""
+    """Verify DipExt produces expected dimensions."""
     nr = NonLinearReductions(X_small, return_type="numpy", debug=True)
     Z = nr.apply_dip_ext(n_components=2)
     if Z is not None:

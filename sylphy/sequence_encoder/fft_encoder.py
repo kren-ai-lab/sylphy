@@ -75,25 +75,25 @@ class FFTEncoder:
         self.__get_near_pow()
         self.__complete_zero_padding()
 
-    def __create_row(self, index: int) -> list[float]:
-        return self.dataset.iloc[index].tolist()
+    def __create_row(self, position: int) -> list[float]:
+        return self.dataset.iloc[position].tolist()
 
-    def __apply_fft(self, index: int) -> list[float]:
+    def __apply_fft(self, position: int) -> list[float]:
         try:
-            row = self.__create_row(index)
+            row = self.__create_row(position)
             yf = fft(row)
             return np.abs(yf[: self.stop_value // 2]).tolist()
         except (TypeError, ValueError, RuntimeError) as e:
-            self.__logger__.error("Error applying FFT at index %d: %s", index, e)
+            self.__logger__.error("Error applying FFT at position %d: %s", position, e)
             return [0.0] * (self.stop_value // 2)
 
     def encoding_dataset(self) -> None:
         """Encode the dataset by applying FFT to each row."""
         try:
             self.__logger__.info("Encoding dataset with FFT.")
-            matrix = [self.__apply_fft(i) for i in self.dataset.index]
+            matrix = [self.__apply_fft(i) for i in range(len(self.dataset))]
             header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
-            self.coded_dataset = pd.DataFrame(matrix, columns=header)
+            self.coded_dataset = pd.DataFrame(matrix, columns=header, index=self.dataset.index)
             self.coded_dataset[self.sequence_column] = self.sequence_list
             self.__logger__.info("FFT encoding complete. Output shape: %s", self.coded_dataset.shape)
         except Exception as e:

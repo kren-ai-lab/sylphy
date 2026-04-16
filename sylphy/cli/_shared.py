@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path  # noqa: TC003
+from typing import TYPE_CHECKING
 
-import pandas as pd
 import typer
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 HELP_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
@@ -29,7 +32,9 @@ def validate_choice(value: str, choices: tuple[str, ...], opt: str) -> str:
 
 
 def load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
-    """Lazy-load a CSV file and validate the requested sequence column."""
+    """Load a CSV file and validate the requested sequence column."""
+    import pandas as pd  # noqa: PLC0415
+
     if not input_path.exists():
         msg = f"Input file not found: {input_path}"
         raise typer.BadParameter(msg)
@@ -41,6 +46,7 @@ def load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
         msg = f"Column '{seq_col}' not found. Available: {list(df.columns)}"
         raise typer.BadParameter(msg)
     df[seq_col] = df[seq_col].astype(str).fillna("")
+
     return df
 
 

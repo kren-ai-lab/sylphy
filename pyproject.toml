@@ -62,11 +62,11 @@ all = [
     "umap-learn>=0.5.9,<1.0",
 ]
 dev = [
-    "pyrefly>=0.55.0",
+    "pyrefly>=0.60.0",
     "pytest~=9.0.2",
     "ruff~=0.15.5",
     "taskipy~=1.14.0",
-    "ty>=0.0.21",
+    "ty>=0.0.30",
 ]
 embeddings = [
     "esm>=3.2.1,<4.0",

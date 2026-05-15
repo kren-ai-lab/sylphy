@@ -11,18 +11,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-try:
-    from appdirs import user_log_dir
-except ImportError:  # pragma: no cover
-    def user_log_dir(
-        _appname: str | None = None,
-        _appauthor: str | None = None,
-        _version: str | None = None,
-        *,
-        _opinion: bool = True,
-    ) -> str:
-        """Return an empty fallback log directory when appdirs is unavailable."""
-        return ""
+from platformdirs import user_log_dir
 
 # Import lightweight constants/helpers (avoid cycles)
 from sylphy.constants.logging_constants import (

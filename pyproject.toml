@@ -37,7 +37,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "appdirs>=1.4.4,<2.0",
+    "platformdirs>=4.0,<5.0",
     "huggingface-hub>=0.36.0,<2.0",
     "numpy>=2.3.5,<3.0",
     "pandas>=3.0.1,<4.0",

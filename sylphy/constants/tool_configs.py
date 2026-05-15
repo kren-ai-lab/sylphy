@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 import os
-import platform
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from platformdirs import user_cache_dir
 
 from .config_constants import CachePaths
 from .logging_constants import env_log_level
@@ -16,15 +17,6 @@ DEFAULT_CACHE_ROOT_ENV = "SYLPHY_CACHE_ROOT"
 DEFAULT_CACHE_DIR_ENV = "SYLPHY_CACHE_DIR"
 
 _logger = logging.getLogger(__name__)
-
-def _default_cache_parent() -> Path:
-    """Return the platform-specific parent directory used for application caches."""
-    system = platform.system().lower()
-    if system == "darwin":
-        return Path.home() / "Library" / "Caches"
-    if system == "windows":
-        return Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    return Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
 
 
 def resolve_cache_dir() -> Path:
@@ -37,7 +29,7 @@ def resolve_cache_dir() -> Path:
     if env_root:
         return (Path(env_root).expanduser().resolve() / DEFAULT_CACHE_APP).resolve()
 
-    return (_default_cache_parent() / DEFAULT_CACHE_APP).expanduser().resolve()
+    return Path(user_cache_dir(DEFAULT_CACHE_APP))
 
 
 def default_cache_paths() -> CachePaths:

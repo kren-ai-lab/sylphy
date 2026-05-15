@@ -5,17 +5,17 @@ from __future__ import annotations
 import contextlib
 import gc
 import logging
-import os
 from collections.abc import Callable, Sequence
-from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from sylphy.constants.tool_configs import resolve_cache_dir
 from sylphy.core.model_registry import ModelSpec, register_model, resolve_model
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
@@ -55,9 +55,6 @@ class EmbeddingBased:
         oom_backoff: bool = True,
     ) -> None:
         """Initialize common state for embedding backends."""
-        self._cache_root = resolve_cache_dir()
-        self._wire_cache_envs(self._cache_root)
-
         self.dataset: pd.DataFrame = dataset
         self.column_seq = column_seq
 
@@ -97,23 +94,6 @@ class EmbeddingBased:
     def device(self) -> torch.device:
         """Return the torch device used for model execution."""
         return cast("torch.device", self._device)
-
-    @staticmethod
-    def _wire_cache_envs(root: Path) -> None:
-        root = Path(root).expanduser()
-        # Carpeta unificada de Sylphy
-        os.environ.setdefault("SYLPHY_CACHE_DIR", str(root))
-
-        # Hugging Face / Transformers / Datasets
-        os.environ.setdefault("HF_HOME", str(root / "hf"))
-        os.environ.setdefault("TRANSFORMERS_CACHE", str(root / "hf" / "transformers"))
-        os.environ.setdefault("HF_DATASETS_CACHE", str(root / "hf" / "datasets"))
-
-        # Torch hub
-        os.environ.setdefault("TORCH_HOME", str(root / "torch"))
-
-        # (opcional) Tokenizers (a veces usan su propia caché)
-        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
     # ---------------------------------------------------------------------
     # Model resolution & loading

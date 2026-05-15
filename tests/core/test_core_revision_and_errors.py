@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import sys
 import types
-from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import pytest
 
-from sylphy.core.config import get_config
 from sylphy.core.model_registry import (
     ModelDownloadError,
     ModelNotFoundError,
@@ -18,42 +19,29 @@ from sylphy.core.model_registry import (
 from sylphy.core.model_spec import ModelSpec
 
 
-def test_hf_revision_path_is_used(monkeypatch: pytest.MonkeyPatch) -> None:
-    """
-    If a revision is provided, the resolved cache path should include the revision
-    (per CachePaths.hf_model_dir(org, model, revision)).
-    """
-    calls = {"n": 0}
+def test_hf_revision_is_passed_to_snapshot_download(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """snapshot_download receives the revision kwarg."""
+    received: dict[str, object] = {}
     hub = types.ModuleType("huggingface_hub")
 
-    def snapshot_download(
-        _ref: str,
-        local_dir: str | Path | None = None,
-        **_kwargs: object,
-    ) -> None:
-        calls["n"] += 1
-        if local_dir is None:
-            msg = "local_dir should be provided in snapshot_download mock."
-            raise AssertionError(msg)
-        dest = Path(local_dir)
+    def snapshot_download(ref: str, revision: str | None = None, **_kwargs: object) -> str:
+        received["ref"] = ref
+        received["revision"] = revision
+        dest = tmp_path / "snap"
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "marker.txt").write_text("ok")
+        return str(dest)
 
     monkeypatch.setattr(hub, "snapshot_download", snapshot_download, raising=False)
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
 
-    spec = ModelSpec(
-        name="hf_with_rev",
-        provider="huggingface",
-        ref="org/name",
-        revision="r123",
-    )
+    spec = ModelSpec(name="hf_with_rev", provider="huggingface", ref="org/name", revision="r123")
     register_model(spec)
     p = resolve_model("hf_with_rev")
-    # Expected path must end with the revision directory (layout enforced by CachePaths)
-    assert str(p).endswith("/org/name/r123") or str(p).endswith("\\org\\name\\r123")
+    assert received["revision"] == "r123"
     assert (p / "marker.txt").exists()
-    assert calls["n"] == 1
 
 
 def test_alias_requires_existing_canonical() -> None:
@@ -77,22 +65,16 @@ def test_unsupported_provider_wraps_in_download_error() -> None:
         resolve_model("bad")
 
 
-def test_cache_layout_helpers_agree_with_resolve(monkeypatch: pytest.MonkeyPatch) -> None:
-    """
-    Smoke check: resolve_model() returns a path equal to CachePaths.hf_model_dir
-    for HF models (no revision case).
-    """
+def test_resolve_hf_returns_path_from_snapshot_download(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """resolve_model() returns whatever path snapshot_download returns."""
     hub = types.ModuleType("huggingface_hub")
+    expected = tmp_path / "snap"
+    expected.mkdir()
 
-    def snapshot_download(*args: object, **kwargs: object) -> None:
-        # simulate download by creating the destination directory
-        local_dir = kwargs.get("local_dir")
-        # Also support positional style: snapshot_download(ref, revision=None, local_dir=..., ...)
-        if local_dir is None and len(args) >= 1:
-            # args[0] is ref; we still need local_dir from kwargs; keep no-op if missing
-            pass
-        if local_dir:
-            Path(str(local_dir)).mkdir(parents=True, exist_ok=True)
+    def snapshot_download(_ref: str, _revision: str | None = None, **_kwargs: object) -> str:
+        return str(expected)
 
     monkeypatch.setattr(hub, "snapshot_download", snapshot_download, raising=False)
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
@@ -100,7 +82,4 @@ def test_cache_layout_helpers_agree_with_resolve(monkeypatch: pytest.MonkeyPatch
     spec = ModelSpec(name="hf_simple", provider="huggingface", ref="org/name2")
     register_model(spec)
     p_resolved = resolve_model("hf_simple")
-
-    cfg = get_config()
-    expected = cfg.cache_paths.hf_model_dir("org", "name2")
-    assert str(p_resolved) == str(expected)
+    assert p_resolved == expected

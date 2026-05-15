@@ -171,23 +171,19 @@ def resolve_model(name: str) -> Path:
 
 
 def _resolve_huggingface(spec: ModelSpec) -> Path:
-    """Resolve a Hugging Face model."""
-    cfg = get_config()
-    org, model = _split_org_model(spec.ref)
+    """Resolve a Hugging Face model using HF native cache under HF_HOME."""
+    get_config()  # ensures HF_HOME env vars are wired before snapshot_download
+    try:
+        from huggingface_hub import snapshot_download  # noqa: PLC0415
+    except Exception as e:  # pragma: no cover
+        msg = "huggingface_hub is required. Install with: pip install 'huggingface_hub>=0.23'"
+        raise RuntimeError(msg) from e
 
-    # Use revision-aware path layout to isolate snapshots
-    local_dir = cfg.cache_paths.hf_model_dir(org, model, revision=spec.revision)
+    logger.info("Resolving HF model %s (rev=%s)", spec.ref, spec.revision or "default")
+    path = Path(snapshot_download(spec.ref, revision=spec.revision))
     if spec.subdir:
-        local_dir = local_dir / spec.subdir
-    local_dir.mkdir(parents=True, exist_ok=True)
-
-    # If directory is non-empty, assume already present
-    if any(local_dir.iterdir()):
-        logger.info("Resolved HF model (cached): %s", local_dir)
-        return local_dir
-
-    _download_huggingface(ref=spec.ref, revision=spec.revision, dst=local_dir)
-    return local_dir
+        path = path / spec.subdir
+    return path
 
 
 def _resolve_other_provider(spec: ModelSpec) -> Path:
@@ -205,34 +201,6 @@ def _resolve_other_provider(spec: ModelSpec) -> Path:
     _download_other(spec.ref, local_dir)
     return local_dir
 
-
-def _split_org_model(ref: str) -> tuple[str, str]:
-    if "/" not in ref:
-        msg = f"Hugging Face ref must be 'org/model', got '{ref}'"
-        raise ValueError(msg)
-    org, model = ref.split("/", 1)
-    return org, model
-
-
-def _download_huggingface(ref: str, revision: str | None, dst: Path) -> None:
-    """Download a model snapshot into `dst` using huggingface_hub with a local cache."""
-    try:
-        from huggingface_hub import snapshot_download  # noqa: PLC0415
-    except Exception as e:  # pragma: no cover
-        msg = (
-            "huggingface_hub is required to download models from HF. "
-            "Install with: pip install 'huggingface_hub>=0.23'"
-        )
-        raise RuntimeError(
-            msg,
-        ) from e
-
-    logger.info("Downloading HF model %s -> %s (rev=%s)", ref, dst, revision or "default")
-    snapshot_download(
-        ref,
-        revision=revision,
-        local_dir=str(dst),
-    )
 
 def _download_other(ref: str, dst: Path) -> None:
     """Download or copy a non-HF model into `dst`.

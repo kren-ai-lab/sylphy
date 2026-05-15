@@ -6,13 +6,13 @@ import json
 import sys
 import types
 import zipfile
-from pathlib import Path
 from typing import TYPE_CHECKING, Never, Self
 
 import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 from sylphy.core.config import get_config, temporary_cache_root
@@ -89,36 +89,25 @@ def test_env_override_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     assert (resolved / "weights.bin").exists()
 
 
-def test_resolve_huggingface_download_mocked(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Mock huggingface_hub como módulo real con snapshot_download
-    calls = {"n": 0}
-
+def test_resolve_huggingface_download_mocked(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     hub = types.ModuleType("huggingface_hub")
 
-    def snapshot_download(
-        ref: str,
-        local_dir: str | Path | None = None,
-        **_kwargs: object,
-    ) -> None:
-        calls["n"] += 1
-        if local_dir is None:
-            msg = "local_dir should be provided in snapshot_download mock."
-            raise AssertionError(msg)
-        dest = Path(local_dir)
+    def snapshot_download(ref: str, _revision: str | None = None, **_kwargs: object) -> str:
+        dest = tmp_path / "hf" / ref.replace("/", "--")
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "config.json").write_text(json.dumps({"ref": ref}))
+        return str(dest)
 
     monkeypatch.setattr(hub, "snapshot_download", snapshot_download, raising=False)
-
     monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
 
     register_model(ModelSpec(name="hf_model", provider="huggingface", ref="org/hf_model"))
     p1 = resolve_model("hf_model")
     assert (p1 / "config.json").exists()
-    # Second resolve should reuse (no extra download)
     p2 = resolve_model("hf_model")
     assert p1 == p2
-    assert calls["n"] == 1  # downloaded once
 
 
 def test_resolve_other_local_copy(tmp_path: Path) -> None:
@@ -172,13 +161,15 @@ def test_resolve_other_url_download_and_extract(monkeypatch: pytest.MonkeyPatch)
 
 def test_download_error_is_wrapped(monkeypatch: pytest.MonkeyPatch) -> None:
     register_model(ModelSpec(name="will_fail", provider="huggingface", ref="org/fail"))
-    import sylphy.core.model_registry as regmod
+
+    hub = types.ModuleType("huggingface_hub")
 
     def boom(*_args: object, **_kwargs: object) -> Never:
         msg = "network down"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(regmod, "_download_huggingface", boom, raising=True)
+    monkeypatch.setattr(hub, "snapshot_download", boom, raising=False)
+    monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
 
     with pytest.raises(ModelDownloadError) as ei:
         resolve_model("will_fail")

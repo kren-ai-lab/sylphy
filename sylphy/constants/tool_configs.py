@@ -19,6 +19,17 @@ DEFAULT_CACHE_DIR_ENV = "SYLPHY_CACHE_DIR"
 _logger = logging.getLogger(__name__)
 
 
+def _wire_cache_envs(root: Path) -> None:
+    """Set HF/Torch env vars to subdirs of the Sylphy cache root (only if not already set)."""
+    root = Path(root).expanduser()
+    os.environ.setdefault("SYLPHY_CACHE_DIR", str(root))
+    os.environ.setdefault("HF_HOME", str(root / "hf"))
+    os.environ.setdefault("TRANSFORMERS_CACHE", str(root / "hf" / "transformers"))
+    os.environ.setdefault("HF_DATASETS_CACHE", str(root / "hf" / "datasets"))
+    os.environ.setdefault("TORCH_HOME", str(root / "torch"))
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+
 def resolve_cache_dir() -> Path:
     """Resolve the final Sylphy cache directory from environment or platform defaults."""
     env_dir = os.getenv(DEFAULT_CACHE_DIR_ENV)
@@ -92,6 +103,7 @@ class _ConfigStore:
         if cls._instance is None:
             cls._instance = ToolConfig()
             cls._instance.cache_paths.ensure_all()
+            _wire_cache_envs(cls._instance.cache_paths.base())
         return cls._instance
 
     @classmethod

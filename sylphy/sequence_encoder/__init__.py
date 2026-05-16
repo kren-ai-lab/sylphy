@@ -1,10 +1,10 @@
 """Expose sequence encoder classes and the encoder factory."""
 
-from .base_encoder import EncoderBase
+from .encoder_base import EncoderBase
 from .factory import create_encoder
 from .fft_encoder import FFTEncoder
 from .frequency_encoder import FrequencyEncoder
-from .kmers_encoder import KMerEncoder
+from .kmer_encoder import KMerEncoder
 from .one_hot_encoder import OneHotEncoder
 from .ordinal_encoder import OrdinalEncoder
 from .physicochemical_encoder import PhysicochemicalEncoder

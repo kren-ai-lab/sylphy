@@ -9,7 +9,7 @@ import pandas as pd
 
 from sylphy.constants import residues
 
-from .base_encoder import EncoderBase
+from .encoder_base import EncoderBase
 
 
 class FrequencyEncoder(EncoderBase):

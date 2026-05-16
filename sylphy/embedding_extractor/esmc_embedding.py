@@ -12,7 +12,7 @@ from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
 from tqdm import tqdm
 
-from .embedding_based import (
+from .embedding_base import (
     DEFAULT_DEBUG_MODE,
     DEFAULT_DEVICE,
     DEFAULT_PRECISION,

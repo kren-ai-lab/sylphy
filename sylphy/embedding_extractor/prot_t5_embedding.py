@@ -11,7 +11,7 @@ from transformers import AutoConfig, T5EncoderModel, T5Tokenizer
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
-from .embedding_based import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
+from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
     import pandas as pd

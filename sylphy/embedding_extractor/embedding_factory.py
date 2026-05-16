@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from sylphy.types import PrecisionType
 
-    from .embedding_based import EmbeddingBase  # for type hints only
+    from .embedding_base import EmbeddingBase  # for type hints only
 
 
 
@@ -28,35 +28,35 @@ logger = get_child_logger(
 _BACKENDS: list[tuple[tuple[str, ...], str, str, str, dict[str, Any]]] = [
     (
         ("esm2", "facebook/esm2"),
-        ".esm_based",
+        ".esm_embedding",
         "ESMEmbedding",
         "ESM2",
         {},
     ),
     (
         ("ankh2", "elnaggarlab/ankh2", "ankh3", "elnaggarlab/ankh3"),
-        ".ankh2_based",
+        ".ankh2_embedding",
         "Ankh2Embedding",
         "Ankh2/3",
         {"use_encoder_only": True},
     ),
     (
         ("t5", "prot_t5", "rostlab/prot_t5"),
-        ".prot5_based",
+        ".prot_t5_embedding",
         "ProtT5Embedding",
         "ProtT5",
         {},
     ),
     (
         ("bert", "prot_bert", "rostlab/prot_bert"),
-        ".bert_based",
+        ".prot_bert_embedding",
         "ProtBertEmbedding",
         "ProtBERT",
         {},
     ),
     (
         ("mistral", "mistral-prot"),
-        ".mistral_based",
+        ".mistral_embedding",
         "MistralEmbedding",
         "Mistral-Prot",
         {},
@@ -105,7 +105,7 @@ def create_embedding(
     if "esmc" in name:
         logger.info("Selecting ESM-C backend", extra={"model": model_name})
         try:
-            module = import_module(".esmc_based", package=__package__)
+            module = import_module(".esmc_embedding", package=__package__)
             cls = module.ESMCEmbedding
         except (ImportError, ModuleNotFoundError) as exc:
             wrapped = wrap_optional_dependency_error(

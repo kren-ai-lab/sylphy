@@ -4,12 +4,12 @@ import pandas as pd
 import pytest
 
 from sylphy.embedding_extractor import create_embedding
-from sylphy.embedding_extractor.ankh2_based import Ankh2Embedding
-from sylphy.embedding_extractor.bert_based import ProtBertEmbedding
-from sylphy.embedding_extractor.esm_based import ESMEmbedding
-from sylphy.embedding_extractor.esmc_based import ESMCEmbedding
-from sylphy.embedding_extractor.mistral_based import MistralEmbedding
-from sylphy.embedding_extractor.prot5_based import ProtT5Embedding
+from sylphy.embedding_extractor.ankh2_embedding import Ankh2Embedding
+from sylphy.embedding_extractor.esm_embedding import ESMEmbedding
+from sylphy.embedding_extractor.esmc_embedding import ESMCEmbedding
+from sylphy.embedding_extractor.mistral_embedding import MistralEmbedding
+from sylphy.embedding_extractor.prot_bert_embedding import ProtBertEmbedding
+from sylphy.embedding_extractor.prot_t5_embedding import ProtT5Embedding
 
 
 @pytest.mark.parametrize(

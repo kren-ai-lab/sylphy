@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from .embedding_based import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
+from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
     import pandas as pd

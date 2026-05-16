@@ -19,13 +19,13 @@ __all__ = [
 ]
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
-    "EmbeddingBase": (".embedding_based", "EmbeddingBase"),
-    "ESMEmbedding": (".esm_based", "ESMEmbedding"),
-    "ProtT5Embedding": (".prot5_based", "ProtT5Embedding"),
-    "ProtBertEmbedding": (".bert_based", "ProtBertEmbedding"),
-    "MistralEmbedding": (".mistral_based", "MistralEmbedding"),
-    "ESMCEmbedding": (".esmc_based", "ESMCEmbedding"),
-    "Ankh2Embedding": (".ankh2_based", "Ankh2Embedding"),
+    "EmbeddingBase": (".embedding_base", "EmbeddingBase"),
+    "ESMEmbedding": (".esm_embedding", "ESMEmbedding"),
+    "ProtT5Embedding": (".prot_t5_embedding", "ProtT5Embedding"),
+    "ProtBertEmbedding": (".prot_bert_embedding", "ProtBertEmbedding"),
+    "MistralEmbedding": (".mistral_embedding", "MistralEmbedding"),
+    "ESMCEmbedding": (".esmc_embedding", "ESMCEmbedding"),
+    "Ankh2Embedding": (".ankh2_embedding", "Ankh2Embedding"),
     "create_embedding": (".embedding_factory", "create_embedding"),
 }
 
@@ -61,11 +61,11 @@ def __dir__() -> list[str]:
 
 # Optional typing-only exposure (keeps runtime lazy)
 if TYPE_CHECKING:  # pragma: no cover
-    from .ankh2_based import Ankh2Embedding
-    from .bert_based import ProtBertEmbedding
-    from .embedding_based import EmbeddingBase
+    from .ankh2_embedding import Ankh2Embedding
+    from .embedding_base import EmbeddingBase
     from .embedding_factory import create_embedding
-    from .esm_based import ESMEmbedding
-    from .esmc_based import ESMCEmbedding
-    from .mistral_based import MistralEmbedding
-    from .prot5_based import ProtT5Embedding
+    from .esm_embedding import ESMEmbedding
+    from .esmc_embedding import ESMCEmbedding
+    from .mistral_embedding import MistralEmbedding
+    from .prot_bert_embedding import ProtBertEmbedding
+    from .prot_t5_embedding import ProtT5Embedding

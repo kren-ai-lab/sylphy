@@ -5,7 +5,7 @@ from typing import Any, cast
 import pandas as pd
 import pytest
 
-from sylphy.embedding_extractor.prot5_based import ProtT5Embedding
+from sylphy.embedding_extractor.prot_t5_embedding import ProtT5Embedding
 
 
 def test_prot5_missing_sentencepiece_suggests_embeddings_extra(monkeypatch: pytest.MonkeyPatch) -> None:

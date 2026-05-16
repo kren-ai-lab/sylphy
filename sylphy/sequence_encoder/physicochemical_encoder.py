@@ -13,7 +13,7 @@ import requests
 from sylphy.constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
 from sylphy.core import get_config
 
-from .base_encoder import EncoderBase
+from .encoder_base import EncoderBase
 
 
 class PhysicochemicalEncoder(EncoderBase):

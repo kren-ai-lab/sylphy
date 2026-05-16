@@ -1,4 +1,4 @@
-"""Implement the ESM2 embedding backend."""
+"""Implement the Mistral-Prot embedding backend."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from .embedding_based import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
+from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -15,14 +15,14 @@ if TYPE_CHECKING:
     from sylphy.types import PrecisionType
 
 
-class ESMEmbedding(EmbeddingBase):
-    """Extract embeddings using ESM2 Hugging Face models."""
+class MistralEmbedding(EmbeddingBase):
+    """Extract embeddings using Mistral-Prot models."""
 
     def __init__(
         self,
         name_device: str = DEFAULT_DEVICE,
-        name_model: str = "facebook/esm2_t6_8M_UR50D",
-        name_tokenizer: str = "facebook/esm2_t6_8M_UR50D",
+        name_model: str = "RaphaelMourad/Mistral-Prot-v1-134M",
+        name_tokenizer: str = "RaphaelMourad/Mistral-Prot-v1-134M",
         dataset: pd.DataFrame | None = None,
         column_seq: str | None = "sequence",
         debug_mode: int = DEFAULT_DEBUG_MODE,
@@ -31,7 +31,7 @@ class ESMEmbedding(EmbeddingBase):
         debug: bool = False,
         oom_backoff: bool = True,
     ) -> None:
-        """Initialize the ESM backend."""
+        """Initialize the Mistral-Prot backend."""
         if dataset is None:
             msg = "dataset must be provided"
             raise ValueError(msg)
@@ -52,12 +52,12 @@ class ESMEmbedding(EmbeddingBase):
         )
 
     def load_model_tokenizer(self) -> None:
-        """Load ESM tokenizer and model from the resolved local directory."""
+        """Load Mistral tokenizer and model from the resolved model directory."""
         try:
             local_dir = self._register_and_resolve()
             _ = AutoConfig.from_pretrained(local_dir, trust_remote_code=False)
 
-            self.__logger__.info("Loading ESM tokenizer from: %s", local_dir)
+            self.__logger__.info("Loading Mistral tokenizer from: %s", local_dir)
             tokenizer = AutoTokenizer.from_pretrained(
                 local_dir,
                 do_lower_case=False,
@@ -69,21 +69,14 @@ class ESMEmbedding(EmbeddingBase):
                 self.__logger__.debug("pad_token_id set to: %s", tokenizer.pad_token_id)
             self.tokenizer = tokenizer
 
-            self.__logger__.info("Loading ESM model from: %s on device=%s", local_dir, self.device)
+            self.__logger__.info("Loading Mistral model from: %s on device=%s", local_dir, self.device)
             model = AutoModel.from_pretrained(local_dir, trust_remote_code=False)  # type: ignore[possibly-missing-attribute]
             model.to(self.device)
             self.model = model
             model.eval()
         except Exception as e:
-            self.__logger__.error("Failed to load ESM tokenizer/model: %s", e)
+            self.__logger__.error("Failed to load Mistral tokenizer/model: %s", e)
             raise
-
-    def _pre_tokenize(self, batch: list[str]) -> list[str]:
-        vocab = getattr(self.tokenizer, "get_vocab", dict)()
-        has_cls = "<cls>" in vocab
-        if has_cls:
-            return [f"<cls> {' '.join(seq.strip())}" for seq in batch]
-        return [seq.strip() for seq in batch]
 
     @torch.no_grad()
     def embedding_batch(
@@ -91,12 +84,7 @@ class ESMEmbedding(EmbeddingBase):
         batch: list[str],
         max_length: int = 1024,
     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
-        """Return hidden states and attention mask for a sequence batch.
-
-        Returns:
-            A tuple of hidden states by layer and the attention mask.
-
-        """
+        """Embed a batch and return hidden states with an attention mask."""
         if not batch:
             msg = "Input batch is empty."
             raise ValueError(msg)

@@ -9,7 +9,7 @@ import pandas as pd
 
 from sylphy.constants import get_index, residues
 
-from .base_encoder import EncoderBase
+from .encoder_base import EncoderBase
 
 
 class OneHotEncoder(EncoderBase):

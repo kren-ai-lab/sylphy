@@ -3,13 +3,13 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from sylphy.embedding_extractor import EmbeddingFactory
+from sylphy.embedding_extractor import create_embedding
 
 
 def test_load_and_pool_mean_cls_eos_and_layers() -> None:
     """Verify different pooling strategies and layer aggregation methods."""
     df = pd.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
-    inst = EmbeddingFactory(
+    inst = create_embedding(
         model_name="facebook/esm2_t6_8M_UR50D",
         dataset=df,
         column_seq="sequence",
@@ -40,7 +40,7 @@ def test_load_and_pool_mean_cls_eos_and_layers() -> None:
 def test_run_process_end_to_end() -> None:
     """Verify complete embedding extraction pipeline produces expected output."""
     df = pd.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
-    inst = EmbeddingFactory(
+    inst = create_embedding(
         model_name="facebook/esm2_t6_8M_UR50D",
         dataset=df,
         column_seq="sequence",

@@ -6,5 +6,5 @@ def test_lazy_exports_and_public_symbols() -> None:
     import sylphy.embedding_extractor as ee
 
     assert "EmbeddingBase" in dir(ee)
-    assert "EmbeddingFactory" in dir(ee)
-    assert callable(ee.EmbeddingFactory)
+    assert "create_embedding" in dir(ee)
+    assert callable(ee.create_embedding)

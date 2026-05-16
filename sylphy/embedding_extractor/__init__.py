@@ -12,7 +12,6 @@ __all__ = [
     "ESMCEmbedding",
     "ESMEmbedding",
     "EmbeddingBase",
-    "EmbeddingFactory",
     "MistralEmbedding",
     "ProtBertEmbedding",
     "ProtT5Embedding",
@@ -27,16 +26,13 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "MistralEmbedding": (".mistral_based", "MistralEmbedding"),
     "ESMCEmbedding": (".esmc_based", "ESMCEmbedding"),
     "Ankh2Embedding": (".ankh2_based", "Ankh2Embedding"),
-    "EmbeddingFactory": (".embedding_factory", "EmbeddingFactory"),
+    "create_embedding": (".embedding_factory", "create_embedding"),
 }
 
 def __getattr__(name: str) -> object:
     """Resolve lazy exports and cache the loaded symbol."""
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
-        if name == "create_embedding":
-            module = import_module(".embedding_factory", package=__name__)
-            return module.EmbeddingFactory
         msg = f"module '{__name__}' has no attribute '{name}'"
         raise AttributeError(msg)
     mod_name, attr = spec
@@ -67,10 +63,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from .ankh2_based import Ankh2Embedding
     from .bert_based import ProtBertEmbedding
     from .embedding_based import EmbeddingBase
-    from .embedding_factory import EmbeddingFactory
+    from .embedding_factory import create_embedding
     from .esm_based import ESMEmbedding
     from .esmc_based import ESMCEmbedding
     from .mistral_based import MistralEmbedding
     from .prot5_based import ProtT5Embedding
-
-    create_embedding = EmbeddingFactory

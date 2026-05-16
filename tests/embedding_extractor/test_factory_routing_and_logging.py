@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from sylphy.embedding_extractor import EmbeddingFactory
+from sylphy.embedding_extractor import create_embedding
 from sylphy.embedding_extractor.ankh2_based import Ankh2Embedding
 from sylphy.embedding_extractor.bert_based import ProtBertEmbedding
 from sylphy.embedding_extractor.esm_based import ESMEmbedding
@@ -26,7 +26,7 @@ from sylphy.embedding_extractor.prot5_based import ProtT5Embedding
 def test_factory_selects_backend(model_name: str, cls: type) -> None:
     """Verify factory routes model names to the correct backend class."""
     df = pd.DataFrame({"sequence": ["AAAA"]})
-    inst = EmbeddingFactory(model_name=model_name, dataset=df, column_seq="sequence", name_device="cpu")
+    inst = create_embedding(model_name=model_name, dataset=df, column_seq="sequence", name_device="cpu")
     assert isinstance(inst, cls)
 
 
@@ -34,4 +34,4 @@ def test_factory_unknown_raises() -> None:
     """Verify factory raises ValueError for unknown model names."""
     df = pd.DataFrame({"sequence": ["AAAA"]})
     with pytest.raises(ValueError, match=r"Unknown model name"):
-        EmbeddingFactory(model_name="unknown/model", dataset=df, column_seq="sequence", name_device="cpu")
+        create_embedding(model_name="unknown/model", dataset=df, column_seq="sequence", name_device="cpu")

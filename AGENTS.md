@@ -140,7 +140,7 @@ Heavy dependencies (PyTorch, Transformers) are loaded lazily in `embedding_extra
 #### 2. Factory Pattern
 All major components use factories:
 - `create_encoder(encoder_type, ...)` → sequence encoders
-- `create_embedding(model_name, ...)` or `EmbeddingFactory(...)` → embedding extractors
+- `create_embedding(model_name, ...)` → embedding extractors
 - `reduce_dimensionality(method, ...)` → dimensionality reducers
 
 #### 3. Model Registry

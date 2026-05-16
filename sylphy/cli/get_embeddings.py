@@ -13,7 +13,7 @@ Design goals
 - Correct output file extension based on --format-output.
 
 Backends are selected by the factory from the model name. See:
-- EmbeddingFactory: backend selection by name substring/namespace.
+- create_embedding: backend selection by name substring/namespace.
 - EmbeddingBase: run_process(), layer selection/aggregation, pooling, export.
 
 """

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from importlib import import_module
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.logging import add_context, get_logger
@@ -22,13 +22,35 @@ def _norm(s: str) -> str:
     return (s or "").strip().lower()
 
 
-# logging: ensure parent once, then a child for the factory
 _ = get_logger("sylphy")
 logger = logging.getLogger("sylphy.embedding_extraction.factory")
 add_context(logger, component="embedding_extraction", backend="factory")
 
+_BACKENDS: list[tuple[tuple[str, ...], str, str, str, dict[str, Any]]] = [
+    (
+        ("esm2", "facebook/esm2"),
+        ".esm_based", "ESMEmbedding", "ESM2", {},
+    ),
+    (
+        ("ankh2", "elnaggarlab/ankh2", "ankh3", "elnaggarlab/ankh3"),
+        ".ankh2_based", "Ankh2Embedding", "Ankh2/3", {"use_encoder_only": True},
+    ),
+    (
+        ("t5", "prot_t5", "rostlab/prot_t5"),
+        ".prot5_based", "ProtT5Embedding", "ProtT5", {},
+    ),
+    (
+        ("bert", "prot_bert", "rostlab/prot_bert"),
+        ".bert_based", "ProtBertEmbedding", "ProtBERT", {},
+    ),
+    (
+        ("mistral", "mistral-prot"),
+        ".mistral_based", "MistralEmbedding", "Mistral-Prot", {},
+    ),
+]
 
-def EmbeddingFactory(  # noqa: PLR0911
+
+def create_embedding(
     model_name: str,
     dataset: pd.DataFrame,
     column_seq: str,
@@ -47,115 +69,30 @@ def EmbeddingFactory(  # noqa: PLR0911
     """
     name = _norm(model_name)
 
-    if "esm2" in name or name.startswith("facebook/esm2"):
-        logger.info("Selecting ESM2 backend", extra={"model": model_name})
-        module = import_module(".esm_based", package=__package__)
-        ESMEmbedding = module.ESMEmbedding
+    common_kwargs: dict[str, Any] = {
+        "name_device": name_device,
+        "name_model": model_name,
+        "name_tokenizer": model_name,
+        "dataset": dataset,
+        "column_seq": column_seq,
+        "debug_mode": debug_mode,
+        "precision": precision,
+        "debug": debug,
+        "oom_backoff": oom_backoff,
+    }
 
-        return ESMEmbedding(
-            name_device=name_device,
-            name_model=model_name,
-            name_tokenizer=model_name,
-            dataset=dataset,
-            column_seq=column_seq,
-            debug_mode=debug_mode,
-            precision=precision,
-            debug=debug,
-            oom_backoff=oom_backoff,
-        )
-
-    if "ankh2" in name or name.startswith("elnaggarlab/ankh2"):
-        logger.info("Selecting Ankh2 backend", extra={"model": model_name})
-        module = import_module(".ankh2_based", package=__package__)
-        Ankh2Embedding = module.Ankh2Embedding
-
-        return Ankh2Embedding(
-            dataset=dataset,
-            name_device=name_device,
-            name_model=model_name,
-            name_tokenizer=model_name,
-            column_seq=column_seq,
-            debug_mode=debug_mode,
-            precision=precision,
-            use_encoder_only=True,
-            debug=debug,
-            oom_backoff=oom_backoff,
-        )
-
-    if "ankh3" in name or name.startswith("elnaggarlab/ankh3"):
-        logger.info("Selecting Ankh2 backend", extra={"model": model_name})
-        module = import_module(".ankh2_based", package=__package__)
-        Ankh2Embedding = module.Ankh2Embedding
-
-        return Ankh2Embedding(
-            dataset=dataset,
-            name_device=name_device,
-            name_model=model_name,
-            name_tokenizer=model_name,
-            column_seq=column_seq,
-            debug_mode=debug_mode,
-            precision=precision,
-            use_encoder_only=True,
-            debug=debug,
-            oom_backoff=oom_backoff,
-        )
-
-    if "t5" in name or "prot_t5" in name or name.startswith("rostlab/prot_t5"):
-        logger.info("Selecting ProtT5 backend", extra={"model": model_name})
-        module = import_module(".prot5_based", package=__package__)
-        ProtT5Embedding = module.ProtT5Embedding
-
-        return ProtT5Embedding(
-            name_device=name_device,
-            name_model=model_name,
-            name_tokenizer=model_name,
-            dataset=dataset,
-            column_seq=column_seq,
-            debug_mode=debug_mode,
-            precision=precision,
-            debug=debug,
-            oom_backoff=oom_backoff,
-        )
-
-    if "bert" in name or "prot_bert" in name or name.startswith("rostlab/prot_bert"):
-        logger.info("Selecting ProtBERT backend", extra={"model": model_name})
-        module = import_module(".bert_based", package=__package__)
-        ProtBertEmbedding = module.ProtBertEmbedding
-
-        return ProtBertEmbedding(
-            name_device=name_device,
-            name_model=model_name,
-            name_tokenizer=model_name,
-            dataset=dataset,
-            column_seq=column_seq,
-            debug_mode=debug_mode,
-            precision=precision,
-            debug=debug,
-            oom_backoff=oom_backoff,
-        )
-
-    if "mistral" in name or "mistral-prot" in name:
-        logger.info("Selecting Mistral-Prot backend", extra={"model": model_name})
-        module = import_module(".mistral_based", package=__package__)
-        MistralEmbedding = module.MistralEmbedding
-
-        return MistralEmbedding(
-            name_device=name_device,
-            name_model=model_name,
-            name_tokenizer=model_name,
-            dataset=dataset,
-            column_seq=column_seq,
-            debug_mode=debug_mode,
-            precision=precision,
-            debug=debug,
-            oom_backoff=oom_backoff,
-        )
+    for patterns, module_suffix, class_name, label, extra in _BACKENDS:
+        if any(p in name for p in patterns):
+            logger.info("Selecting %s backend", label, extra={"model": model_name})
+            module = import_module(module_suffix, package=__package__)
+            cls = getattr(module, class_name)
+            return cls(**common_kwargs, **extra)  # type: ignore[no-any-return]
 
     if "esmc" in name:
         logger.info("Selecting ESM-C backend", extra={"model": model_name})
         try:
             module = import_module(".esmc_based", package=__package__)
-            ESMCEmbedding = module.ESMCEmbedding
+            cls = module.ESMCEmbedding
         except (ImportError, ModuleNotFoundError) as exc:
             wrapped = wrap_optional_dependency_error(
                 exc,
@@ -166,23 +103,13 @@ def EmbeddingFactory(  # noqa: PLR0911
             if wrapped is not None:
                 raise wrapped from exc
             raise
-        return ESMCEmbedding(
-            name_device=name_device,
-            name_model=model_name,  # e.g., "esmc_300m" or registry key
-            dataset=dataset,
-            column_seq=column_seq,
-            debug_mode=debug_mode,
-            precision=precision,
-            debug=debug,
-            oom_backoff=oom_backoff,
-        )
+        esmc_kwargs = {k: v for k, v in common_kwargs.items() if k != "name_tokenizer"}
+        return cls(**esmc_kwargs)  # type: ignore[no-any-return]
 
     msg = (
         f"Unknown model name '{model_name}'. "
-        f"Supported: ESM2 ('facebook/esm2_*'), Ankh2 ('ElnaggarLab/ankh2-*'), "
+        f"Supported: ESM2 ('facebook/esm2_*'), Ankh2/3 ('ElnaggarLab/ankh2-*', 'ElnaggarLab/ankh3-*'), "
         f"ProtT5 ('Rostlab/prot_t5_*'), ProtBERT ('Rostlab/prot_bert'), "
-        f"Mistral-Prot ('RaphaelMourad/Mistral-Prot-*'), and ESM-C ('esmc_*')."
+        f"Mistral-Prot ('RaphaelMourad/Mistral-Prot-*'), ESM-C ('esmc_*')."
     )
-    raise ValueError(
-        msg,
-    )
+    raise ValueError(msg)

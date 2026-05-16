@@ -16,6 +16,13 @@ hooks = [
 repo = "local"
 hooks = [
   {
+    id = "format",
+    name = "lint-check",
+    entry = "uv run task format",
+    language = "system",
+    pass_filenames = false
+  },
+  {
     id = "lint",
     name = "lint-check",
     entry = "uv run task lint",

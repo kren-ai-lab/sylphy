@@ -98,11 +98,21 @@ class UtilsLib:
 
         if per_label:
             return cls._sample_per_label(
-                df, label_name, use_labels, n_samples, replace=replace, seed=random_state,
+                df,
+                label_name,
+                use_labels,
+                n_samples,
+                replace=replace,
+                seed=random_state,
             )
 
         return cls._sample_globally_proportionate(
-            df, label_name, use_labels, n_samples, replace=replace, seed=random_state,
+            df,
+            label_name,
+            use_labels,
+            n_samples,
+            replace=replace,
+            seed=random_state,
         )
 
     @staticmethod
@@ -137,7 +147,7 @@ class UtilsLib:
             _LOG.info("Sampled %d rows for label '%s'.", k, lab)
 
         if not parts:
-            return pd.DataFrame(columns=df.columns)
+            return df.iloc[0:0].copy()
         out = pd.concat(parts, axis=0).reset_index(drop=True)
         _LOG.info("Total sampled rows (per_label): %d", len(out))
         return out
@@ -182,7 +192,7 @@ class UtilsLib:
                 _LOG.info("Sampled %d rows for label '%s' (global mode).", actual_k, lab)
 
         if not parts:
-            return pd.DataFrame(columns=df.columns)
+            return df.iloc[0:0].copy()
         out = pd.concat(parts, axis=0).reset_index(drop=True)
         _LOG.info("Total sampled rows (global): %d", len(out))
         return out
@@ -234,11 +244,30 @@ class UtilsLib:
             raise ValueError(msg)
 
         supported_metrics = {
-            "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan",
-            "nan_euclidean", "braycurtis", "canberra", "chebyshev",
-            "correlation", "dice", "hamming", "jaccard", "kulsinski",
-            "mahalanobis", "minkowski", "rogerstanimoto", "russellrao",
-            "seuclidean", "sokalmichener", "sokalsneath", "sqeuclidean", "yule",
+            "cityblock",
+            "cosine",
+            "euclidean",
+            "l1",
+            "l2",
+            "manhattan",
+            "nan_euclidean",
+            "braycurtis",
+            "canberra",
+            "chebyshev",
+            "correlation",
+            "dice",
+            "hamming",
+            "jaccard",
+            "kulsinski",
+            "mahalanobis",
+            "minkowski",
+            "rogerstanimoto",
+            "russellrao",
+            "seuclidean",
+            "sokalmichener",
+            "sokalsneath",
+            "sqeuclidean",
+            "yule",
         }
         if metric not in supported_metrics:
             _LOG.error("Unsupported metric '%s'.", metric)
@@ -349,7 +378,10 @@ class UtilsLib:
             cls._do_export(df_encoded, dest, file_format, base_message)
         except Exception as e:
             wrapped = wrap_optional_dependency_error(
-                e, feature="Parquet export", extra="parquet", packages=("pyarrow", "fastparquet"),
+                e,
+                feature="Parquet export",
+                extra="parquet",
+                packages=("pyarrow", "fastparquet"),
             )
             if wrapped is not None:
                 _LOG.error("Failed export to %s (%s): %s", dest, file_format, wrapped)

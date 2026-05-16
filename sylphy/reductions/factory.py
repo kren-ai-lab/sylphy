@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pandas as pd
 
+from sylphy.core.model_registry import normalize_name
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
-from sylphy.logging import add_context, get_logger
+from sylphy.logging import add_context, get_child_logger
 
 if TYPE_CHECKING:
     from .reduction_methods import Preprocess, ReturnType
@@ -62,10 +63,7 @@ def _build_methods() -> dict[str, tuple[Kind, str]]:
 
 _METHODS: dict[str, tuple[Kind, str]] = _build_methods()
 
-# --- logging: ensure parent, then a child logger for the factory -------------
-_ = get_logger("sylphy")
-logger = logging.getLogger("sylphy.reductions.factory")
-add_context(logger, component="reductions", facility="factory")
+logger = get_child_logger("reductions.factory", component="reductions", facility="factory")
 
 
 def get_available_methods(kind: Kind | None = None) -> list[str]:
@@ -90,12 +88,12 @@ def get_available_methods(kind: Kind | None = None) -> list[str]:
 
 def is_linear_method(name: str) -> bool:
     """Return True if `name` is a registered linear method."""
-    return name.lower() in _LINEAR_METHODS
+    return normalize_name(name) in _LINEAR_METHODS
 
 
 def is_nonlinear_method(name: str) -> bool:
     """Return True if `name` is a registered non-linear method."""
-    return name.lower() in _NONLINEAR_METHODS
+    return normalize_name(name) in _NONLINEAR_METHODS
 
 
 def reduce_dimensionality(
@@ -137,9 +135,9 @@ def reduce_dimensionality(
     # Child logger for this invocation (level control via `debug`)
     log = logging.getLogger(logger_name)
     log.setLevel(debug_mode if debug else logging.NOTSET)
-    add_context(log, method=method.lower())
+    add_context(log, method=normalize_name(method))
 
-    key = method.lower().strip()
+    key = normalize_name(method)
     if key not in _METHODS:
         all_methods = ", ".join(sorted(_METHODS.keys()))
         msg = f"Unknown reduction method '{method}'. Available: {all_methods}"

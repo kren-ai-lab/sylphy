@@ -21,7 +21,7 @@ Backends are selected by the factory from the model name. See:
 from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, cast
+from typing import get_args
 
 import typer
 
@@ -34,9 +34,7 @@ from sylphy.cli._shared import (
     load_csv,
     validate_choice,
 )
-
-if TYPE_CHECKING:
-    from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
+from sylphy.types import LayerAggType, PoolType, PrecisionType
 
 app = typer.Typer(
     name="get-embedding",
@@ -47,9 +45,9 @@ app = typer.Typer(
 
 # ---- Declarative choices (keep stdlib-only at import time) -------------------
 DEVICE_CHOICES = ("cuda", "cpu")
-PRECISION_CHOICES = ("fp32", "fp16", "bf16")
-POOL_CHOICES = ("mean", "cls", "eos")
-LAYER_AGG_CHOICES = ("mean", "sum", "concat")
+PRECISION_CHOICES: tuple[PrecisionType, ...] = get_args(PrecisionType)
+POOL_CHOICES: tuple[PoolType, ...] = get_args(PoolType)
+LAYER_AGG_CHOICES: tuple[LayerAggType, ...] = get_args(LayerAggType)
 
 MODEL_OPTION = typer.Option(
     "facebook/esm2_t6_8M_UR50D",
@@ -203,10 +201,10 @@ def get_embedding(
     try:
         # Cheap validations first (keep startup fast)
         device_v = validate_choice(device, DEVICE_CHOICES, "device")
-        precision_v = cast("PrecisionType", validate_choice(precision, PRECISION_CHOICES, "precision"))
-        pool_v = cast("PoolType", validate_choice(pool, POOL_CHOICES, "pool"))
-        layer_agg_v = cast("LayerAggType", validate_choice(layer_agg, LAYER_AGG_CHOICES, "layer-agg"))
-        fmt_v = cast("FileFormat", validate_choice(format_output, EXPORT_CHOICES, "format-output"))
+        precision_v = validate_choice(precision, PRECISION_CHOICES, "precision")
+        pool_v = validate_choice(pool, POOL_CHOICES, "pool")
+        layer_agg_v = validate_choice(layer_agg, LAYER_AGG_CHOICES, "layer-agg")
+        fmt_v = validate_choice(format_output, EXPORT_CHOICES, "format-output")
         lvl = level_from_str(log_level)
 
         # CSV → DataFrame (lazy pandas)
@@ -226,8 +224,7 @@ def get_embedding(
                     layers_spec = int(ls)
             except ValueError:
                 msg = (
-                    "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | "
-                    "comma-separated integers."
+                    "Invalid --layers. Use 'last' | 'last4' | 'all' | an integer | comma-separated integers."
                 )
                 raise typer.BadParameter(
                     msg,

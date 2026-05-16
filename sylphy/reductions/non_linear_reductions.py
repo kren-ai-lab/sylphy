@@ -66,7 +66,10 @@ class NonLinearReductions(Reductions):
         return cls(**k)
 
     def _apply_model(
-        self, model: ModelT, method_name: str, n_components: int | None = None,
+        self,
+        model: ModelT,
+        method_name: str,
+        n_components: int | None = None,
     ) -> np.ndarray | pd.DataFrame | None:
         try:
             params_getter = cast("Callable[[], object]", getattr(model, "get_params", dict))
@@ -132,12 +135,15 @@ class NonLinearReductions(Reductions):
         return self._apply_model(model, "DictionaryLearning", cast("int | None", kwargs.get("n_components")))
 
     def apply_mini_batch_dictionary_learning(
-        self, **kwargs: object,
+        self,
+        **kwargs: object,
     ) -> np.ndarray | pd.DataFrame | None:
         """Apply MiniBatchDictionaryLearning and return transformed data."""
         model = self._init_with_seed(MiniBatchDictionaryLearning, kwargs)
         return self._apply_model(
-            model, "MiniBatchDictionaryLearning", cast("int | None", kwargs.get("n_components")),
+            model,
+            "MiniBatchDictionaryLearning",
+            cast("int | None", kwargs.get("n_components")),
         )
 
     def apply_dip_ext(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:

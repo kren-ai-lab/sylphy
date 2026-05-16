@@ -19,9 +19,7 @@ from sylphy.core.model_registry import (
 from sylphy.core.model_spec import ModelSpec
 
 
-def test_hf_revision_is_passed_to_snapshot_download(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_hf_revision_is_passed_to_snapshot_download(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """snapshot_download receives the revision kwarg."""
     received: dict[str, object] = {}
     hub = types.ModuleType("huggingface_hub")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import logging
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -13,7 +12,15 @@ from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
 from tqdm import tqdm
 
-from .embedding_based import EmbeddingBase, LayerAgg, LayerSpec, Pool
+from .embedding_based import (
+    DEFAULT_DEBUG_MODE,
+    DEFAULT_DEVICE,
+    DEFAULT_PRECISION,
+    EmbeddingBase,
+    LayerAgg,
+    LayerSpec,
+    Pool,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -26,13 +33,13 @@ class ESMCEmbedding(EmbeddingBase):
 
     def __init__(
         self,
-        name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        name_device: str = DEFAULT_DEVICE,
         name_model: str = "esmc_300m",
         _name_tokenizer: str | None = None,
         dataset: pd.DataFrame | None = None,
         column_seq: str | None = "sequence",
-        debug_mode: int = logging.INFO,
-        precision: PrecisionType = "fp32",
+        debug_mode: int = DEFAULT_DEBUG_MODE,
+        precision: PrecisionType = DEFAULT_PRECISION,
         *,
         debug: bool = False,
         oom_backoff: bool = True,
@@ -125,7 +132,11 @@ class ESMCEmbedding(EmbeddingBase):
             return out.embeddings, getattr(out, "hidden_states", None)
 
     def _process_sequence(
-        self, seq: str, layers: LayerSpec, layer_agg: LayerAgg, pool: Pool,
+        self,
+        seq: str,
+        layers: LayerSpec,
+        layer_agg: LayerAgg,
+        pool: Pool,
     ) -> np.ndarray | None:
         """Embed and pool a single sequence."""
         emb, hs = self._embed_one(seq, return_hidden_states=True)
@@ -206,7 +217,7 @@ class ESMCEmbedding(EmbeddingBase):
 
         self.release_resources()
         mat = np.stack(out_vecs, axis=0)
-        cols = pd.Index([f"p_{k+1}" for k in range(mat.shape[1])])
+        cols = pd.Index([f"p_{k + 1}" for k in range(mat.shape[1])])
         df_emb = pd.DataFrame(mat, columns=cols, index=self.dataset.index)
         df_emb[self.column_seq] = self.dataset[self.column_seq].to_numpy()
         return df_emb

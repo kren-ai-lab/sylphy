@@ -105,7 +105,8 @@ class LinearReduction(Reductions):
         return self._apply_model(model, "PCA", cast("int | None", kwargs.get("n_components")))
 
     def apply_incremental_pca(
-        self, **kwargs: object,
+        self,
+        **kwargs: object,
     ) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
         """Apply IncrementalPCA and return the fitted model with transformed data."""
         model = self._init_with_seed(IncrementalPCA, kwargs)
@@ -117,7 +118,8 @@ class LinearReduction(Reductions):
         return self._apply_model(model, "SparsePCA", cast("int | None", kwargs.get("n_components")))
 
     def apply_minibatch_sparse_pca(
-        self, **kwargs: object,
+        self,
+        **kwargs: object,
     ) -> tuple[MiniBatchSparsePCA, np.ndarray | pd.DataFrame | None]:
         """Apply MiniBatchSparsePCA and return the fitted model with transformed data."""
         model = self._init_with_seed(MiniBatchSparsePCA, kwargs)
@@ -134,7 +136,8 @@ class LinearReduction(Reductions):
         return self._apply_model(model, "TruncatedSVD", cast("int | None", kwargs.get("n_components")))
 
     def apply_factor_analysis(
-        self, **kwargs: object,
+        self,
+        **kwargs: object,
     ) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
         """Apply FactorAnalysis and return the fitted model with transformed data."""
         model = self._init_with_seed(FactorAnalysis, kwargs)
@@ -152,10 +155,13 @@ class LinearReduction(Reductions):
         return self._apply_model(model, "MiniBatchNMF", cast("int | None", kwargs.get("n_components")))
 
     def apply_latent_dirichlet_allocation(
-        self, **kwargs: object,
+        self,
+        **kwargs: object,
     ) -> tuple[LatentDirichletAllocation, np.ndarray | pd.DataFrame | None]:
         """Apply LatentDirichletAllocation and return model with transformed data."""
         model = self._init_with_seed(LatentDirichletAllocation, kwargs)
         return self._apply_model(
-            model, "LatentDirichletAllocation", cast("int | None", kwargs.get("n_components")),
+            model,
+            "LatentDirichletAllocation",
+            cast("int | None", kwargs.get("n_components")),
         )

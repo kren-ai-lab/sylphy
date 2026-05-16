@@ -89,9 +89,7 @@ def test_env_override_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     assert (resolved / "weights.bin").exists()
 
 
-def test_resolve_huggingface_download_mocked(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_resolve_huggingface_download_mocked(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     hub = types.ModuleType("huggingface_hub")
 
     def snapshot_download(ref: str, _revision: str | None = None, **_kwargs: object) -> str:

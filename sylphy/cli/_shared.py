@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar, get_args
 
 import typer
+
+from sylphy.types import FileFormat
+
+_T = TypeVar("_T", bound=str)
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -12,7 +16,7 @@ if TYPE_CHECKING:
 HELP_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
-EXPORT_CHOICES = ("csv", "npy", "npz", "parquet")
+EXPORT_CHOICES: tuple[FileFormat, ...] = get_args(FileFormat)
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
 
@@ -21,10 +25,10 @@ def level_from_str(name: str) -> int:
     return getattr(logging, (name or "INFO").upper(), logging.INFO)
 
 
-def validate_choice(value: str, choices: tuple[str, ...], opt: str) -> str:
+def validate_choice(value: str, choices: tuple[_T, ...], opt: str) -> _T:  # noqa: UP047
     """Validate a CLI option against a list of case-insensitive choices."""
     normalized = (value or "").strip().lower()
-    allowed = {choice.lower(): choice for choice in choices}
+    allowed: dict[str, _T] = {choice.lower(): choice for choice in choices}
     if normalized not in allowed:
         msg = f"Invalid {opt}: {value!r}. Allowed: {', '.join(choices)}"
         raise typer.BadParameter(msg)

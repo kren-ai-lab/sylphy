@@ -33,7 +33,6 @@ from sylphy.cli._shared import (
 
 if TYPE_CHECKING:
     from sylphy.sequence_encoder.fft_encoder import FFTEncoder
-    from sylphy.types import FileFormat
 
 app = typer.Typer(
     name="encode-sequences",
@@ -167,13 +166,14 @@ def encode_sequences(
     - Alphabet and length validation are handled by the shared base encoder.
 
     """
+
     def _fail(m: str) -> None:
         raise RuntimeError(m)
 
     try:
         # Cheap validations (no heavy imports yet)
         enc_choice = validate_choice(encoder, ENCODER_CHOICES, "encoder")
-        fmt_choice = cast("FileFormat", validate_choice(format_output, EXPORT_CHOICES, "format-output"))
+        fmt_choice = validate_choice(format_output, EXPORT_CHOICES, "format-output")
         if enc_choice in {"physicochemical", "fft"}:
             validate_choice(type_descriptor or "aaindex", DESCRIPTOR_CHOICES, "type-descriptor")
 
@@ -188,7 +188,6 @@ def encode_sequences(
 
         # --- FFT pipeline (physicochemical -> FFT) ---
         if enc_choice == "fft":
-
             phys = create_encoder(
                 "physicochemical",
                 dataset=df,

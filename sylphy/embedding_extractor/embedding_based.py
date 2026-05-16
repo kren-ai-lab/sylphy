@@ -25,6 +25,10 @@ Pool = PoolType
 LayerAgg = LayerAggType
 LayerSpec = str | int | Sequence[int]
 
+DEFAULT_DEVICE: str = "cuda" if torch.cuda.is_available() else "cpu"
+DEFAULT_PRECISION: PrecisionType = "fp32"
+DEFAULT_DEBUG_MODE: int = logging.INFO
+
 
 class EmbeddingBase:
     """Base class for embedding extraction from protein sequences.

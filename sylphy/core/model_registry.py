@@ -20,6 +20,12 @@ from .model_spec import ModelSpec
 logger = get_logger(__name__)
 _LOCK = RLock()
 
+
+def normalize_name(s: str) -> str:
+    """Lowercase and strip a name string, treating None/empty as empty."""
+    return (s or "").strip().lower()
+
+
 # ----------------------------
 # Exceptions
 # ----------------------------

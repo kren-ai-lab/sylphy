@@ -29,6 +29,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "create_embedding": (".embedding_factory", "create_embedding"),
 }
 
+
 def __getattr__(name: str) -> object:
     """Resolve lazy exports and cache the loaded symbol."""
     spec = _LAZY_EXPORTS.get(name)

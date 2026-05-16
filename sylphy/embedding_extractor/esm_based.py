@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from .embedding_based import EmbeddingBase
+from .embedding_based import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -21,13 +20,13 @@ class ESMEmbedding(EmbeddingBase):
 
     def __init__(
         self,
-        name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        name_device: str = DEFAULT_DEVICE,
         name_model: str = "facebook/esm2_t6_8M_UR50D",
         name_tokenizer: str = "facebook/esm2_t6_8M_UR50D",
         dataset: pd.DataFrame | None = None,
         column_seq: str | None = "sequence",
-        debug_mode: int = logging.INFO,
-        precision: PrecisionType = "fp32",
+        debug_mode: int = DEFAULT_DEBUG_MODE,
+        precision: PrecisionType = DEFAULT_PRECISION,
         *,
         debug: bool = False,
         oom_backoff: bool = True,
@@ -60,7 +59,10 @@ class ESMEmbedding(EmbeddingBase):
 
             self.__logger__.info("Loading ESM tokenizer from: %s", local_dir)
             tokenizer = AutoTokenizer.from_pretrained(
-                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=False,
+                local_dir,
+                do_lower_case=False,
+                use_fast=True,
+                trust_remote_code=False,
             )
             if getattr(tokenizer, "pad_token_id", None) is None:
                 tokenizer.add_special_tokens({"pad_token": "<pad>"})

@@ -107,6 +107,7 @@ def _table() -> tuple[type[Table], Any] | tuple[None, None]:
     else:
         return Table, box
 
+
 # ----------------------------
 # Data Structures
 # ----------------------------
@@ -153,8 +154,6 @@ class CacheManager:
         glob = pattern or ("**/*" if recursive else "*")
         for p in base.glob(glob):
             try:
-                if not p.exists():
-                    continue
                 if p.is_dir():
                     if include_dirs:
                         st = p.stat()
@@ -360,7 +359,9 @@ def cmd_rm(
     *,
     pattern: str | None = typer.Option(None, "--pattern", "-p", help="Glob like '**/*.tmp'."),
     older_than: str | None = typer.Option(
-        None, "--older-than", help="Delete files older than given age (e.g., '30d', '12h').",
+        None,
+        "--older-than",
+        help="Delete files older than given age (e.g., '30d', '12h').",
     ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),  # noqa: FBT003
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation when applying."),  # noqa: FBT003
@@ -388,10 +389,14 @@ def cmd_rm(
 def cmd_prune(
     *,
     max_size: str | None = typer.Option(
-        None, "--max-size", help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB).",
+        None,
+        "--max-size",
+        help="Ensure total cache size <= VALUE by deleting oldest files (e.g., 10GB).",
     ),
     remove_empty_dirs: bool = typer.Option(
-        True, "--prune-empty/--keep-empty", help="Remove empty directories.",  # noqa: FBT003
+        True,  # noqa: FBT003
+        "--prune-empty/--keep-empty",
+        help="Remove empty directories.",
     ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="Show what would be removed."),  # noqa: FBT003
 ) -> None:

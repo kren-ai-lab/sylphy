@@ -108,10 +108,27 @@ class _JsonFormatter(logging.Formatter):
         }
         for k, v in record.__dict__.items():
             if k in {
-                "args", "asctime", "created", "exc_info", "exc_text", "filename",
-                "funcName", "levelname", "levelno", "lineno", "module", "msecs",
-                "msg", "name", "pathname", "process", "processName",
-                "relativeCreated", "stack_info", "thread", "threadName",
+                "args",
+                "asctime",
+                "created",
+                "exc_info",
+                "exc_text",
+                "filename",
+                "funcName",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "msg",
+                "name",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "stack_info",
+                "thread",
+                "threadName",
             }:
                 continue
             try:
@@ -129,7 +146,12 @@ class _JsonFormatter(logging.Formatter):
 
 
 def _make_stream_handler(
-    level: int, fmt: str, *, use_json: bool, use_utc: bool, datefmt: str | None,
+    level: int,
+    fmt: str,
+    *,
+    use_json: bool,
+    use_utc: bool,
+    datefmt: str | None,
 ) -> logging.Handler:
     h = logging.StreamHandler()
     h.setLevel(level)
@@ -297,7 +319,14 @@ def setup_logger(
 
     if with_file:
         _add_file_handler(
-            logger, file_path, fmt_file, json=uj, utc=uu, datefmt=datefmt_file, max_bytes=mb, backups=bk,
+            logger,
+            file_path,
+            fmt_file,
+            json=uj,
+            utc=uu,
+            datefmt=datefmt_file,
+            max_bytes=mb,
+            backups=bk,
         )
 
     if extra_filters:
@@ -333,6 +362,15 @@ def add_context(logger: logging.Logger, **context: object) -> None:
     if not context:
         return
     logger.addFilter(_ContextFilter(**context))
+
+
+def get_child_logger(suffix: str, **context: object) -> logging.Logger:
+    """Return a configured sylphy.<suffix> child logger with optional static context."""
+    _ = get_logger("sylphy")
+    log = logging.getLogger(f"sylphy.{suffix}")
+    if context:
+        add_context(log, **context)
+    return log
 
 
 def set_global_level(level: int | str, name: str = LOG_DEFAULT_NAME) -> None:

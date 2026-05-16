@@ -59,7 +59,8 @@ class FrequencyEncoder(EncoderBase):
             self.coded_dataset = pd.DataFrame(matrix, columns=header)
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
             self.__logger__.info(
-                "Frequency encoding completed with %d features.", self.coded_dataset.shape[1],
+                "Frequency encoding completed with %d features.",
+                self.coded_dataset.shape[1],
             )
         except Exception as e:
             msg = f"[ERROR] Failed to encode sequences: {e}"

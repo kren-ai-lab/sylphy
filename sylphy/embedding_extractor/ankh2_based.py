@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, cast
 
 import torch
@@ -11,7 +10,7 @@ from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
-from .embedding_based import EmbeddingBase
+from .embedding_based import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -25,15 +24,15 @@ class Ankh2Embedding(EmbeddingBase):
     def __init__(
         self,
         dataset: pd.DataFrame,
-        name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        name_device: str = DEFAULT_DEVICE,
         name_model: str = "ElnaggarLab/ankh2-ext1",
         name_tokenizer: str = "ElnaggarLab/ankh2-ext1",
         column_seq: str = "sequence",
-        debug_mode: int = logging.INFO,
+        debug_mode: int = DEFAULT_DEBUG_MODE,
         *,
         use_encoder_only: bool = True,
         debug: bool = False,
-        precision: PrecisionType = "fp32",
+        precision: PrecisionType = DEFAULT_PRECISION,
         oom_backoff: bool = True,
     ) -> None:
         """Initialize the Ankh2 backend."""
@@ -62,7 +61,10 @@ class Ankh2Embedding(EmbeddingBase):
 
             self.__logger__.info("Loading Ankh2 tokenizer from: %s", local_dir)
             self.tokenizer = AutoTokenizer.from_pretrained(
-                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=True,
+                local_dir,
+                do_lower_case=False,
+                use_fast=True,
+                trust_remote_code=True,
             )
             if getattr(self.tokenizer, "pad_token_id", None) is None:
                 if getattr(self.tokenizer, "pad_token", None) is None:

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, cast
 
-from sylphy.logging import add_context, get_logger
+from sylphy.core.model_registry import normalize_name
+from sylphy.logging import get_child_logger
 
 from .base_encoder import EncoderBase
 from .fft_encoder import FFTEncoder
@@ -29,10 +29,7 @@ __all__ = [
     "create_encoder",
 ]
 
-# Ensure package logger once, then child for the factory
-_ = get_logger("sylphy")
-_logger = logging.getLogger("sylphy.sequence_encoder.factory")
-add_context(_logger, component="sequence_encoder", facility="factory")
+_logger = get_child_logger("sequence_encoder.factory", component="sequence_encoder", facility="factory")
 
 # Canonical names for encoders
 _ALIASES: dict[str, str] = {
@@ -115,7 +112,7 @@ _ALLOWED: dict[str, set[str]] = {
 
 def _canonical(name: str) -> str:
     """Resolve an encoder name or alias to its canonical key."""
-    key = (name or "").strip().lower()
+    key = normalize_name(name)
     if key in _ALIASES:
         return _ALIASES[key]
     msg = (
@@ -151,7 +148,12 @@ def create_encoder(name: str, **kwargs: object) -> EncoderInstance:
     kind = _canonical(name)
     cls = _CLASSES[kind]
     params = _filter_kwargs(kind, kwargs)
-    _logger.info("Creating encoder kind=%s class=%s kwargs=%s", kind, cls.__name__, params)
-    add_context(_logger, encoder=cls.__name__)  # enrich context once we know it
+    _logger.info(
+        "Creating encoder kind=%s class=%s kwargs=%s",
+        kind,
+        cls.__name__,
+        params,
+        extra={"encoder": cls.__name__},
+    )
     constructor = cast("Callable[..., EncoderInstance]", cls)
     return constructor(**params)

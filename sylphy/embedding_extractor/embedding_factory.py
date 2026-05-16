@@ -6,8 +6,9 @@ import logging
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
+from sylphy.core.model_registry import normalize_name
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
-from sylphy.logging import add_context, get_logger
+from sylphy.logging import get_child_logger
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -17,35 +18,48 @@ if TYPE_CHECKING:
     from .embedding_based import EmbeddingBase  # for type hints only
 
 
-def _norm(s: str) -> str:
-    """Normalize a model name for backend dispatch."""
-    return (s or "").strip().lower()
 
-
-_ = get_logger("sylphy")
-logger = logging.getLogger("sylphy.embedding_extraction.factory")
-add_context(logger, component="embedding_extraction", backend="factory")
+logger = get_child_logger(
+    "embedding_extraction.factory",
+    component="embedding_extraction",
+    facility="factory",
+)
 
 _BACKENDS: list[tuple[tuple[str, ...], str, str, str, dict[str, Any]]] = [
     (
         ("esm2", "facebook/esm2"),
-        ".esm_based", "ESMEmbedding", "ESM2", {},
+        ".esm_based",
+        "ESMEmbedding",
+        "ESM2",
+        {},
     ),
     (
         ("ankh2", "elnaggarlab/ankh2", "ankh3", "elnaggarlab/ankh3"),
-        ".ankh2_based", "Ankh2Embedding", "Ankh2/3", {"use_encoder_only": True},
+        ".ankh2_based",
+        "Ankh2Embedding",
+        "Ankh2/3",
+        {"use_encoder_only": True},
     ),
     (
         ("t5", "prot_t5", "rostlab/prot_t5"),
-        ".prot5_based", "ProtT5Embedding", "ProtT5", {},
+        ".prot5_based",
+        "ProtT5Embedding",
+        "ProtT5",
+        {},
     ),
     (
         ("bert", "prot_bert", "rostlab/prot_bert"),
-        ".bert_based", "ProtBertEmbedding", "ProtBERT", {},
+        ".bert_based",
+        "ProtBertEmbedding",
+        "ProtBERT",
+        {},
     ),
     (
         ("mistral", "mistral-prot"),
-        ".mistral_based", "MistralEmbedding", "Mistral-Prot", {},
+        ".mistral_based",
+        "MistralEmbedding",
+        "Mistral-Prot",
+        {},
     ),
 ]
 
@@ -67,7 +81,7 @@ def create_embedding(
         Concrete backend instance.
 
     """
-    name = _norm(model_name)
+    name = normalize_name(model_name)
 
     common_kwargs: dict[str, Any] = {
         "name_device": name_device,

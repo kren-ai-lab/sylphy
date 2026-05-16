@@ -72,7 +72,8 @@ class KMerEncoder(EncoderBase):
                 self.coded_dataset = self.coded_dataset.drop(columns=["sequence"])
 
             self.__logger__.info(
-                "TF-IDF k-mer encoding completed with %d features.", self.coded_dataset.shape[1],
+                "TF-IDF k-mer encoding completed with %d features.",
+                self.coded_dataset.shape[1],
             )
         except Exception as e:
             msg = f"[ERROR] K-mer encoding failed: {e}"

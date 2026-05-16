@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from sylphy.types import PrecisionType
 
-    from .embedding_based import EmbeddingBased  # for type hints only
+    from .embedding_based import EmbeddingBase  # for type hints only
 
 
 def _norm(s: str) -> str:
@@ -38,7 +38,7 @@ def EmbeddingFactory(  # noqa: PLR0911
     *,
     oom_backoff: bool = True,
     debug: bool = False,
-) -> EmbeddingBased:
+) -> EmbeddingBase:
     """Instantiate an embedding backend from a model name.
 
     Returns:
@@ -50,9 +50,9 @@ def EmbeddingFactory(  # noqa: PLR0911
     if "esm2" in name or name.startswith("facebook/esm2"):
         logger.info("Selecting ESM2 backend", extra={"model": model_name})
         module = import_module(".esm_based", package=__package__)
-        ESMBasedEmbedding = module.ESMBasedEmbedding
+        ESMEmbedding = module.ESMEmbedding
 
-        return ESMBasedEmbedding(
+        return ESMEmbedding(
             name_device=name_device,
             name_model=model_name,
             name_tokenizer=model_name,
@@ -67,9 +67,9 @@ def EmbeddingFactory(  # noqa: PLR0911
     if "ankh2" in name or name.startswith("elnaggarlab/ankh2"):
         logger.info("Selecting Ankh2 backend", extra={"model": model_name})
         module = import_module(".ankh2_based", package=__package__)
-        Ankh2BasedEmbedding = module.Ankh2BasedEmbedding
+        Ankh2Embedding = module.Ankh2Embedding
 
-        return Ankh2BasedEmbedding(
+        return Ankh2Embedding(
             dataset=dataset,
             name_device=name_device,
             name_model=model_name,
@@ -85,9 +85,9 @@ def EmbeddingFactory(  # noqa: PLR0911
     if "ankh3" in name or name.startswith("elnaggarlab/ankh3"):
         logger.info("Selecting Ankh2 backend", extra={"model": model_name})
         module = import_module(".ankh2_based", package=__package__)
-        Ankh2BasedEmbedding = module.Ankh2BasedEmbedding
+        Ankh2Embedding = module.Ankh2Embedding
 
-        return Ankh2BasedEmbedding(
+        return Ankh2Embedding(
             dataset=dataset,
             name_device=name_device,
             name_model=model_name,
@@ -103,9 +103,9 @@ def EmbeddingFactory(  # noqa: PLR0911
     if "t5" in name or "prot_t5" in name or name.startswith("rostlab/prot_t5"):
         logger.info("Selecting ProtT5 backend", extra={"model": model_name})
         module = import_module(".prot5_based", package=__package__)
-        Prot5Based = module.Prot5Based
+        ProtT5Embedding = module.ProtT5Embedding
 
-        return Prot5Based(
+        return ProtT5Embedding(
             name_device=name_device,
             name_model=model_name,
             name_tokenizer=model_name,
@@ -120,9 +120,9 @@ def EmbeddingFactory(  # noqa: PLR0911
     if "bert" in name or "prot_bert" in name or name.startswith("rostlab/prot_bert"):
         logger.info("Selecting ProtBERT backend", extra={"model": model_name})
         module = import_module(".bert_based", package=__package__)
-        BertBasedEmbedding = module.BertBasedEmbedding
+        ProtBertEmbedding = module.ProtBertEmbedding
 
-        return BertBasedEmbedding(
+        return ProtBertEmbedding(
             name_device=name_device,
             name_model=model_name,
             name_tokenizer=model_name,
@@ -137,9 +137,9 @@ def EmbeddingFactory(  # noqa: PLR0911
     if "mistral" in name or "mistral-prot" in name:
         logger.info("Selecting Mistral-Prot backend", extra={"model": model_name})
         module = import_module(".mistral_based", package=__package__)
-        MistralBasedEmbedding = module.MistralBasedEmbedding
+        MistralEmbedding = module.MistralEmbedding
 
-        return MistralBasedEmbedding(
+        return MistralEmbedding(
             name_device=name_device,
             name_model=model_name,
             name_tokenizer=model_name,
@@ -155,7 +155,7 @@ def EmbeddingFactory(  # noqa: PLR0911
         logger.info("Selecting ESM-C backend", extra={"model": model_name})
         try:
             module = import_module(".esmc_based", package=__package__)
-            ESMCBasedEmbedding = module.ESMCBasedEmbedding
+            ESMCEmbedding = module.ESMCEmbedding
         except (ImportError, ModuleNotFoundError) as exc:
             wrapped = wrap_optional_dependency_error(
                 exc,
@@ -166,7 +166,7 @@ def EmbeddingFactory(  # noqa: PLR0911
             if wrapped is not None:
                 raise wrapped from exc
             raise
-        return ESMCBasedEmbedding(
+        return ESMCEmbedding(
             name_device=name_device,
             name_model=model_name,  # e.g., "esmc_300m" or registry key
             dataset=dataset,

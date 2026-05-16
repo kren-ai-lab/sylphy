@@ -9,10 +9,10 @@ import pandas as pd
 
 from sylphy.constants import get_index, residues
 
-from .base_encoder import Encoders
+from .base_encoder import EncoderBase
 
 
-class OneHotEncoder(Encoders):
+class OneHotEncoder(EncoderBase):
     """Encode sequences as one-hot residue vectors padded to ``max_length``.
 
     Supports canonical or extended alphabets configured by base-class flags.

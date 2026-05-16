@@ -13,7 +13,7 @@ from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
 from tqdm import tqdm
 
-from .embedding_based import EmbeddingBased, LayerAgg, LayerSpec, Pool
+from .embedding_based import EmbeddingBase, LayerAgg, LayerSpec, Pool
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from sylphy.types import PrecisionType
 
 
-class ESMCBasedEmbedding(EmbeddingBased):
+class ESMCEmbedding(EmbeddingBase):
     """ESM-C backend using Meta's ESM SDK."""
 
     def __init__(

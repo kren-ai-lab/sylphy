@@ -121,11 +121,11 @@ sylphy/
 │   ├── non_linear_reductions.py # UMAP, Isomap, t-SNE, etc.
 │   └── factory.py              # reduce_dimensionality factory
 ├── sequence_encoder/      # Classical sequence encoders
-│   ├── base_encoder.py    # Common validation and preprocessing (Encoders class)
+│   ├── base_encoder.py    # Common validation and preprocessing (EncoderBase class)
 │   ├── one_hot_encoder.py # OneHotEncoder
 │   ├── ordinal_encoder.py # OrdinalEncoder
 │   ├── frequency_encoder.py # FrequencyEncoder
-│   ├── kmers_encoder.py   # KMersEncoders (TF-IDF)
+│   ├── kmers_encoder.py   # KMerEncoder (TF-IDF)
 │   ├── physicochemical_encoder.py # PhysicochemicalEncoder (AAIndex properties)
 │   ├── fft_encoder.py     # FFTEncoder (expects numeric input)
 │   └── factory.py         # create_encoder factory
@@ -135,7 +135,7 @@ sylphy/
 ### Key Design Patterns
 
 #### 1. Lazy Loading
-Heavy dependencies (PyTorch, Transformers) are loaded lazily in `embedding_extractor/__init__.py` using `__getattr__` to keep imports fast. When accessing classes like `ESMBasedEmbedding`, the module is imported on-demand and cached.
+Heavy dependencies (PyTorch, Transformers) are loaded lazily in `embedding_extractor/__init__.py` using `__getattr__` to keep imports fast. When accessing classes like `ESMEmbedding`, the module is imported on-demand and cached.
 
 #### 2. Factory Pattern
 All major components use factories:
@@ -163,14 +163,14 @@ FFT encoders expect numeric input. Common workflow:
 
 ### Base Classes
 
-#### `Encoders` (sequence_encoder/base_encoder.py)
+#### `EncoderBase` (sequence_encoder/base_encoder.py)
 - Common validation for all sequence encoders
 - Parameters: `dataset`, `sequence_column`, `max_length`, `allow_extended`, `allow_unknown`
 - Validates amino acid alphabet and filters sequences by length
 - Subclasses implement `run_process()` and populate `coded_dataset`
 - Export via `export_encoder(path)` (supports CSV/Parquet)
 
-#### `EmbeddingBased` (embedding_extractor/embedding_based.py)
+#### `EmbeddingBase` (embedding_extractor/embedding_based.py)
 - Base for all embedding extractors
 - Handles model/tokenizer loading from HuggingFace or local paths
 - Manages device placement (cuda/cpu) and precision (fp32/fp16/bf16)
@@ -269,14 +269,14 @@ pip install -e ".[embeddings,reductions,parquet]"
 ## Common Patterns
 
 ### Creating a new sequence encoder
-1. Inherit from `Encoders` in `sequence_encoder/base_encoder.py`
+1. Inherit from `EncoderBase` in `sequence_encoder/base_encoder.py`
 2. Implement `run_process(self) -> None` to populate `self.coded_dataset`
 3. Register in `sequence_encoder/factory.py` encoder mapping
 4. Add exports to `sequence_encoder/__init__.py`
 5. Add tests in `tests/sequence_encoder/`
 
 ### Creating a new embedding backend
-1. Inherit from `EmbeddingBased` in `embedding_extractor/embedding_based.py`
+1. Inherit from `EmbeddingBase` in `embedding_extractor/embedding_based.py`
 2. Override `__init__` if custom initialization needed
 3. For non-tokenizer models, set `requires_tokenizer=False` and override `embedding_process()`
 4. Register in `embedding_extractor/embedding_factory.py` model family mapping

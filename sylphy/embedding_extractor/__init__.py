@@ -8,25 +8,25 @@ from typing import TYPE_CHECKING
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
 __all__ = [
-    "Ankh2BasedEmbedding",
-    "BertBasedEmbedding",
-    "ESMBasedEmbedding",
-    "ESMCBasedEmbedding",
-    "EmbeddingBased",
+    "Ankh2Embedding",
+    "ESMCEmbedding",
+    "ESMEmbedding",
+    "EmbeddingBase",
     "EmbeddingFactory",
-    "MistralBasedEmbedding",
-    "Prot5Based",
+    "MistralEmbedding",
+    "ProtBertEmbedding",
+    "ProtT5Embedding",
     "create_embedding",
 ]
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
-    "EmbeddingBased": (".embedding_based", "EmbeddingBased"),
-    "ESMBasedEmbedding": (".esm_based", "ESMBasedEmbedding"),
-    "Prot5Based": (".prot5_based", "Prot5Based"),
-    "BertBasedEmbedding": (".bert_based", "BertBasedEmbedding"),
-    "MistralBasedEmbedding": (".mistral_based", "MistralBasedEmbedding"),
-    "ESMCBasedEmbedding": (".esmc_based", "ESMCBasedEmbedding"),
-    "Ankh2BasedEmbedding": (".ankh2_based", "Ankh2BasedEmbedding"),
+    "EmbeddingBase": (".embedding_based", "EmbeddingBase"),
+    "ESMEmbedding": (".esm_based", "ESMEmbedding"),
+    "ProtT5Embedding": (".prot5_based", "ProtT5Embedding"),
+    "ProtBertEmbedding": (".bert_based", "ProtBertEmbedding"),
+    "MistralEmbedding": (".mistral_based", "MistralEmbedding"),
+    "ESMCEmbedding": (".esmc_based", "ESMCEmbedding"),
+    "Ankh2Embedding": (".ankh2_based", "Ankh2Embedding"),
     "EmbeddingFactory": (".embedding_factory", "EmbeddingFactory"),
 }
 
@@ -64,13 +64,13 @@ def __dir__() -> list[str]:
 
 # Optional typing-only exposure (keeps runtime lazy)
 if TYPE_CHECKING:  # pragma: no cover
-    from .ankh2_based import Ankh2BasedEmbedding
-    from .bert_based import BertBasedEmbedding
-    from .embedding_based import EmbeddingBased
+    from .ankh2_based import Ankh2Embedding
+    from .bert_based import ProtBertEmbedding
+    from .embedding_based import EmbeddingBase
     from .embedding_factory import EmbeddingFactory
-    from .esm_based import ESMBasedEmbedding
-    from .esmc_based import ESMCBasedEmbedding
-    from .mistral_based import MistralBasedEmbedding
-    from .prot5_based import Prot5Based
+    from .esm_based import ESMEmbedding
+    from .esmc_based import ESMCEmbedding
+    from .mistral_based import MistralEmbedding
+    from .prot5_based import ProtT5Embedding
 
     create_embedding = EmbeddingFactory

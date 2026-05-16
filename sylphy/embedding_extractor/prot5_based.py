@@ -12,7 +12,7 @@ from transformers import AutoConfig, T5EncoderModel, T5Tokenizer
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
-from .embedding_based import EmbeddingBased
+from .embedding_based import EmbeddingBase
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from sylphy.types import PrecisionType
 
 
-class Prot5Based(EmbeddingBased):
+class ProtT5Embedding(EmbeddingBase):
     """Extract embeddings using ProtT5 encoder models."""
 
     def __init__(

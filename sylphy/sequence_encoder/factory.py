@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, cast
 
 from sylphy.logging import add_context, get_logger
 
-from .base_encoder import Encoders
+from .base_encoder import EncoderBase
 from .fft_encoder import FFTEncoder
 from .frequency_encoder import FrequencyEncoder
-from .kmers_encoder import KMersEncoders
+from .kmers_encoder import KMerEncoder
 from .one_hot_encoder import OneHotEncoder
 from .ordinal_encoder import OrdinalEncoder
 from .physicochemical_encoder import PhysicochemicalEncoder
@@ -19,10 +19,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 __all__ = [
-    "Encoders",
+    "EncoderBase",
     "FFTEncoder",
     "FrequencyEncoder",
-    "KMersEncoders",
+    "KMerEncoder",
     "OneHotEncoder",
     "OrdinalEncoder",
     "PhysicochemicalEncoder",
@@ -57,13 +57,13 @@ _ALIASES: dict[str, str] = {
 }
 
 # Class map
-EncoderInstance = Encoders | FFTEncoder
+EncoderInstance = EncoderBase | FFTEncoder
 
-_CLASSES: dict[str, type[Encoders | FFTEncoder]] = {
+_CLASSES: dict[str, type[EncoderBase | FFTEncoder]] = {
     "one_hot": OneHotEncoder,
     "ordinal": OrdinalEncoder,
     "frequency": FrequencyEncoder,
-    "kmers": KMersEncoders,
+    "kmers": KMerEncoder,
     "physicochemical": PhysicochemicalEncoder,
     "fft": FFTEncoder,
 }

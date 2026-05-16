@@ -26,7 +26,7 @@ LayerAgg = LayerAggType
 LayerSpec = str | int | Sequence[int]
 
 
-class EmbeddingBased:
+class EmbeddingBase:
     """Base class for embedding extraction from protein sequences.
 
     Supports:

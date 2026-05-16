@@ -13,10 +13,10 @@ import requests
 from sylphy.constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
 from sylphy.core import get_config
 
-from .base_encoder import Encoders
+from .base_encoder import EncoderBase
 
 
-class PhysicochemicalEncoder(Encoders):
+class PhysicochemicalEncoder(EncoderBase):
     """Encode sequences using a selected physicochemical property (e.g., AAIndex).
 
     Notes:

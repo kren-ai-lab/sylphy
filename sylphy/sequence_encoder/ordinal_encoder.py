@@ -9,10 +9,10 @@ import pandas as pd
 
 from sylphy.constants import get_index, residues
 
-from .base_encoder import Encoders
+from .base_encoder import EncoderBase
 
 
-class OrdinalEncoder(Encoders):
+class OrdinalEncoder(EncoderBase):
     """Encode residues as alphabet indices padded to ``max_length``."""
 
     def __init__(

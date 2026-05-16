@@ -5,12 +5,12 @@ from typing import Any, cast
 import pandas as pd
 import pytest
 
-from sylphy.embedding_extractor.prot5_based import Prot5Based
+from sylphy.embedding_extractor.prot5_based import ProtT5Embedding
 
 
 def test_prot5_missing_sentencepiece_suggests_embeddings_extra(monkeypatch: pytest.MonkeyPatch) -> None:
     df = pd.DataFrame({"sequence": ["AAAA"]})
-    inst = Prot5Based(dataset=df, name_device="cpu")
+    inst = ProtT5Embedding(dataset=df, name_device="cpu")
     monkeypatch.setattr(inst, "_register_and_resolve", lambda: "fake-model-dir")
 
     def _boom(*_args: object, **_kwargs: object) -> object:

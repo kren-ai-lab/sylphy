@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from .embedding_based import EmbeddingBased
+from .embedding_based import EmbeddingBase
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from sylphy.types import PrecisionType
 
 
-class BertBasedEmbedding(EmbeddingBased):
+class ProtBertEmbedding(EmbeddingBase):
     """Extract embeddings using ProtBERT models."""
 
     def __init__(

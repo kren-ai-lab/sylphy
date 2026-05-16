@@ -2,7 +2,7 @@
 
 Unified CLI to extract protein/peptide embeddings from pretrained models
 (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C), using Sylphy's
-factory and EmbeddingBased API.
+factory and EmbeddingBase API.
 
 Design goals
 ------------
@@ -14,7 +14,7 @@ Design goals
 
 Backends are selected by the factory from the model name. See:
 - EmbeddingFactory: backend selection by name substring/namespace.
-- EmbeddingBased: run_process(), layer selection/aggregation, pooling, export.
+- EmbeddingBase: run_process(), layer selection/aggregation, pooling, export.
 
 """
 
@@ -164,7 +164,7 @@ def get_embedding(
     batch_size: int = BATCH_SIZE_OPTION,
     max_length: int = MAX_LENGTH_OPTION,
     oom_backoff: bool = OOM_BACKOFF_OPTION,
-    # Layer/Pooling controls (handled by EmbeddingBased)
+    # Layer/Pooling controls (handled by EmbeddingBase)
     layers: str = LAYERS_OPTION,
     layer_agg: str = LAYER_AGG_OPTION,
     pool: str = POOL_OPTION,
@@ -183,7 +183,7 @@ def get_embedding(
     -----
     - Backend selection is handled by the factory from the model name
       (ESM2, ProtT5, ProtBERT, Ankh2, Mistral-Prot, ESM-C).
-    - The EmbeddingBased pipeline manages tokenizer/model loading, AMP precision,
+    - The EmbeddingBase pipeline manages tokenizer/model loading, AMP precision,
       OOM backoff, layer selection/aggregation, pooling, and export.
 
     Examples

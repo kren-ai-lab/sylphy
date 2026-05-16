@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
     from sylphy.types import FileFormat
 
 
-class Encoders:
+class EncoderBase(ABC):
     """Common pre-processing and validation for protein/peptide sequence encoders.
 
     This class validates the input alphabet and maximum length constraints,
@@ -140,10 +141,9 @@ class Encoders:
     # IO
     # ----------------------------
 
+    @abstractmethod
     def run_process(self) -> None:
         """Run the encoder-specific processing routine."""
-        msg = "Encoders subclasses must implement run_process()."
-        raise NotImplementedError(msg)
 
     def export_encoder(
         self,

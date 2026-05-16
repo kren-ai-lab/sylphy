@@ -4,10 +4,10 @@ import pandas as pd
 import torch
 
 from sylphy.embedding_extractor import (
-    BertBasedEmbedding,
-    ESMBasedEmbedding,
-    MistralBasedEmbedding,
-    Prot5Based,
+    ProtBertEmbedding,
+    ESMEmbedding,
+    MistralEmbedding,
+    ProtT5Embedding,
 )
 
 
@@ -32,7 +32,7 @@ def main():
     path_export = sys.argv[3]
 
     # --- ESM2 ---
-    esm2 = ESMBasedEmbedding(
+    esm2 = ESMEmbedding(
         dataset=df_train,
         column_seq="seq",
         name_model="facebook/esm2_t6_8M_UR50D",
@@ -44,7 +44,7 @@ def main():
     )
     run_backend(esm2, f"{path_export}esm2_embedding/train_dataset.csv")
 
-    esm2 = ESMBasedEmbedding(
+    esm2 = ESMEmbedding(
         dataset=df_test,
         column_seq="seq",
         name_model="facebook/esm2_t6_8M_UR50D",
@@ -57,7 +57,7 @@ def main():
     run_backend(esm2, f"{path_export}esm2_embedding/test_dataset.csv")
 
     # --- ProtT5 ---
-    prot5 = Prot5Based(
+    prot5 = ProtT5Embedding(
         dataset=df_train,
         column_seq="seq",
         name_model="Rostlab/prot_t5_xl_uniref50",
@@ -69,7 +69,7 @@ def main():
     )
     run_backend(prot5, f"{path_export}prot5_embedding/train_dataset.csv")
 
-    prot5 = Prot5Based(
+    prot5 = ProtT5Embedding(
         dataset=df_test,
         column_seq="seq",
         name_model="Rostlab/prot_t5_xl_uniref50",
@@ -82,7 +82,7 @@ def main():
     run_backend(prot5, f"{path_export}prot5_embedding/test_dataset.csv")
 
     # --- Bert ---
-    bert = BertBasedEmbedding(
+    bert = ProtBertEmbedding(
         dataset=df_train,
         column_seq="seq",
         name_model="Rostlab/prot_bert",
@@ -94,7 +94,7 @@ def main():
     )
     run_backend(bert, f"{path_export}bert_embedding/train_dataset.csv")
 
-    bert = BertBasedEmbedding(
+    bert = ProtBertEmbedding(
         dataset=df_test,
         column_seq="seq",
         name_model="Rostlab/prot_bert",
@@ -107,7 +107,7 @@ def main():
     run_backend(bert, f"{path_export}bert_embedding/test_dataset.csv")
 
     # --- Mistral ---
-    mistral = MistralBasedEmbedding(
+    mistral = MistralEmbedding(
         dataset=df_train,
         column_seq="seq",
         name_model="RaphaelMourad/Mistral-Prot-v1-134M",
@@ -119,7 +119,7 @@ def main():
     )
     run_backend(mistral, f"{path_export}mistral_embedding/train_dataset.csv")
 
-    mistral = MistralBasedEmbedding(
+    mistral = MistralEmbedding(
         dataset=df_test,
         column_seq="seq",
         name_model="RaphaelMourad/Mistral-Prot-v1-134M",

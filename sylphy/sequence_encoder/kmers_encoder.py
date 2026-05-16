@@ -9,10 +9,10 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from .base_encoder import Encoders
+from .base_encoder import EncoderBase
 
 
-class KMersEncoders(Encoders):
+class KMerEncoder(EncoderBase):
     """TF-IDF encode k-merized sequences (word-level analyzer)."""
 
     def __init__(
@@ -35,7 +35,7 @@ class KMersEncoders(Encoders):
             allow_unknown=allow_unknown,
             debug=debug,
             debug_mode=debug_mode,
-            name_logging=KMersEncoders.__name__,
+            name_logging=KMerEncoder.__name__,
         )
         self.size_kmer = size_kmer
 

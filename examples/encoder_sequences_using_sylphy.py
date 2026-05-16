@@ -4,7 +4,7 @@ import warnings
 import pandas as pd
 
 from sylphy.sequence_encoder import (
-    KMersEncoders,
+    KMerEncoder,
     OneHotEncoder,
     OrdinalEncoder,
     PhysicochemicalEncoder,
@@ -44,9 +44,9 @@ make_encoder(ordinal_encoder_test, f"{path_export}ordinal/test_dataset.csv")
 
 ### KMers
 print("Coding with kmers")
-kmer_train = KMersEncoders(dataset=df_training, sequence_column="seq")
+kmer_train = KMerEncoder(dataset=df_training, sequence_column="seq")
 
-kmer_test = KMersEncoders(dataset=df_testing, sequence_column="seq")
+kmer_test = KMerEncoder(dataset=df_testing, sequence_column="seq")
 
 make_encoder(kmer_train, f"{path_export}kmers/train_dataset.csv")
 make_encoder(kmer_test, f"{path_export}kmers/test_dataset.csv")

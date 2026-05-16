@@ -11,7 +11,7 @@ from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
-from .embedding_based import EmbeddingBased
+from .embedding_based import EmbeddingBase
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from sylphy.types import PrecisionType
 
 
-class Ankh2BasedEmbedding(EmbeddingBased):
+class Ankh2Embedding(EmbeddingBase):
     """Extract embeddings using Ankh2 models."""
 
     def __init__(

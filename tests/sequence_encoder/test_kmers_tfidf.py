@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pandas as pd
 
-from sylphy.sequence_encoder import KMersEncoders
+from sylphy.sequence_encoder import KMerEncoder
 
 
 def test_kmers_tfidf_basic() -> None:
     """Verify k-mer encoder produces TF-IDF features for extracted k-mers."""
     df = pd.DataFrame({"sequence": ["ABCDE", "BCDEF", "CDEFG"]})
-    enc = KMersEncoders(dataset=df, size_kmer=3, debug=True)
+    enc = KMerEncoder(dataset=df, size_kmer=3, debug=True)
     enc.run_process()
     X = enc.coded_dataset
 

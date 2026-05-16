@@ -9,10 +9,10 @@ import pandas as pd
 
 from sylphy.constants import residues
 
-from .base_encoder import Encoders
+from .base_encoder import EncoderBase
 
 
-class FrequencyEncoder(Encoders):
+class FrequencyEncoder(EncoderBase):
     """Encode sequences by normalized per-residue frequency over the selected alphabet.
 
     Output is a single |alphabet|-dimensional vector per sequence:

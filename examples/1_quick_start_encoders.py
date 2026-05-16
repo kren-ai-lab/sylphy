@@ -52,9 +52,7 @@ def main() -> None:
     fft.run_process()
     print("fft:", fft.coded_dataset.shape)
 
-    one_hot_factory = create_encoder(
-        "onehot", dataset=df, sequence_column="sequence", max_length=20
-    )
+    one_hot_factory = create_encoder("onehot", dataset=df, sequence_column="sequence", max_length=20)
     one_hot_factory.run_process()
     print("factory (onehot):", one_hot_factory.coded_dataset.shape)
 

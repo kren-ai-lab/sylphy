@@ -32,17 +32,15 @@ hooks = [
   {
     id = "ty",
     name = "ty-check",
-    entry = "uv run ty check",
-    language = "python",
-    types = ["python"],
+    entry = "uv run task ty",
+    language = "system",
     pass_filenames = false
   },
   {
     id = "pyrefly",
     name = "pyrefly-check",
-    entry = "uv run pyrefly check",
-    language = "python",
-    types = ["python"],
+    entry = "uv run task pyrefly",
+    language = "system",
     pass_filenames = false
   }
 ]

@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from .embedding_base import EmbeddingBase  # for type hints only
 
 
-
 logger = get_child_logger(
     "embedding_extraction.factory",
     component="embedding_extraction",

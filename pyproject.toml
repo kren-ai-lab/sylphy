@@ -117,12 +117,22 @@ ignore = ["COM812", "D203", "D213", "N802", "N803", "N806", "PLR0913"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "PLC0415", "PLR2004", "S101"]
+"examples/*" = [
+    "ANN",     # type annotations not required in examples
+    "D",       # docstrings not required in examples
+    "ERA001",  # section comments in examples look like commented-out code
+    "INP001",  # example scripts are intentionally standalone modules
+    "PLR2004", # small referential scripts can compare against literal sizes
+    "S101",    # lightweight runtime checks are fine in examples
+    "S603",    # subprocess usage is explicit in CLI examples
+    "T201",    # examples print result snippets by design
+]
 
 [tool.taskipy.tasks]
-sort-imports = "ruff check --fix --select I,F401 sylphy/ tests/"
-format = "task sort-imports && ruff format sylphy/ tests/"
-lint = "ruff check sylphy/ tests/"
-lint-fix = "ruff check --fix sylphy/ tests/"
+sort-imports = "ruff check --fix --select I,F401 sylphy/ tests/ examples/"
+format = "task sort-imports && ruff format sylphy/ tests/ examples/"
+lint = "ruff check sylphy/ tests/ examples/"
+lint-fix = "ruff check --fix sylphy/ tests/ examples/"
 test = "pytest -q"
 test-v = "pytest -v"
 test-cov = "pytest --cov=sylphy --cov-report=html"

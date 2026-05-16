@@ -2,10 +2,10 @@ import pandas as pd
 
 from sylphy.embedding_extractor import (
     Ankh2Embedding,
-    ProtBertEmbedding,
-    ESMEmbedding,
     ESMCEmbedding,
+    ESMEmbedding,
     MistralEmbedding,
+    ProtBertEmbedding,
     ProtT5Embedding,
 )
 

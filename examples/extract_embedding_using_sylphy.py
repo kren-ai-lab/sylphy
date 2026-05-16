@@ -4,9 +4,9 @@ import pandas as pd
 import torch
 
 from sylphy.embedding_extractor import (
-    ProtBertEmbedding,
     ESMEmbedding,
     MistralEmbedding,
+    ProtBertEmbedding,
     ProtT5Embedding,
 )
 

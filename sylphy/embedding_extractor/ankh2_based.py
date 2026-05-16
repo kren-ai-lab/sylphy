@@ -86,15 +86,11 @@ class Ankh2BasedEmbedding(EmbeddingBased):
                 packages=("sentencepiece",),
             )
             if wrapped is not None:
-                self.status = False
-                self.message = str(wrapped)
-                self.__logger__.error(self.message)
+                self.__logger__.error("%s", wrapped)
                 raise wrapped from e
             raise
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load Ankh2 tokenizer/model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load Ankh2 tokenizer/model: %s", e)
             raise
 
     @torch.no_grad()

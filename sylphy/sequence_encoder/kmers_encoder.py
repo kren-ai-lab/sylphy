@@ -46,10 +46,6 @@ class KMersEncoders(Encoders):
 
     def run_process(self) -> None:
         """Vectorize k-mer text with TF-IDF and store the encoded dataset."""
-        if not self.status:
-            self.__logger__.warning("Encoding aborted due to failed validation.")
-            return
-
         try:
             self.__logger__.info("Starting k-mer encoding (k=%d).", self.size_kmer)
             self.dataset["kmer_sequence"] = self.dataset[self.sequence_column].apply(
@@ -79,7 +75,6 @@ class KMersEncoders(Encoders):
                 "TF-IDF k-mer encoding completed with %d features.", self.coded_dataset.shape[1],
             )
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] K-mer encoding failed: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] K-mer encoding failed: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e

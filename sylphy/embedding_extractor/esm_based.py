@@ -73,9 +73,7 @@ class ESMBasedEmbedding(EmbeddingBased):
             self.model = model
             model.eval()
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load ESM tokenizer/model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load ESM tokenizer/model: %s", e)
             raise
 
     def _pre_tokenize(self, batch: list[str]) -> list[str]:

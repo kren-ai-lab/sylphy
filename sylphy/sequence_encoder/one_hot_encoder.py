@@ -71,10 +71,6 @@ class OneHotEncoder(Encoders):
 
     def run_process(self) -> None:
         """Encode all validated sequences using one-hot representation."""
-        if not self.status:
-            self.__logger__.warning("Encoding skipped; dataset validation failed.")
-            return
-
         try:
             self.__logger__.info("Starting one-hot encoding for %d sequences.", len(self.dataset))
             matrix = [
@@ -86,7 +82,6 @@ class OneHotEncoder(Encoders):
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
             self.__logger__.info("One-hot encoding completed with %d features.", self.coded_dataset.shape[1])
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] One-hot encoding failed: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] One-hot encoding failed: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e

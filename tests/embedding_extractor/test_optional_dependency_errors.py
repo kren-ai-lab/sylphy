@@ -24,5 +24,3 @@ def test_prot5_missing_sentencepiece_suggests_embeddings_extra(monkeypatch: pyte
 
     with pytest.raises(ImportError, match=r"sylphy\[embeddings\]"):
         inst.load_model_tokenizer()
-
-    assert "sentencepiece" in inst.message.lower()

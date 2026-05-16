@@ -87,9 +87,6 @@ class EmbeddingBased:
 
         self.requires_tokenizer: bool = self.provider == "huggingface"
 
-        self.status: bool = True
-        self.message: str = ""
-
     @property
     def device(self) -> torch.device:
         """Return the torch device used for model execution."""
@@ -147,10 +144,9 @@ class EmbeddingBased:
             self.model.eval()
 
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] Failed to load tokenizer/model: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] Failed to load tokenizer/model: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e
 
     # ---------------------------------------------------------------------
     # Readiness helpers
@@ -446,8 +442,6 @@ class EmbeddingBased:
                 )
                 self.release_resources()
                 self.coded_dataset = df
-                self.status = True
-                self.message = "OK"
                 self.__logger__.info(
                     "Embedding extraction (non-HF) complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
                     df.shape,
@@ -500,8 +494,6 @@ class EmbeddingBased:
             columns_index = pd.Index(header)
             self.coded_dataset = pd.DataFrame(Xall, columns=columns_index, index=self.dataset.index)
             self.coded_dataset[self.column_seq] = self.dataset[self.column_seq].to_numpy()
-            self.status = True
-            self.message = "OK"
             self.__logger__.info(
                 "Embedding extraction complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
                 Xall.shape,
@@ -510,10 +502,9 @@ class EmbeddingBased:
                 pool,
             )
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] run_process failed: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] run_process failed: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e
 
     def export_encoder(
         self,

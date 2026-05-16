@@ -73,9 +73,7 @@ class BertBasedEmbedding(EmbeddingBased):
             self.model = model
             model.eval()
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load ProtBERT tokenizer/model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load ProtBERT tokenizer/model: %s", e)
             raise
 
     def _pre_tokenize(self, batch: list[str]) -> list[str]:

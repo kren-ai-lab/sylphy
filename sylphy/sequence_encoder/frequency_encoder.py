@@ -49,10 +49,6 @@ class FrequencyEncoder(Encoders):
 
     def run_process(self) -> None:
         """Encode each sequence as normalized residue frequencies."""
-        if not self.status:
-            self.__logger__.warning("Encoding skipped due to failed validation.")
-            return
-
         try:
             self.__logger__.info("Starting frequency encoding (alphabet size=%d).", len(self._alpha))
             matrix = [
@@ -66,7 +62,6 @@ class FrequencyEncoder(Encoders):
                 "Frequency encoding completed with %d features.", self.coded_dataset.shape[1],
             )
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] Failed to encode sequences: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] Failed to encode sequences: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e

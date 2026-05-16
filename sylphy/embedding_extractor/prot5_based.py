@@ -86,15 +86,11 @@ class Prot5Based(EmbeddingBased):
                 packages=("sentencepiece",),
             )
             if wrapped is not None:
-                self.status = False
-                self.message = str(wrapped)
-                self.__logger__.error(self.message)
+                self.__logger__.error("%s", wrapped)
                 raise wrapped from e
             raise
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load ProtT5 tokenizer/model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load ProtT5 tokenizer/model: %s", e)
             raise
 
     def _pre_tokenize(self, batch: list[str]) -> list[str]:

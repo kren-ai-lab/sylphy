@@ -73,9 +73,7 @@ class MistralBasedEmbedding(EmbeddingBased):
             self.model = model
             model.eval()
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load Mistral tokenizer/model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load Mistral tokenizer/model: %s", e)
             raise
 
     @torch.no_grad()

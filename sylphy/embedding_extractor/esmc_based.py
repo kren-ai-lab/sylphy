@@ -89,13 +89,9 @@ class ESMCBasedEmbedding(EmbeddingBased):
             mdl.to(self.device)
             mdl.eval()
             self.model = mdl
-            self.status = True
-            self.message = "ESM-C model loaded."
             self.__logger__.info("ESM-C model '%s' loaded successfully.", load_ref)
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load ESM-C model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load ESM-C model: %s", e)
             raise
 
     @torch.no_grad()

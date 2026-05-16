@@ -36,8 +36,6 @@ class Encoders:
     Attributes:
         dataset: Cleaned and validated dataset.
         coded_dataset: Output feature matrix populated by subclasses.
-        status: Validation status flag.
-        message: Last status or error message.
         max_length: Maximum permitted sequence length.
         allow_extended: Whether extended alphabet mode is enabled.
         allow_unknown: Whether ``X`` is allowed when not using extended mode.
@@ -70,22 +68,14 @@ class Encoders:
         self.allow_extended = allow_extended
         self.allow_unknown = allow_unknown
 
-        self.status = True
-        self.message = ""
         self.coded_dataset: pd.DataFrame = pd.DataFrame()
 
         if dataset is None:
-            self.status = False
-            self.message = "[ERROR] No dataset provided to encoder."
-            self.__logger__.error(self.message)
-            return
+            msg = "[ERROR] No dataset provided to encoder."
+            self.__logger__.error(msg)
+            raise ValueError(msg)
 
-        try:
-            self.make_revisions()
-        except (RuntimeError, ValueError) as e:
-            self.status = False
-            self.message = f"[ERROR] Initialization failed: {e}"
-            self.__logger__.exception(self.message)
+        self.make_revisions()
 
     # ----------------------------
     # Validation steps
@@ -94,10 +84,9 @@ class Encoders:
     def make_revisions(self) -> None:
         """Run alphabet validation and length filtering."""
         if self.sequence_column not in self.dataset.columns:
-            self.status = False
-            self.message = f"[ERROR] Column '{self.sequence_column}' not found in dataset."
-            self.__logger__.error(self.message)
-            raise ValueError(self.message)
+            msg = f"[ERROR] Column '{self.sequence_column}' not found in dataset."
+            self.__logger__.error(msg)
+            raise ValueError(msg)
 
         try:
             self.__logger__.info(
@@ -108,10 +97,9 @@ class Encoders:
             self.__logger__.info("Validating sequence lengths (≤ %d).", self.max_length)
             self.process_length_sequences()
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] Failed during revision steps: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] Failed during revision steps: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e
 
     def check_allowed_alphabet(self) -> None:
         """Keep only sequences composed of the selected alphabet."""

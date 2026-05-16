@@ -140,8 +140,5 @@ class PhysicochemicalEncoder(Encoders):
 
     def run_process(self) -> None:
         """Encode validated sequences using the configured descriptor property."""
-        if self.status:
-            self.__logger__.info("Running physicochemical encoding.")
-            self.__encoding_dataset()
-        else:
-            self.__logger__.warning("Encoding aborted. Dataset validation failed.")
+        self.__logger__.info("Running physicochemical encoding.")
+        self.__encoding_dataset()

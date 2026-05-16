@@ -61,10 +61,6 @@ class OrdinalEncoder(Encoders):
 
     def run_process(self) -> None:
         """Encode all validated sequences using ordinal representation."""
-        if not self.status:
-            self.__logger__.warning("Encoding skipped; dataset validation failed.")
-            return
-
         try:
             self.__logger__.info("Starting ordinal encoding for %d sequences.", len(self.dataset))
             matrix = [
@@ -76,7 +72,6 @@ class OrdinalEncoder(Encoders):
             self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
             self.__logger__.info("Ordinal encoding completed with %d features.", self.coded_dataset.shape[1])
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] Ordinal encoding failed: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] Ordinal encoding failed: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e

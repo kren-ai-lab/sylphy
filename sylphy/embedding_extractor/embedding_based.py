@@ -383,29 +383,27 @@ class EmbeddingBased:
 
     def clean_memory(self) -> None:
         """Release Python and CUDA memory caches when available."""
-        try:
-            if torch.cuda.is_available():
-                with contextlib.suppress(Exception):
-                    torch.cuda.synchronize()
-                torch.cuda.empty_cache()
-                with contextlib.suppress(Exception):
-                    torch.cuda.reset_peak_memory_stats()
-            gc.collect()
-        except Exception as e:  # noqa: BLE001
-            self.__logger__.debug("clean_memory() warning: %s", e)
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.synchronize()
+            except RuntimeError as e:
+                self.__logger__.debug("cuda.synchronize() skipped: %s", e)
+            torch.cuda.empty_cache()
+            try:
+                torch.cuda.reset_peak_memory_stats()
+            except RuntimeError as e:
+                self.__logger__.debug("reset_peak_memory_stats() skipped: %s", e)
+        gc.collect()
 
     def release_resources(self) -> None:
         """Move model off-device and clear model/tokenizer references."""
         try:
-            model = getattr(self, "model", None)
-            if model is not None:
-                with contextlib.suppress(Exception):
-                    model.to("cpu")
-            with contextlib.suppress(Exception):
-                del self.model
+            if self.model is not None:
+                try:
+                    self.model.to("cpu")
+                except RuntimeError as e:
+                    self.__logger__.debug("model.to('cpu') failed: %s", e)
             self.model = None
-            with contextlib.suppress(Exception):
-                del self.tokenizer
             self.tokenizer = None
         finally:
             self.clean_memory()
@@ -475,7 +473,7 @@ class EmbeddingBased:
                     bs = new_bs
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
-                        with contextlib.suppress(Exception):
+                        with contextlib.suppress(RuntimeError):
                             torch.cuda.reset_peak_memory_stats()
                     # retry this same chunk with smaller batch
                     for sub in self._make_batches(chunk, bs):

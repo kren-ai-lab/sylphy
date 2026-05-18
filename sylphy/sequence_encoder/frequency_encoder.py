@@ -47,7 +47,8 @@ class FrequencyEncoder(EncoderBase):
         try:
             self.__logger__.info("Starting frequency encoding (alphabet size=%d).", len(self._alpha))
             seq_col = pl.col(self.sequence_column)
-            seq_len = seq_col.str.len_chars().cast(pl.Float32)
+            raw_len = seq_col.str.len_chars().cast(pl.Float32)
+            seq_len = pl.max_horizontal(raw_len, pl.lit(1.0, dtype=pl.Float32))
             freq_exprs = [
                 (seq_col.str.count_matches(re.escape(r)).cast(pl.Float32) / seq_len).alias(f"freq_{r}")
                 for r in self._alpha

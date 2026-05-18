@@ -1369,23 +1369,6 @@ wheels = [
 ]
 
 [[package]]
-name = "polars-ds"
-version = "0.11.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "polars" },
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/8a/7e0ee24b22b99727c506b95701363736379516d31379350c6cbcec877070/polars_ds-0.11.2.tar.gz", hash = "sha256:d703c1e2398ec45e85c952429ad4c059d70e6af848a992bc628682715c4771ff", size = 2130942, upload-time = "2026-04-30T03:15:23.737Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/1b/9a2afb78e0e40e64effcd8131bffe217a71ed98d7d49bef813fa2a25b6e4/polars_ds-0.11.2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:73bf06b33224471d4e63c62e1ec1ff081cfbac03b2a9c046c83de36456efecee", size = 18306447, upload-time = "2026-04-30T03:15:08.307Z" },
-    { url = "https://files.pythonhosted.org/packages/4b/c7/f174a446d79c32c9b1546ba150030123a1e301d3ff576ee4e17ccf09b64f/polars_ds-0.11.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:c6b25cbb87cf14114c2a3619a1f1e615d3497a3fe73a94da49d53d69ab608e5d", size = 16200961, upload-time = "2026-04-30T03:15:11.411Z" },
-    { url = "https://files.pythonhosted.org/packages/71/23/1f53e0b2a76254cf387369353e15e2e796b1828779fd4fcbb43ff30feb2b/polars_ds-0.11.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5e63830eaeba4fef158f022f76547079e32bddaf543cdfb44c817a387ef94c30", size = 18945320, upload-time = "2026-04-30T03:15:14.873Z" },
-    { url = "https://files.pythonhosted.org/packages/f8/8a/de77b6ed232ff1c75f95b47219cfa484acffc06051589a17e8b1fb6fd118/polars_ds-0.11.2-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:4e1d3c5d1ccf63f2523df40fb27f66efdc69cc4daf7759e28049a012bf289b8c", size = 16700258, upload-time = "2026-04-30T03:15:17.979Z" },
-    { url = "https://files.pythonhosted.org/packages/db/d7/1f395313f08197815de9f2c6575c696cdb093ce010f9e0de9011b4513f82/polars_ds-0.11.2-cp39-abi3-win_amd64.whl", hash = "sha256:57fa25e53d9549aba02665193634d1b4c4a1b4a45461e2645042c4e21dee83df", size = 20055762, upload-time = "2026-04-30T03:15:20.811Z" },
-]
-
-[[package]]
 name = "polars-runtime-32"
 version = "1.40.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1855,7 +1838,6 @@ dependencies = [
     { name = "numpy" },
     { name = "platformdirs" },
     { name = "polars" },
-    { name = "polars-ds" },
     { name = "requests" },
     { name = "rich" },
     { name = "scikit-learn" },
@@ -1914,7 +1896,6 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.3.5,<3.0" },
     { name = "platformdirs", specifier = ">=4.0,<5.0" },
     { name = "polars", specifier = ">=1.20,<2.0" },
-    { name = "polars-ds", specifier = ">=0.6,<1.0" },
     { name = "pyrefly", marker = "extra == 'dev'", specifier = ">=0.60.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "~=9.0.2" },
     { name = "pytest", marker = "extra == 'tests'", specifier = "~=9.0.2" },

@@ -239,7 +239,7 @@ tests/
 ## Dependencies
 
 ### Core (always required)
-- `polars`, `polars-ds`, `numpy`, `scipy`, `scikit-learn`
+- `polars`, `numpy`, `scipy`, `scikit-learn`
 - `typer`, `rich` (CLI)
 - `platformdirs`, `huggingface-hub` (cache/registry)
 

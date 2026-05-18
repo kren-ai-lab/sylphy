@@ -58,7 +58,8 @@ class UtilsLib:
         """Randomly select rows from a DataFrame with optional stratification."""
         if label_name is None:
             _LOG.info("Sampling without stratification (n=%d).", n_samples)
-            return df.sample(n=n_samples, with_replacement=replace, shuffle=True, seed=random_state)
+            n = n_samples if replace else min(n_samples, len(df))
+            return df.sample(n=n, with_replacement=replace, shuffle=True, seed=random_state)
 
         return cls._stratified_selection(
             df,
@@ -130,13 +131,14 @@ class UtilsLib:
         seed: int | None,
     ) -> pl.DataFrame:
         def _sample_group(grp: pl.DataFrame) -> pl.DataFrame:
+            label_val = grp[col][0]
             k = n if replace else min(n, len(grp))
             if k <= 0:
-                _LOG.warning("Skipping label (no rows).")
+                _LOG.warning("Skipping label '%s' (no rows).", label_val)
                 return grp.clear()
-            label_val = grp[col][0]
+            per_seed = (hash((seed, label_val)) & 0x7FFFFFFF) if seed is not None else None
             _LOG.info("Sampled %d rows for label '%s'.", k, label_val)
-            return grp.sample(n=k, with_replacement=replace, seed=seed)
+            return grp.sample(n=k, with_replacement=replace, seed=per_seed)
 
         result = df.group_by(col).map_groups(_sample_group)
         _LOG.info("Total sampled rows (per_label): %d", len(result))
@@ -193,8 +195,9 @@ class UtilsLib:
             actual_k = k if replace else min(k, len(grp))
             if actual_k <= 0:
                 return grp.clear()
+            per_seed = (hash((seed, label_val)) & 0x7FFFFFFF) if seed is not None else None
             _LOG.info("Sampled %d rows for label '%s' (global mode).", actual_k, label_val)
-            return grp.sample(n=actual_k, with_replacement=replace, seed=seed)
+            return grp.sample(n=actual_k, with_replacement=replace, seed=per_seed)
 
         result = df.group_by(col).map_groups(_sample_group)
         _LOG.info("Total sampled rows (global): %d", len(result))

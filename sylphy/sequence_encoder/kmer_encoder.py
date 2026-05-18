@@ -50,6 +50,7 @@ class KMerEncoder(EncoderBase):
         self.size_kmer = size_kmer
         self.as_sparse = as_sparse
         self.sparse_matrix: csr_matrix | None = None
+        self.feature_names: list[str] = []
 
     @staticmethod
     def _tokenize(seq: str, k: int) -> str:
@@ -61,23 +62,9 @@ class KMerEncoder(EncoderBase):
         try:
             self.__logger__.info("Starting k-mer encoding (k=%d).", self.size_kmer)
 
-            # Tokenize each sequence using a polars expression (no per-row Python apply)
             sequences = self.dataset[self.sequence_column].to_list()
             k = self.size_kmer
-            collected = cast(
-                "pl.DataFrame",
-                self.dataset.lazy()
-                .select(
-                    pl.col(self.sequence_column)
-                    .map_batches(
-                        lambda s: pl.Series([self._tokenize(seq, k) for seq in s.to_list()]),
-                        return_dtype=pl.String,
-                    )
-                    .alias("_kmer_seq")
-                )
-                .collect(),
-            )
-            tokenized = collected["_kmer_seq"].to_list()
+            tokenized = [self._tokenize(seq, k) for seq in sequences]
 
             vectorizer = TfidfVectorizer(
                 analyzer="word",
@@ -87,6 +74,7 @@ class KMerEncoder(EncoderBase):
 
             X = cast("csr_matrix", vectorizer.fit_transform(tokenized))
             feature_names = [c.upper() for c in vectorizer.get_feature_names_out()]
+            self.feature_names = feature_names
 
             if self.as_sparse:
                 self.sparse_matrix = X

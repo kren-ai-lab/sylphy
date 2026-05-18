@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 import pytest
 
 from sylphy.constants.tool_constants import BASE_URL_AAINDEX
@@ -34,7 +34,7 @@ def mock_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     return tmp_path / "data"
 
 
-def test_factory_known_aliases(toy_df: pd.DataFrame, mock_cache: Path) -> None:
+def test_factory_known_aliases(toy_df: pl.DataFrame, mock_cache: Path) -> None:
     """Verify factory creates correct encoder for all known aliases."""
     # Pre-populate cache with minimal AAIndex file to avoid network requests
     cache_dir = mock_cache / "aaindex"
@@ -66,4 +66,4 @@ def test_factory_known_aliases(toy_df: pd.DataFrame, mock_cache: Path) -> None:
 def test_factory_unknown_raises() -> None:
     """Verify factory raises ValueError for unknown encoder names."""
     with pytest.raises(ValueError, match=r"Unknown encoder 'nope'"):
-        create_encoder("nope", dataset=pd.DataFrame({"sequence": ["AAA"]}))
+        create_encoder("nope", dataset=pl.DataFrame({"sequence": ["AAA"]}))

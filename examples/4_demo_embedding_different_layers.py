@@ -11,18 +11,18 @@ Notes on layer indexing:
 Adjust if your backend defines different semantics.
 """
 
-import pandas as pd
+import polars as pl
 
 from sylphy.embedding_extractor import ESMEmbedding
 
 
 def make_toy_df():
-    return pd.DataFrame(
+    return pl.DataFrame(
         {
             "id": [1, 2, 3, 4],
             "sequence": ["MKT", "ACDEFGHIKLMNPQRST", "GGGSSSPPP", "MPEPTIDESEQX"],
         }
-    ).set_index("id")
+    )
 
 
 def run_case(backend, *, layers, layer_agg="mean", pool="mean", tag=""):

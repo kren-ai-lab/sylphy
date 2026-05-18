@@ -14,7 +14,7 @@ from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
     from sylphy.types import PrecisionType
 
@@ -27,7 +27,7 @@ class ProtT5Embedding(EmbeddingBase):
         name_device: str = DEFAULT_DEVICE,
         name_model: str = "Rostlab/prot_t5_xl_uniref50",
         name_tokenizer: str = "Rostlab/prot_t5_xl_uniref50",
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         column_seq: str | None = "sequence",
         debug_mode: int = DEFAULT_DEBUG_MODE,
         precision: PrecisionType = DEFAULT_PRECISION,

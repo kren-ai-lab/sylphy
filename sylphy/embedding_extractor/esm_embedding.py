@@ -10,7 +10,7 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
     from sylphy.types import PrecisionType
 
@@ -23,7 +23,7 @@ class ESMEmbedding(EmbeddingBase):
         name_device: str = DEFAULT_DEVICE,
         name_model: str = "facebook/esm2_t6_8M_UR50D",
         name_tokenizer: str = "facebook/esm2_t6_8M_UR50D",
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         column_seq: str | None = "sequence",
         debug_mode: int = DEFAULT_DEBUG_MODE,
         precision: PrecisionType = DEFAULT_PRECISION,

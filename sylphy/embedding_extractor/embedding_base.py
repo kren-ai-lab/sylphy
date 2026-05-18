@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
@@ -44,7 +44,7 @@ class EmbeddingBase:
 
     def __init__(
         self,
-        dataset: pd.DataFrame,
+        dataset: pl.DataFrame,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "",
         name_tokenizer: str = "",
@@ -59,7 +59,7 @@ class EmbeddingBase:
         oom_backoff: bool = True,
     ) -> None:
         """Initialize common state for embedding backends."""
-        self.dataset: pd.DataFrame = dataset
+        self.dataset: pl.DataFrame = dataset
         self.column_seq = column_seq
 
         self.name_model = name_model
@@ -210,7 +210,7 @@ class EmbeddingBase:
         layers: LayerSpec = "last",
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """Process embeddings for non-tokenizer backends.
 
         Subclasses that set ``requires_tokenizer = False`` must override this method.
@@ -435,7 +435,7 @@ class EmbeddingBase:
 
         try:
             if not self.requires_tokenizer:
-                df = self.embedding_process(
+                result: pl.DataFrame = self.embedding_process(
                     batch_size=batch_size,
                     seq_len=max_length,
                     layers=layers,
@@ -443,17 +443,17 @@ class EmbeddingBase:
                     pool=pool,
                 )
                 self.release_resources()
-                self.coded_dataset = df
+                self.coded_dataset = result
                 self.__logger__.info(
                     "Embedding extraction (non-HF) complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
-                    df.shape,
+                    result.shape,
                     layers,
                     layer_agg,
                     pool,
                 )
                 return
 
-            seqs = self.dataset[self.column_seq].astype(str).tolist()
+            seqs = self.dataset[self.column_seq].cast(pl.String).to_list()
             mats: list[np.ndarray] = []
             bs: int = int(batch_size)
             bs = max(bs, 1)
@@ -493,9 +493,9 @@ class EmbeddingBase:
             self.release_resources()
             Xall: np.ndarray = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
             header: list[str] = [f"p_{i}" for i in range(Xall.shape[1])]
-            columns_index = pd.Index(header)
-            self.coded_dataset = pd.DataFrame(Xall, columns=columns_index, index=self.dataset.index)
-            self.coded_dataset[self.column_seq] = self.dataset[self.column_seq].to_numpy()
+            self.coded_dataset = pl.from_numpy(Xall, schema=header).with_columns(
+                self.dataset[self.column_seq]
+            )
             self.__logger__.info(
                 "Embedding extraction complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
                 Xall.shape,

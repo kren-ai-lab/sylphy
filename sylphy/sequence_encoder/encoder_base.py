@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
+import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-import pandas as pd
+import polars as pl
 
 from sylphy.constants import residues
 from sylphy.logging import add_context, get_logger
@@ -46,7 +47,7 @@ class EncoderBase(ABC):
 
     def __init__(
         self,
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         sequence_column: str = "sequence",
         max_length: int = 1024,
         *,
@@ -57,19 +58,18 @@ class EncoderBase(ABC):
         name_logging: str = "sequence_encoder.encoder",
     ) -> None:
         """Initialize the base encoder and run input validation."""
-        # Ensure top-level logger is initialized once and create a child logger
         _ = get_logger("sylphy")
         self.__logger__ = logging.getLogger(f"sylphy.sequence_encoder.{name_logging}")
         self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
         add_context(self.__logger__, component="sequence_encoder", encoder=name_logging)
 
-        self.dataset: pd.DataFrame = dataset if dataset is not None else pd.DataFrame()
+        self.dataset: pl.DataFrame = dataset if dataset is not None else pl.DataFrame()
         self.sequence_column = sequence_column
         self.max_length = max_length
         self.allow_extended = allow_extended
         self.allow_unknown = allow_unknown
 
-        self.coded_dataset: pd.DataFrame = pd.DataFrame()
+        self.coded_dataset: pl.DataFrame = pl.DataFrame()
 
         if dataset is None:
             msg = "[ERROR] No dataset provided to encoder."
@@ -107,15 +107,16 @@ class EncoderBase(ABC):
         try:
             alpha = set(residues(extended=self.allow_extended or self.allow_unknown))
             if not self.allow_extended and self.allow_unknown:
-                alpha.add("X")  # allow unknown explicitly if requested
+                alpha.add("X")
 
-            def _ok(seq: str) -> bool:
-                return all((r in alpha) for r in seq)
+            # Build a regex that matches any character NOT in the allowed alphabet
+            escaped = re.escape("".join(sorted(alpha)))
+            invalid_pattern = f"[^{escaped}]"
 
-            mask = [_ok(seq) for seq in self.dataset[self.sequence_column]]
-            self.dataset["is_canon"] = mask
             before = len(self.dataset)
-            self.dataset = self.dataset.loc[self.dataset["is_canon"]].copy()
+            self.dataset = self.dataset.filter(
+                ~pl.col(self.sequence_column).str.contains(invalid_pattern)
+            )
             removed = before - len(self.dataset)
             self.__logger__.info("Filtered sequences outside alphabet: %d removed.", removed)
         except Exception as exc:
@@ -126,10 +127,10 @@ class EncoderBase(ABC):
     def process_length_sequences(self) -> None:
         """Filter out sequences longer than `max_length`."""
         try:
-            self.dataset["length_sequence"] = self.dataset[self.sequence_column].str.len()
-            self.dataset["is_valid_length"] = (self.dataset["length_sequence"] <= self.max_length).astype(int)
             before = len(self.dataset)
-            self.dataset = self.dataset.loc[self.dataset["is_valid_length"] == 1].copy()
+            self.dataset = self.dataset.filter(
+                pl.col(self.sequence_column).str.len_chars() <= self.max_length
+            )
             removed = before - len(self.dataset)
             self.__logger__.info("Filtered long sequences: %d removed.", removed)
         except Exception as exc:

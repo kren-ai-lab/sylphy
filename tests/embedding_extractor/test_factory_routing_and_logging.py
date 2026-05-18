@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pandas as pd
+import polars as pl
 import pytest
 
 from sylphy.embedding_extractor import create_embedding
@@ -25,13 +25,13 @@ from sylphy.embedding_extractor.prot_t5_embedding import ProtT5Embedding
 )
 def test_factory_selects_backend(model_name: str, cls: type) -> None:
     """Verify factory routes model names to the correct backend class."""
-    df = pd.DataFrame({"sequence": ["AAAA"]})
+    df = pl.DataFrame({"sequence": ["AAAA"]})
     inst = create_embedding(model_name=model_name, dataset=df, column_seq="sequence", name_device="cpu")
     assert isinstance(inst, cls)
 
 
 def test_factory_unknown_raises() -> None:
     """Verify factory raises ValueError for unknown model names."""
-    df = pd.DataFrame({"sequence": ["AAAA"]})
+    df = pl.DataFrame({"sequence": ["AAAA"]})
     with pytest.raises(ValueError, match=r"Unknown model name"):
         create_embedding(model_name="unknown/model", dataset=df, column_seq="sequence", name_device="cpu")

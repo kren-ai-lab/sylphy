@@ -11,7 +11,7 @@ from sylphy.types import FileFormat
 _T = TypeVar("_T", bound=str)
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
 HELP_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
@@ -35,9 +35,9 @@ def validate_choice(value: str, choices: tuple[_T, ...], opt: str) -> _T:  # noq
     return allowed[normalized]
 
 
-def load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
+def load_csv(input_path: Path, seq_col: str) -> pl.DataFrame:
     """Load a CSV file and validate the requested sequence column."""
-    import pandas as pd  # noqa: PLC0415
+    import polars as pl  # noqa: PLC0415
 
     if not input_path.exists():
         msg = f"Input file not found: {input_path}"
@@ -45,13 +45,11 @@ def load_csv(input_path: Path, seq_col: str) -> pd.DataFrame:
     if input_path.suffix.lower() != ".csv":
         msg = "Only CSV is supported as input."
         raise typer.BadParameter(msg)
-    df = pd.read_csv(input_path)
+    df = pl.scan_csv(input_path).collect()
     if seq_col not in df.columns:
-        msg = f"Column '{seq_col}' not found. Available: {list(df.columns)}"
+        msg = f"Column '{seq_col}' not found. Available: {df.columns}"
         raise typer.BadParameter(msg)
-    df[seq_col] = df[seq_col].astype(str).fillna("")
-
-    return df
+    return df.with_columns(pl.col(seq_col).cast(pl.String).fill_null("").alias(seq_col))
 
 
 def ensure_ext(path: Path, fmt: str) -> Path:

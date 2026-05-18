@@ -1,7 +1,7 @@
 import sys
 import warnings
 
-import pandas as pd
+import polars as pl
 
 from sylphy.sequence_encoder import (
     KMerEncoder,
@@ -15,12 +15,12 @@ warnings.filterwarnings("ignore")
 
 def make_encoder(encoder, name_export):
     encoder.run_process()
-    encoder.coded_dataset.to_csv(name_export, index=False)
+    encoder.coded_dataset.write_csv(name_export)
 
 
 print("Processing data")
-df_training = pd.read_excel(sys.argv[1])
-df_testing = pd.read_excel(sys.argv[2])
+df_training = pl.read_excel(sys.argv[1])
+df_testing = pl.read_excel(sys.argv[2])
 
 path_export = sys.argv[3]
 

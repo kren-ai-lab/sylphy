@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 
-import pandas as pd
+import polars as pl
 
 from sylphy.reductions.factory import get_available_methods, reduce_dimensionality
 from sylphy.sequence_encoder import PhysicochemicalEncoder
@@ -29,7 +29,7 @@ DATA = [
 
 
 def main() -> None:
-    df = pd.DataFrame(DATA)
+    df = pl.DataFrame(DATA)
 
     print("Available linear methods:", get_available_methods(kind="linear"))
     print("Available nonlinear methods:", get_available_methods(kind="nonlinear"))
@@ -48,7 +48,7 @@ def main() -> None:
 
     # TruncatedSVD (linear, no centering required)
     _, transformed_svd = reduce_dimensionality(
-        "truncated_svd", X, n_components=2, return_type="pandas", random_state=0, debug=False
+        "truncated_svd", X, n_components=2, return_type="polars", random_state=0, debug=False
     )
     print(f"TruncatedSVD: {transformed_svd.shape}")
     print(transformed_svd)
@@ -65,12 +65,12 @@ def main() -> None:
     )
     print(f"Isomap: {transformed_iso.shape}")
 
-    # PCA with pandas return and normalization preprocessing
-    _, transformed_pd = reduce_dimensionality(
-        "pca", X, n_components=3, return_type="pandas", preprocess="normalize", random_state=0, debug=False
+    # PCA with polars return and normalization preprocessing
+    _, transformed_pl = reduce_dimensionality(
+        "pca", X, n_components=3, return_type="polars", preprocess="normalize", random_state=0, debug=False
     )
-    print(f"PCA (pandas, 3 components): {transformed_pd.shape}")
-    print(transformed_pd)
+    print(f"PCA (polars, 3 components): {transformed_pl.shape}")
+    print(transformed_pl)
 
 
 if __name__ == "__main__":

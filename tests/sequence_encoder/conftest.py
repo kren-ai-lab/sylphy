@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-import pandas as pd
+import polars as pl
 import pytest
 
 if TYPE_CHECKING:
@@ -20,6 +20,6 @@ def _quiet_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def toy_df() -> pd.DataFrame:
+def toy_df() -> pl.DataFrame:
     """Provide a small DataFrame with canonical sequences of varying lengths."""
-    return pd.DataFrame({"sequence": ["ACD", "WYYVV", "KLMNPQ", "GGG"]})
+    return pl.DataFrame({"sequence": ["ACD", "WYYVV", "KLMNPQ", "GGG"]})

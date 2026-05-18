@@ -16,7 +16,7 @@ from sklearn.manifold import MDS, TSNE, Isomap, LocallyLinearEmbedding, Spectral
 from .reduction_methods import Preprocess, Reductions, ReturnType
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
 
 ModelT = TypeVar("ModelT")
@@ -34,7 +34,7 @@ class NonLinearReductions(Reductions):
 
     def __init__(
         self,
-        dataset: np.ndarray | pd.DataFrame,
+        dataset: np.ndarray | pl.DataFrame,
         *,
         return_type: ReturnType = "numpy",
         preprocess: Preprocess = "none",
@@ -70,7 +70,7 @@ class NonLinearReductions(Reductions):
         model: ModelT,
         method_name: str,
         n_components: int | None = None,
-    ) -> np.ndarray | pd.DataFrame | None:
+    ) -> np.ndarray | pl.DataFrame | None:
         try:
             params_getter = cast("Callable[[], object]", getattr(model, "get_params", dict))
             params = params_getter()
@@ -92,7 +92,7 @@ class NonLinearReductions(Reductions):
     # -----------------------------
     # Public API (one wrapper per method)
     # -----------------------------
-    def apply_tsne(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_tsne(self, **kwargs: object) -> np.ndarray | pl.DataFrame | None:
         """Apply t-SNE and return transformed data."""
         n = self.dataset.shape[0]
         perplexity = kwargs.get("perplexity", 30)
@@ -103,33 +103,33 @@ class NonLinearReductions(Reductions):
         model = self._init_with_seed(TSNE, kwargs)
         return self._apply_model(model, "t-SNE", cast("int | None", kwargs.get("n_components")))
 
-    def apply_isomap(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_isomap(self, **kwargs: object) -> np.ndarray | pl.DataFrame | None:
         """Apply Isomap and return transformed data."""
         model = Isomap(**cast("dict[str, Any]", kwargs))  # no random_state
         return self._apply_model(model, "Isomap", cast("int | None", kwargs.get("n_components")))
 
-    def apply_mds(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_mds(self, **kwargs: object) -> np.ndarray | pl.DataFrame | None:
         """Apply MDS and return transformed data."""
         model = self._init_with_seed(MDS, kwargs)
         return self._apply_model(model, "MDS", cast("int | None", kwargs.get("n_components")))
 
-    def apply_lle(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_lle(self, **kwargs: object) -> np.ndarray | pl.DataFrame | None:
         """Apply LLE and return transformed data."""
         model = self._init_with_seed(LocallyLinearEmbedding, kwargs)
         return self._apply_model(model, "LLE", cast("int | None", kwargs.get("n_components")))
 
-    def apply_spectral(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_spectral(self, **kwargs: object) -> np.ndarray | pl.DataFrame | None:
         """Apply SpectralEmbedding and return transformed data."""
         model = self._init_with_seed(SpectralEmbedding, kwargs)
         return self._apply_model(model, "SpectralEmbedding", cast("int | None", kwargs.get("n_components")))
 
-    def apply_umap(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_umap(self, **kwargs: object) -> np.ndarray | pl.DataFrame | None:
         """Apply UMAP and return transformed data."""
         # umap-learn supports 'random_state'
         model = self._init_with_seed(umap.UMAP, kwargs)
         return self._apply_model(model, "UMAP", cast("int | None", kwargs.get("n_components")))
 
-    def apply_dictionary_learning(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_dictionary_learning(self, **kwargs: object) -> np.ndarray | pl.DataFrame | None:
         """Apply DictionaryLearning and return transformed data."""
         model = self._init_with_seed(DictionaryLearning, kwargs)
         return self._apply_model(model, "DictionaryLearning", cast("int | None", kwargs.get("n_components")))
@@ -137,7 +137,7 @@ class NonLinearReductions(Reductions):
     def apply_mini_batch_dictionary_learning(
         self,
         **kwargs: object,
-    ) -> np.ndarray | pd.DataFrame | None:
+    ) -> np.ndarray | pl.DataFrame | None:
         """Apply MiniBatchDictionaryLearning and return transformed data."""
         model = self._init_with_seed(MiniBatchDictionaryLearning, kwargs)
         return self._apply_model(
@@ -146,7 +146,7 @@ class NonLinearReductions(Reductions):
             cast("int | None", kwargs.get("n_components")),
         )
 
-    def apply_dip_ext(self, **kwargs: object) -> np.ndarray | pd.DataFrame | None:
+    def apply_dip_ext(self, **kwargs: object) -> np.ndarray | pl.DataFrame | None:
         """Apply DipExt and return transformed data."""
         model = DipExt(**cast("dict[str, Any]", kwargs))  # library-specific, no random_state in __init__
         return self._apply_model(model, "DipExt", cast("int | None", kwargs.get("n_components")))

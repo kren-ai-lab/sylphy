@@ -7,7 +7,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 from sylphy.core.model_registry import normalize_name
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
@@ -16,7 +16,7 @@ from sylphy.logging import add_context, get_child_logger
 if TYPE_CHECKING:
     from .reduction_methods import Preprocess, ReturnType
 
-DatasetLike = np.ndarray | pd.DataFrame
+DatasetLike = np.ndarray | pl.DataFrame
 Kind = Literal["linear", "nonlinear"]
 _LINEAR_KIND: Kind = "linear"
 _NONLINEAR_KIND: Kind = "nonlinear"
@@ -107,7 +107,7 @@ def reduce_dimensionality(
     debug_mode: int = logging.INFO,
     logger_name: str = "sylphy.reductions.factory",
     **kwargs: object,
-) -> tuple[object | None, np.ndarray | pd.DataFrame | None]:
+) -> tuple[object | None, np.ndarray | pl.DataFrame | None]:
     """Run a dimensionality reduction by method name via a unified factory.
 
     For linear methods, returns ``(fitted_model, transformed)``.

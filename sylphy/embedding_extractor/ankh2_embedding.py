@@ -13,7 +13,7 @@ from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
     from sylphy.types import PrecisionType
 
@@ -23,7 +23,7 @@ class Ankh2Embedding(EmbeddingBase):
 
     def __init__(
         self,
-        dataset: pd.DataFrame,
+        dataset: pl.DataFrame,
         name_device: str = DEFAULT_DEVICE,
         name_model: str = "ElnaggarLab/ankh2-ext1",
         name_tokenizer: str = "ElnaggarLab/ankh2-ext1",

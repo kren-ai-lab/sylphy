@@ -6,8 +6,8 @@ import io
 import logging
 from pathlib import Path
 
+import niquests as requests
 import polars as pl
-import requests
 
 from sylphy.constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
 from sylphy.core import get_config
@@ -76,7 +76,7 @@ class PhysicochemicalEncoder(EncoderBase):
                 with requests.Session() as sess:
                     resp = sess.get(base_url, timeout=60)
                     resp.raise_for_status()
-                    raw_text = resp.content.decode("utf-8")
+                    raw_text = (resp.content or b"").decode("utf-8")
                 df = pl.read_csv(io.StringIO(raw_text))
                 df.write_csv(filepath)
                 self.__logger__.info("Descriptor cached at %s", filepath)

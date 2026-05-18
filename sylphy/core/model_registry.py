@@ -238,7 +238,7 @@ def _handle_local_copy(src: Path, dst: Path) -> None:
 
 def _download_url_and_extract(url: str, dst: Path) -> None:
     """Download file from URL and extract if it's an archive."""
-    import requests  # noqa: PLC0415
+    import niquests as requests  # noqa: PLC0415
 
     parsed = urlparse(url)
     if not parsed.scheme:

@@ -148,9 +148,9 @@ def test_resolve_other_url_download_and_extract(monkeypatch: pytest.MonkeyPatch)
     def fake_get(_url: str, **_kwargs: object) -> DummyResp:
         return DummyResp(_make_zip_bytes())
 
-    req = types.ModuleType("requests")
+    req = types.ModuleType("niquests")
     monkeypatch.setattr(req, "get", fake_get, raising=False)
-    monkeypatch.setitem(sys.modules, "requests", req)
+    monkeypatch.setitem(sys.modules, "niquests", req)
 
     register_model(ModelSpec(name="other_url", provider="other", ref="https://example.com/model.zip"))
     dst = resolve_model("other_url")

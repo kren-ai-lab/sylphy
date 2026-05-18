@@ -493,8 +493,8 @@ class EmbeddingBase:
             self.release_resources()
             Xall: np.ndarray = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
             header: list[str] = [f"p_{i}" for i in range(Xall.shape[1])]
-            self.coded_dataset = pl.from_numpy(Xall, schema=header).with_columns(
-                self.dataset[self.column_seq]
+            self.coded_dataset = pl.from_numpy(Xall, schema=header).insert_column(
+                0, self.dataset[self.column_seq]
             )
             self.__logger__.info(
                 "Embedding extraction complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",

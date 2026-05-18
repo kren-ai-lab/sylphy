@@ -52,11 +52,6 @@ class KMerEncoder(EncoderBase):
         self.sparse_matrix: csr_matrix | None = None
         self.feature_names: list[str] = []
 
-    @staticmethod
-    def _tokenize(seq: str, k: int) -> str:
-        """Return whitespace-separated overlapping k-mers for a sequence."""
-        return " ".join(seq[i : i + k] for i in range(max(0, len(seq) - k + 1)))
-
     def run_process(self) -> None:
         """Vectorize k-mer text with TF-IDF and store the encoded dataset."""
         try:
@@ -64,15 +59,13 @@ class KMerEncoder(EncoderBase):
 
             sequences = self.dataset[self.sequence_column].to_list()
             k = self.size_kmer
-            tokenized = [self._tokenize(seq, k) for seq in sequences]
 
-            vectorizer = TfidfVectorizer(
-                analyzer="word",
-                token_pattern=r"(?u)\b\w+\b",  # noqa: S106
-                dtype=np.float32,
-            )
+            def _kmers(s: str) -> list[str]:
+                return [s[i : i + k] for i in range(len(s) - k + 1)]
 
-            X = cast("csr_matrix", vectorizer.fit_transform(tokenized))
+            vectorizer = TfidfVectorizer(analyzer=_kmers, dtype=np.float32)
+
+            X = cast("csr_matrix", vectorizer.fit_transform(sequences))
             feature_names = [c.upper() for c in vectorizer.get_feature_names_out()]
             self.feature_names = feature_names
 

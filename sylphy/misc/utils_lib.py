@@ -130,17 +130,22 @@ class UtilsLib:
         replace: bool,
         seed: int | None,
     ) -> pl.DataFrame:
-        def _sample_group(grp: pl.DataFrame) -> pl.DataFrame:
-            label_val = grp[col][0]
-            k = n if replace else min(n, len(grp))
-            if k <= 0:
-                _LOG.warning("Skipping label '%s' (no rows).", label_val)
-                return grp.clear()
-            per_seed = (hash((seed, label_val)) & 0x7FFFFFFF) if seed is not None else None
-            _LOG.info("Sampled %d rows for label '%s'.", k, label_val)
-            return grp.sample(n=k, with_replacement=replace, seed=per_seed)
+        if replace:
 
-        result = df.group_by(col).map_groups(_sample_group)
+            def _sample_group(grp: pl.DataFrame) -> pl.DataFrame:
+                label_val = grp[col][0]
+                if len(grp) == 0:
+                    _LOG.warning("Skipping label '%s' (no rows).", label_val)
+                    return grp.clear()
+                per_seed = (hash((seed, label_val)) & 0x7FFFFFFF) if seed is not None else None
+                _LOG.info("Sampled %d rows for label '%s'.", n, label_val)
+                return grp.sample(n=n, with_replacement=True, seed=per_seed)
+
+            result = df.group_by(col).map_groups(_sample_group)
+        else:
+            ranked = df.with_columns(pl.int_range(pl.len()).shuffle(seed=seed).over(col).alias("_rk"))
+            result = ranked.filter(pl.col("_rk") < n).drop("_rk")
+
         _LOG.info("Total sampled rows (per_label): %d", len(result))
         return result
 
@@ -187,21 +192,38 @@ class UtilsLib:
                     alloc_dict[lab] = new_v
                     diff += -1 if diff > 0 else 1
 
+        if replace:
+            result = UtilsLib._global_sample_with_replacement(df, col, alloc_dict, seed)
+        else:
+            alloc_frame = pl.DataFrame(
+                {col: list(alloc_dict.keys()), "_alloc": list(alloc_dict.values())},
+                schema={col: df[col].dtype, "_alloc": pl.Int64},
+            )
+            ranked = df.join(alloc_frame, on=col, how="left").with_columns(
+                pl.int_range(pl.len()).shuffle(seed=seed).over(col).alias("_rk")
+            )
+            result = ranked.filter(pl.col("_rk") < pl.col("_alloc")).drop(["_rk", "_alloc"])
+
+        _LOG.info("Total sampled rows (global): %d", len(result))
+        return result
+
+    @staticmethod
+    def _global_sample_with_replacement(
+        df: pl.DataFrame,
+        col: str,
+        alloc_dict: dict[Any, int],
+        seed: int | None,
+    ) -> pl.DataFrame:
         def _sample_group(grp: pl.DataFrame) -> pl.DataFrame:
             label_val = grp[col][0]
             k = alloc_dict.get(label_val, 0)
             if k <= 0:
                 return grp.clear()
-            actual_k = k if replace else min(k, len(grp))
-            if actual_k <= 0:
-                return grp.clear()
             per_seed = (hash((seed, label_val)) & 0x7FFFFFFF) if seed is not None else None
-            _LOG.info("Sampled %d rows for label '%s' (global mode).", actual_k, label_val)
-            return grp.sample(n=actual_k, with_replacement=replace, seed=per_seed)
+            _LOG.info("Sampled %d rows for label '%s' (global mode).", k, label_val)
+            return grp.sample(n=k, with_replacement=True, seed=per_seed)
 
-        result = df.group_by(col).map_groups(_sample_group)
-        _LOG.info("Total sampled rows (global): %d", len(result))
-        return result
+        return df.group_by(col).map_groups(_sample_group)
 
     # -------------------------------------------------------------------------
     # Distances

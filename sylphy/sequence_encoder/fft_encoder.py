@@ -58,36 +58,22 @@ class FFTEncoder:
         self.stop_value = int(2 ** int(np.ceil(np.log2(max(1, self.max_length)))))
         self.__logger__.info("FFT stop value set to %d.", self.stop_value)
 
-    def _zero_pad(self) -> None:
-        self.__logger__.info("Applying zero-padding up to %d.", self.stop_value)
-        pad = self.stop_value - self.max_length
-        if pad > 0:
-            self._numeric = self._numeric.with_columns(
-                pl.lit(0.0, dtype=pl.Float64).alias(f"p_{self.max_length + i}") for i in range(pad)
-            )
-
     def init_process(self) -> None:
-        """Compute FFT length and zero-padding setup for the dataset."""
+        """Compute FFT output length for the dataset."""
         self.__logger__.info("Initializing FFT encoding process.")
         self._get_near_pow()
-        self._zero_pad()
 
     def encoding_dataset(self) -> None:
         """Encode the dataset by applying FFT row-wise."""
         try:
             self.__logger__.info("Encoding dataset with FFT.")
-            # Exit to numpy once for bulk FFT, then return to polars immediately
-            numeric_matrix = self._numeric.to_numpy()
+            arr = self._numeric.to_numpy()
+            pad = self.stop_value - self.max_length
+            if pad > 0:
+                arr = np.pad(arr, ((0, 0), (0, pad)), mode="constant")
             n_out = self.stop_value // 2
-            output = np.empty((len(numeric_matrix), n_out), dtype=np.float32)
-            for i, row in enumerate(numeric_matrix):
-                try:
-                    yf = fft(row)
-                    output[i] = np.abs(yf[:n_out]).astype(np.float32)
-                except (TypeError, ValueError, RuntimeError) as e:
-                    self.__logger__.error("Error applying FFT at row %d: %s", i, e)
-                    output[i] = 0.0
-
+            yf = fft(arr, axis=1, workers=-1)
+            output = np.abs(yf[:, :n_out]).astype(np.float32)
             col_names = [f"p_{i}" for i in range(n_out)]
             self.coded_dataset = pl.from_numpy(output, schema=col_names).with_columns(self.sequence_series)
             self.__logger__.info("FFT encoding complete. Shape: %s", self.coded_dataset.shape)

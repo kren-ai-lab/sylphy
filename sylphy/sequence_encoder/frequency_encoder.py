@@ -52,7 +52,7 @@ class FrequencyEncoder(EncoderBase):
                 (seq_col.str.count_matches(re.escape(r)).cast(pl.Float32) / seq_len).alias(f"freq_{r}")
                 for r in self._alpha
             ]
-            self.coded_dataset = self.dataset.lazy().select([*freq_exprs, seq_col]).collect()
+            self.coded_dataset = self.dataset.select([*freq_exprs, seq_col])
             self.__logger__.info(
                 "Frequency encoding completed with %d features.",
                 self.coded_dataset.width,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import polars as pl
@@ -12,7 +12,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from .encoder_base import EncoderBase
 
 if TYPE_CHECKING:
-    import scipy.sparse
+    from scipy.sparse import csr_matrix
 
 
 class KMerEncoder(EncoderBase):
@@ -49,7 +49,7 @@ class KMerEncoder(EncoderBase):
         )
         self.size_kmer = size_kmer
         self.as_sparse = as_sparse
-        self.sparse_matrix: scipy.sparse.csr_matrix | None = None
+        self.sparse_matrix: csr_matrix | None = None
 
     @staticmethod
     def _tokenize(seq: str, k: int) -> str:
@@ -64,21 +64,28 @@ class KMerEncoder(EncoderBase):
             # Tokenize each sequence using a polars expression (no per-row Python apply)
             sequences = self.dataset[self.sequence_column].to_list()
             k = self.size_kmer
-            tokenized = self.dataset.lazy().select(
-                pl.col(self.sequence_column)
-                .map_batches(
-                    lambda s: pl.Series([self._tokenize(seq, k) for seq in s.to_list()]),
-                    return_dtype=pl.String,
+            collected = cast(
+                "pl.DataFrame",
+                self.dataset.lazy()
+                .select(
+                    pl.col(self.sequence_column)
+                    .map_batches(
+                        lambda s: pl.Series([self._tokenize(seq, k) for seq in s.to_list()]),
+                        return_dtype=pl.String,
+                    )
+                    .alias("_kmer_seq")
                 )
-                .alias("_kmer_seq")
-            ).collect()["_kmer_seq"].to_list()
+                .collect(),
+            )
+            tokenized = collected["_kmer_seq"].to_list()
 
             vectorizer = TfidfVectorizer(
                 analyzer="word",
                 token_pattern=r"(?u)\b\w+\b",  # noqa: S106
                 dtype=np.float32,
             )
-            X = vectorizer.fit_transform(tokenized)
+
+            X = cast("csr_matrix", vectorizer.fit_transform(tokenized))
             feature_names = [c.upper() for c in vectorizer.get_feature_names_out()]
 
             if self.as_sparse:

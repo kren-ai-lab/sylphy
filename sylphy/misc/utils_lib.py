@@ -173,9 +173,7 @@ class UtilsLib:
         alloc_dict: dict[Any, int] = dict(
             zip(alloc_df[col].to_list(), alloc_df["_alloc"].to_list(), strict=True)
         )
-        count_dict: dict[Any, int] = dict(
-            zip(counts[col].to_list(), counts["_count"].to_list(), strict=True)
-        )
+        count_dict: dict[Any, int] = dict(zip(counts[col].to_list(), counts["_count"].to_list(), strict=True))
         diff = n - sum(alloc_dict.values())
         if diff != 0:
             order = sorted(count_dict, key=lambda k: count_dict[k], reverse=(diff < 0))

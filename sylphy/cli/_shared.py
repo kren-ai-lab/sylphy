@@ -45,7 +45,7 @@ def load_csv(input_path: Path, seq_col: str) -> pl.DataFrame:
     if input_path.suffix.lower() != ".csv":
         msg = "Only CSV is supported as input."
         raise typer.BadParameter(msg)
-    df = pl.scan_csv(input_path).collect()
+    df = pl.read_csv(input_path)
     if seq_col not in df.columns:
         msg = f"Column '{seq_col}' not found. Available: {df.columns}"
         raise typer.BadParameter(msg)

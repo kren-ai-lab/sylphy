@@ -114,9 +114,7 @@ class EncoderBase(ABC):
             invalid_pattern = f"[^{escaped}]"
 
             before = len(self.dataset)
-            self.dataset = self.dataset.filter(
-                ~pl.col(self.sequence_column).str.contains(invalid_pattern)
-            )
+            self.dataset = self.dataset.filter(~pl.col(self.sequence_column).str.contains(invalid_pattern))
             removed = before - len(self.dataset)
             self.__logger__.info("Filtered sequences outside alphabet: %d removed.", removed)
         except Exception as exc:

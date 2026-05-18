@@ -89,9 +89,7 @@ class FFTEncoder:
                     output[i] = 0.0
 
             col_names = [f"p_{i}" for i in range(n_out)]
-            self.coded_dataset = pl.from_numpy(output, schema=col_names).with_columns(
-                self.sequence_series
-            )
+            self.coded_dataset = pl.from_numpy(output, schema=col_names).with_columns(self.sequence_series)
             self.__logger__.info("FFT encoding complete. Shape: %s", self.coded_dataset.shape)
         except Exception as e:
             self.__logger__.error("Failed to encode dataset with FFT: %s", e)

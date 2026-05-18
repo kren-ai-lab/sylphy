@@ -151,6 +151,26 @@ def test_embed_output_missing_extension_errors(tmp_path: Path) -> None:
     assert result.exit_code != 0
 
 
+def test_embed_output_unsupported_extension_errors(tmp_path: Path) -> None:
+    """Output path with unsupported extension should exit with error."""
+    df = pl.DataFrame({"sequence": ["AAAA"]})
+    inp = tmp_path / "seqs.csv"
+    df.write_csv(inp)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--model",
+            "facebook/esm2_t6_8M_UR50D",
+            "--input",
+            str(inp),
+            "--output",
+            str(tmp_path / "out.txt"),
+        ],
+    )
+    assert result.exit_code != 0
+
+
 def test_embed_custom_seq_col(tmp_path: Path) -> None:
     """--seq-col selects the correct column."""
     df = pl.DataFrame({"prot": ["AAAA", "BBB", "CCCCC"]})

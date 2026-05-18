@@ -7,6 +7,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+import numpy as np
 import polars as pl
 
 from sylphy.constants import residues
@@ -17,6 +18,94 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from sylphy.types import FileFormat
+
+
+def _encode_lut_1d(
+    lut: np.ndarray, sequences: list[str], max_length: int, *, uppercase: bool = False
+) -> np.ndarray:
+    N = len(sequences)
+    matrix = np.zeros((N, max_length), dtype=lut.dtype)
+    for i, seq in enumerate(sequences):
+        s = seq.upper() if uppercase else seq
+        raw = np.frombuffer(s.encode("ascii"), dtype=np.uint8)
+        length = min(len(raw), max_length)
+        matrix[i, :length] = lut[raw[:length]]
+    return matrix
+
+
+def _encode_lut_onehot(lut: np.ndarray, sequences: list[str], max_length: int, n_channels: int) -> np.ndarray:
+    N = len(sequences)
+    matrix = np.zeros((N, max_length * n_channels), dtype=np.uint8)
+    for i, seq in enumerate(sequences):
+        raw = np.frombuffer(seq.encode("ascii"), dtype=np.uint8)
+        length = min(len(raw), max_length)
+        indices = lut[raw[:length]]
+        valid = indices >= 0
+        pos = np.nonzero(valid)[0]
+        matrix[i, pos * n_channels + indices[valid]] = 1
+    return matrix
+
+
+def encode_ordinal(sequences: list[str], alphabet: tuple[str, ...], max_length: int) -> np.ndarray:
+    """Encode sequences as ordinal alphabet indices, zero-padded to ``max_length``.
+
+    Args:
+        sequences: Validated amino acid sequences.
+        alphabet: Ordered residue alphabet.
+        max_length: Output length per sequence.
+
+    Returns:
+        int32 array of shape ``(N, max_length)``.
+
+    """
+    lut = np.zeros(256, dtype=np.int32)
+    for idx, res in enumerate(alphabet):
+        lut[ord(res)] = idx
+        lut[ord(res.lower())] = idx
+    return _encode_lut_1d(lut, sequences, max_length)
+
+
+def encode_onehot(sequences: list[str], alphabet: tuple[str, ...], max_length: int) -> np.ndarray:
+    """Encode sequences as flattened one-hot vectors, zero-padded to ``max_length``.
+
+    Args:
+        sequences: Validated amino acid sequences.
+        alphabet: Ordered residue alphabet.
+        max_length: Output length per sequence.
+
+    Returns:
+        uint8 array of shape ``(N, max_length * len(alphabet))``.
+
+    """
+    n_channels = len(alphabet)
+    lut = np.full(256, -1, dtype=np.intp)
+    for idx, res in enumerate(alphabet):
+        lut[ord(res)] = idx
+        lut[ord(res.lower())] = idx
+    return _encode_lut_onehot(lut, sequences, max_length, n_channels)
+
+
+def encode_physicochemical(sequences: list[str], prop_map: dict[str, float], max_length: int) -> np.ndarray:
+    """Encode sequences using a residue → float property mapping, zero-padded to ``max_length``.
+
+    Args:
+        sequences: Validated amino acid sequences.
+        prop_map: Uppercase residue → numeric property value.
+        max_length: Output length per sequence.
+
+    Returns:
+        float32 array of shape ``(N, max_length)``.
+
+    """
+    lut = np.zeros(256, dtype=np.float32)
+    for res, val in prop_map.items():
+        try:
+            f = float(val)
+        except (TypeError, ValueError):
+            f = 0.0
+        lut[ord(res.upper())] = f
+        lut[ord(res.lower())] = f
+    return _encode_lut_1d(lut, sequences, max_length, uppercase=True)
 
 
 class EncoderBase(ABC):
@@ -140,6 +229,13 @@ class EncoderBase(ABC):
     # ----------------------------
     # IO
     # ----------------------------
+
+    def _finalize_encoding(self, sequences: list[str], matrix: np.ndarray) -> None:
+        """Populate ``coded_dataset`` from an encoded numpy matrix."""
+        col_names = [f"p_{i}" for i in range(matrix.shape[1])]
+        self.coded_dataset = pl.from_numpy(matrix, schema=col_names).with_columns(
+            pl.Series(self.sequence_column, sequences)
+        )
 
     @abstractmethod
     def run_process(self) -> None:

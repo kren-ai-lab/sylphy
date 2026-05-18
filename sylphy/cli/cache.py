@@ -8,6 +8,7 @@ Keeps the same UX as your current version, but with lazy imports to speed up sta
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 from dataclasses import dataclass
@@ -140,6 +141,30 @@ class CacheManager:
         self.cache_dir = (cache_dir or resolve_cache_dir()).resolve()
 
     # ---------- Inspect ----------
+    def _scandir_recursive(self, *, include_dirs: bool = False) -> Iterator[CacheEntry]:
+        """Walk cache dir recursively using os.scandir (minimizes syscalls)."""
+        from pathlib import Path  # noqa: PLC0415
+
+        stack = [str(self.cache_dir)]
+        while stack:
+            current = stack.pop()
+            try:
+                with os.scandir(current) as it:
+                    for entry in it:
+                        try:
+                            if entry.is_dir(follow_symlinks=False):
+                                stack.append(entry.path)
+                                if include_dirs:
+                                    st = entry.stat(follow_symlinks=False)
+                                    yield CacheEntry(Path(entry.path), 0, st.st_mtime, is_dir=True)
+                            else:
+                                st = entry.stat(follow_symlinks=False)
+                                yield CacheEntry(Path(entry.path), st.st_size, st.st_mtime, is_dir=False)
+                        except OSError:
+                            continue
+            except OSError:
+                continue
+
     def iter_entries(
         self,
         pattern: str | None = None,
@@ -151,7 +176,10 @@ class CacheManager:
         base = self.cache_dir
         if not base.exists():
             return
-        glob = pattern or ("**/*" if recursive else "*")
+        if recursive and pattern is None:
+            yield from self._scandir_recursive(include_dirs=include_dirs)
+            return
+        glob = pattern or "*"
         for p in base.glob(glob):
             try:
                 if p.is_dir():
@@ -164,14 +192,23 @@ class CacheManager:
             except OSError:
                 continue  # skip unreadable entries
 
+    def stats(self) -> tuple[int, int, CacheEntry | None, CacheEntry | None]:
+        """Return (file_count, total_bytes, newest, oldest) in a single pass."""
+        files = total = 0
+        newest: CacheEntry | None = None
+        oldest: CacheEntry | None = None
+        for e in self._scandir_recursive():
+            files += 1
+            total += e.size
+            if newest is None or e.mtime > newest.mtime:
+                newest = e
+            if oldest is None or e.mtime < oldest.mtime:
+                oldest = e
+        return files, total, newest, oldest
+
     def du(self) -> tuple[int, int]:
         """Return the number of files and total bytes in the cache tree."""
-        files = 0
-        total = 0
-        for e in self.iter_entries(recursive=True):
-            if not e.is_dir:
-                files += 1
-                total += e.size
+        files, total, _, _ = self.stats()
         return files, total
 
     # ---------- Mutate ----------
@@ -212,16 +249,19 @@ class CacheManager:
     def prune_empty_dirs(self) -> int:
         """Remove empty directories under the cache root."""
         count = 0
-        base = self.cache_dir
-        if not base.exists():
+        base = str(self.cache_dir)
+        if not self.cache_dir.exists():
             return 0
-        for p in sorted(base.rglob("*"), key=lambda x: len(x.parts), reverse=True):
-            if p.is_dir():
-                try:
-                    p.rmdir()
-                    count += 1
-                except OSError:
-                    pass
+        from pathlib import Path  # noqa: PLC0415
+
+        for dirpath, _dirnames, _filenames in os.walk(base, topdown=False):
+            if dirpath == base:
+                continue
+            try:
+                Path(dirpath).rmdir()
+                count += 1
+            except OSError:
+                pass
         return count
 
     def prune_to_max_size(self, max_bytes: int, *, dry_run: bool = False) -> tuple[int, int]:
@@ -335,15 +375,7 @@ def cmd_ls(
 def cmd_stats() -> None:
     """Print cache path, file count, total size, and age summary."""
     mgr = CacheManager()
-    files, total = mgr.du()
-    newest: CacheEntry | None = None
-    oldest: CacheEntry | None = None
-    for e in mgr.iter_entries(recursive=True):
-        if e.is_dir:
-            continue
-        newest = e if (newest is None or e.mtime > newest.mtime) else newest
-        oldest = e if (oldest is None or e.mtime < oldest.mtime) else oldest
-
+    files, total, newest, oldest = mgr.stats()
     con = _console()
     _print_kv(con, "Cache:", str(mgr.cache_dir))
     _print_kv(con, "Files:", str(files))
@@ -369,10 +401,11 @@ def cmd_rm(
     """Delete cache files by pattern and/or age with dry-run support."""
     mgr = CacheManager()
     td = _parse_timedelta(older_than) if older_than else None
+    now = datetime.now(UTC)
     candidates = [
         e
         for e in mgr.iter_entries(pattern=pattern, recursive=True)
-        if not e.is_dir and (td is None or (datetime.now(UTC) - e.mtime_dt) >= td)
+        if not e.is_dir and (td is None or (now - e.mtime_dt) >= td)
     ]
     total_bytes = sum(e.size for e in candidates)
     con = _console()
@@ -381,8 +414,20 @@ def cmd_rm(
     if not dry_run and not force and not typer.confirm("Proceed with deletion?"):
         raise typer.Abort
 
-    deleted, freed = mgr.rm(pattern=pattern, older_than=td, dry_run=dry_run)
-    _print_kv(con, "Result:", f"Deleted {deleted} files, freed {_human_size(freed)}")
+    deleted = freed = 0
+    for e in candidates:
+        if not dry_run:
+            try:
+                e.path.unlink(missing_ok=True)
+            except OSError:
+                continue
+        deleted += 1
+        freed += e.size
+    _print_kv(
+        con,
+        "Result:",
+        f"{'Would delete' if dry_run else 'Deleted'} {deleted} files, freed {_human_size(freed)}",
+    )
 
 
 @app.command("prune", help="Shrink cache to a target size and optionally remove empty directories.")
@@ -429,11 +474,13 @@ def cmd_prune(
     removed_dirs = 0
     if remove_empty_dirs:
         if dry_run:
-            empties = 0
-            for p in sorted(mgr.cache_dir.rglob("*"), key=lambda x: len(x.parts), reverse=True):
-                if p.is_dir() and not any(p.iterdir()):
-                    empties += 1
-            removed_dirs = len([None] * empties)
+            base_str = str(mgr.cache_dir)
+            empties = sum(
+                1
+                for dirpath, dirnames, filenames in os.walk(base_str, topdown=False)
+                if dirpath != base_str and not dirnames and not filenames
+            )
+            removed_dirs = empties
         else:
             removed_dirs = mgr.prune_empty_dirs()
 

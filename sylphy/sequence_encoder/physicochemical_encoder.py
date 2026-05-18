@@ -6,14 +6,13 @@ import io
 import logging
 from pathlib import Path
 
-import numpy as np
 import polars as pl
 import requests
 
 from sylphy.constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
 from sylphy.core import get_config
 
-from .encoder_base import EncoderBase
+from .encoder_base import EncoderBase, encode_physicochemical
 
 
 class PhysicochemicalEncoder(EncoderBase):
@@ -110,34 +109,12 @@ class PhysicochemicalEncoder(EncoderBase):
             )
         )
 
-    def _encode_residue(self, residue: str) -> float:
-        r = residue.upper()
-        if r not in self._prop_map:
-            self.__logger__.warning("Residue '%s' not in property table. Using 0.0", residue)
-            return 0.0
-        val = self._prop_map[r]
-        try:
-            return float(val)
-        except (TypeError, ValueError) as e:
-            self.__logger__.error("Unexpected error during residue encoding: %s", e)
-            return 0.0
-
-    def _encode_sequence(self, sequence: str) -> list[float]:
-        vec = [self._encode_residue(r) for r in sequence.upper()]
-        pad = self.max_length - len(vec)
-        if pad > 0:
-            vec.extend([0.0] * pad)
-        return vec[: self.max_length]
-
     def _encode_all(self) -> None:
         try:
             self.__logger__.info("Encoding dataset with physicochemical property: %s", self.name_property)
             sequences = self.dataset[self.sequence_column].to_list()
-            matrix = np.array([self._encode_sequence(seq) for seq in sequences], dtype=np.float32)
-            col_names = [f"p_{i}" for i in range(matrix.shape[1])]
-            self.coded_dataset = pl.from_numpy(matrix, schema=col_names).with_columns(
-                pl.Series(self.sequence_column, sequences)
-            )
+            matrix = encode_physicochemical(sequences, self._prop_map, self.max_length)
+            self._finalize_encoding(sequences, matrix)
             self.__logger__.info("Encoding complete. Shape: %s", self.coded_dataset.shape)
         except Exception as e:
             self.__logger__.error("Error encoding dataset: %s", e)

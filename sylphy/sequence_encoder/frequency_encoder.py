@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import cast
+import re
 
-import pandas as pd
+import polars as pl
 
 from sylphy.constants import residues
 
@@ -21,7 +21,7 @@ class FrequencyEncoder(EncoderBase):
 
     def __init__(
         self,
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         sequence_column: str = "sequence",
         *,
         allow_extended: bool = False,
@@ -30,7 +30,6 @@ class FrequencyEncoder(EncoderBase):
         debug_mode: int = logging.INFO,
     ) -> None:
         """Initialize the frequency encoder."""
-        # Note: max_length is irrelevant for frequency features; keep base validation flow
         super().__init__(
             dataset=dataset,
             sequence_column=sequence_column,
@@ -43,24 +42,21 @@ class FrequencyEncoder(EncoderBase):
         )
         self._alpha = list(residues(extended=self.allow_extended or self.allow_unknown))
 
-    def __encode_sequence(self, sequence: str) -> list[float]:
-        L = float(len(sequence)) if sequence else 1.0
-        return [sequence.count(r) / L for r in self._alpha]
-
     def run_process(self) -> None:
         """Encode each sequence as normalized residue frequencies."""
         try:
             self.__logger__.info("Starting frequency encoding (alphabet size=%d).", len(self._alpha))
-            matrix = [
-                self.__encode_sequence(cast("str", self.dataset.loc[i, self.sequence_column]))
-                for i in self.dataset.index
+            seq_col = pl.col(self.sequence_column)
+            raw_len = seq_col.str.len_chars().cast(pl.Float32)
+            seq_len = pl.max_horizontal(raw_len, pl.lit(1.0, dtype=pl.Float32))
+            freq_exprs = [
+                (seq_col.str.count_matches(re.escape(r)).cast(pl.Float32) / seq_len).alias(f"freq_{r}")
+                for r in self._alpha
             ]
-            header = pd.Index([f"freq_{r}" for r in self._alpha])
-            self.coded_dataset = pd.DataFrame(matrix, columns=header)
-            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
+            self.coded_dataset = self.dataset.select([*freq_exprs, seq_col])
             self.__logger__.info(
                 "Frequency encoding completed with %d features.",
-                self.coded_dataset.shape[1],
+                self.coded_dataset.width,
             )
         except Exception as e:
             msg = f"[ERROR] Failed to encode sequences: {e}"

@@ -24,7 +24,7 @@ from sklearn.decomposition import (
 from .reduction_methods import Preprocess, Reductions, ReturnType
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
 
 ModelT = TypeVar("ModelT")
@@ -40,7 +40,7 @@ class LinearReduction(Reductions):
 
     def __init__(
         self,
-        dataset: np.ndarray | pd.DataFrame,
+        dataset: np.ndarray | pl.DataFrame,
         *,
         return_type: ReturnType = "numpy",
         preprocess: Preprocess = "none",
@@ -76,7 +76,7 @@ class LinearReduction(Reductions):
         model: ModelT,
         method_name: str,
         n_components: int | None = None,
-    ) -> tuple[ModelT, np.ndarray | pd.DataFrame | None]:
+    ) -> tuple[ModelT, np.ndarray | pl.DataFrame | None]:
         """Fit/transform wrapper with logging and error handling."""
         try:
             params_getter = cast("Callable[[], object]", getattr(model, "get_params", dict))
@@ -99,7 +99,7 @@ class LinearReduction(Reductions):
     # -----------------------------
     # Public API
     # -----------------------------
-    def apply_pca(self, **kwargs: object) -> tuple[PCA, np.ndarray | pd.DataFrame | None]:
+    def apply_pca(self, **kwargs: object) -> tuple[PCA, np.ndarray | pl.DataFrame | None]:
         """Apply PCA and return the fitted model with transformed data."""
         model = self._init_with_seed(PCA, kwargs)
         return self._apply_model(model, "PCA", cast("int | None", kwargs.get("n_components")))
@@ -107,12 +107,12 @@ class LinearReduction(Reductions):
     def apply_incremental_pca(
         self,
         **kwargs: object,
-    ) -> tuple[IncrementalPCA, np.ndarray | pd.DataFrame | None]:
+    ) -> tuple[IncrementalPCA, np.ndarray | pl.DataFrame | None]:
         """Apply IncrementalPCA and return the fitted model with transformed data."""
         model = self._init_with_seed(IncrementalPCA, kwargs)
         return self._apply_model(model, "IncrementalPCA", cast("int | None", kwargs.get("n_components")))
 
-    def apply_sparse_pca(self, **kwargs: object) -> tuple[SparsePCA, np.ndarray | pd.DataFrame | None]:
+    def apply_sparse_pca(self, **kwargs: object) -> tuple[SparsePCA, np.ndarray | pl.DataFrame | None]:
         """Apply SparsePCA and return the fitted model with transformed data."""
         model = self._init_with_seed(SparsePCA, kwargs)
         return self._apply_model(model, "SparsePCA", cast("int | None", kwargs.get("n_components")))
@@ -120,17 +120,17 @@ class LinearReduction(Reductions):
     def apply_minibatch_sparse_pca(
         self,
         **kwargs: object,
-    ) -> tuple[MiniBatchSparsePCA, np.ndarray | pd.DataFrame | None]:
+    ) -> tuple[MiniBatchSparsePCA, np.ndarray | pl.DataFrame | None]:
         """Apply MiniBatchSparsePCA and return the fitted model with transformed data."""
         model = self._init_with_seed(MiniBatchSparsePCA, kwargs)
         return self._apply_model(model, "MiniBatchSparsePCA", cast("int | None", kwargs.get("n_components")))
 
-    def apply_fast_ica(self, **kwargs: object) -> tuple[FastICA, np.ndarray | pd.DataFrame | None]:
+    def apply_fast_ica(self, **kwargs: object) -> tuple[FastICA, np.ndarray | pl.DataFrame | None]:
         """Apply FastICA and return the fitted model with transformed data."""
         model = self._init_with_seed(FastICA, kwargs)
         return self._apply_model(model, "FastICA", cast("int | None", kwargs.get("n_components")))
 
-    def apply_truncated_svd(self, **kwargs: object) -> tuple[TruncatedSVD, np.ndarray | pd.DataFrame | None]:
+    def apply_truncated_svd(self, **kwargs: object) -> tuple[TruncatedSVD, np.ndarray | pl.DataFrame | None]:
         """Apply TruncatedSVD and return the fitted model with transformed data."""
         model = self._init_with_seed(TruncatedSVD, kwargs)
         return self._apply_model(model, "TruncatedSVD", cast("int | None", kwargs.get("n_components")))
@@ -138,18 +138,18 @@ class LinearReduction(Reductions):
     def apply_factor_analysis(
         self,
         **kwargs: object,
-    ) -> tuple[FactorAnalysis, np.ndarray | pd.DataFrame | None]:
+    ) -> tuple[FactorAnalysis, np.ndarray | pl.DataFrame | None]:
         """Apply FactorAnalysis and return the fitted model with transformed data."""
         model = self._init_with_seed(FactorAnalysis, kwargs)
         return self._apply_model(model, "FactorAnalysis", cast("int | None", kwargs.get("n_components")))
 
-    def apply_nmf(self, **kwargs: object) -> tuple[NMF, np.ndarray | pd.DataFrame | None]:
+    def apply_nmf(self, **kwargs: object) -> tuple[NMF, np.ndarray | pl.DataFrame | None]:
         """Apply NMF and return the fitted model with transformed data."""
         # NMF requires non-negative data; users should ensure this upstream or via preprocess
         model = self._init_with_seed(NMF, kwargs)
         return self._apply_model(model, "NMF", cast("int | None", kwargs.get("n_components")))
 
-    def apply_minibatch_nmf(self, **kwargs: object) -> tuple[MiniBatchNMF, np.ndarray | pd.DataFrame | None]:
+    def apply_minibatch_nmf(self, **kwargs: object) -> tuple[MiniBatchNMF, np.ndarray | pl.DataFrame | None]:
         """Apply MiniBatchNMF and return the fitted model with transformed data."""
         model = self._init_with_seed(MiniBatchNMF, kwargs)
         return self._apply_model(model, "MiniBatchNMF", cast("int | None", kwargs.get("n_components")))
@@ -157,7 +157,7 @@ class LinearReduction(Reductions):
     def apply_latent_dirichlet_allocation(
         self,
         **kwargs: object,
-    ) -> tuple[LatentDirichletAllocation, np.ndarray | pd.DataFrame | None]:
+    ) -> tuple[LatentDirichletAllocation, np.ndarray | pl.DataFrame | None]:
         """Apply LatentDirichletAllocation and return model with transformed data."""
         model = self._init_with_seed(LatentDirichletAllocation, kwargs)
         return self._apply_model(

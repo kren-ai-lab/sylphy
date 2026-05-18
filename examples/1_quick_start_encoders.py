@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 
-import pandas as pd
+import polars as pl
 
 from sylphy.sequence_encoder import (
     FFTEncoder,
@@ -26,7 +26,7 @@ DATA = [
 
 
 def main() -> None:
-    df = pd.DataFrame(DATA)
+    df = pl.DataFrame(DATA)
 
     one_hot = OneHotEncoder(dataset=df, sequence_column="sequence", max_length=20)
     one_hot.run_process()

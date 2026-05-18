@@ -11,11 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
-import pandas as pd
+import polars as pl
 from sklearn.metrics import pairwise_distances
-from sklearn.utils import shuffle
-
-from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -49,7 +46,7 @@ class UtilsLib:
     @classmethod
     def random_selection(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         label_name: str | None = None,
         labels: Sequence[Any] | None = None,
         n_samples: int = 100,
@@ -57,12 +54,12 @@ class UtilsLib:
         per_label: bool = True,
         replace: bool = False,
         random_state: int | None = 42,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """Randomly select rows from a DataFrame with optional stratification."""
         if label_name is None:
             _LOG.info("Sampling without stratification (n=%d).", n_samples)
-            shuffled = cast("pd.DataFrame", shuffle(df, random_state=random_state))
-            return shuffled.head(n_samples)
+            n = n_samples if replace else min(n_samples, len(df))
+            return df.sample(n=n, with_replacement=replace, shuffle=True, seed=random_state)
 
         return cls._stratified_selection(
             df,
@@ -77,7 +74,7 @@ class UtilsLib:
     @classmethod
     def _stratified_selection(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         label_name: str,
         labels: Sequence[Any] | None,
         n_samples: int,
@@ -85,38 +82,36 @@ class UtilsLib:
         per_label: bool,
         replace: bool,
         random_state: int | None,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """Select rows using stratified sampling rules."""
         if label_name not in df.columns:
             _LOG.error("Label column '%s' not found.", label_name)
             msg = f"Label column '{label_name}' not found in DataFrame."
             raise ValueError(msg)
 
-        # Determine the set of labels to consider
-        present = cast("np.ndarray", pd.unique(df[label_name]))
+        present = df[label_name].unique().to_list()
         use_labels = cls._resolve_labels(present, labels, label_name)
+        filtered = df.filter(pl.col(label_name).is_in(use_labels))
 
         if per_label:
             return cls._sample_per_label(
-                df,
+                filtered,
                 label_name,
-                use_labels,
                 n_samples,
                 replace=replace,
                 seed=random_state,
             )
 
         return cls._sample_globally_proportionate(
-            df,
+            filtered,
             label_name,
-            use_labels,
             n_samples,
             replace=replace,
             seed=random_state,
         )
 
     @staticmethod
-    def _resolve_labels(present: np.ndarray, requested: Sequence[Any] | None, col: str) -> list[Any]:
+    def _resolve_labels(present: list[Any], requested: Sequence[Any] | None, col: str) -> list[Any]:
         if requested is None:
             return list(present)
         unknown = [lab for lab in requested if lab not in present]
@@ -128,74 +123,85 @@ class UtilsLib:
 
     @staticmethod
     def _sample_per_label(
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         col: str,
-        labels: list[Any],
         n: int,
         *,
         replace: bool,
         seed: int | None,
-    ) -> pd.DataFrame:
-        parts: list[pd.DataFrame] = []
-        for lab in labels:
-            subset = df.loc[df[col] == lab]
-            k = n if replace else min(n, len(subset))
+    ) -> pl.DataFrame:
+        def _sample_group(grp: pl.DataFrame) -> pl.DataFrame:
+            label_val = grp[col][0]
+            k = n if replace else min(n, len(grp))
             if k <= 0:
-                _LOG.warning("Skipping label '%s' (no rows).", lab)
-                continue
-            parts.append(subset.sample(n=k, replace=replace, random_state=seed))
-            _LOG.info("Sampled %d rows for label '%s'.", k, lab)
+                _LOG.warning("Skipping label '%s' (no rows).", label_val)
+                return grp.clear()
+            per_seed = (hash((seed, label_val)) & 0x7FFFFFFF) if seed is not None else None
+            _LOG.info("Sampled %d rows for label '%s'.", k, label_val)
+            return grp.sample(n=k, with_replacement=replace, seed=per_seed)
 
-        if not parts:
-            return df.iloc[0:0].copy()
-        out = pd.concat(parts, axis=0).reset_index(drop=True)
-        _LOG.info("Total sampled rows (per_label): %d", len(out))
-        return out
+        result = df.group_by(col).map_groups(_sample_group)
+        _LOG.info("Total sampled rows (per_label): %d", len(result))
+        return result
 
     @staticmethod
     def _sample_globally_proportionate(
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         col: str,
-        labels: list[Any],
         n: int,
         *,
         replace: bool,
         seed: int | None,
-    ) -> pd.DataFrame:
-        counts = df.loc[df[col].isin(labels), col].value_counts().sort_index()
-        total = counts.sum()
+    ) -> pl.DataFrame:
+        if len(df) == 0:
+            _LOG.warning("No rows matched labels; returning empty frame.")
+            return df.clear()
+
+        counts = df.group_by(col).agg(pl.len().alias("_count")).sort(col)
+        total = counts["_count"].sum()
         if total == 0:
             _LOG.warning("No rows matched labels; returning empty frame.")
-            return df.iloc[0:0].copy()
+            return df.clear()
 
-        alloc = cast("pd.Series", (cast("Any", counts / total) * n).round().astype(int))
-        alloc = alloc.mask((counts > 0) & (alloc == 0), 1)
-        diff = int(n - int(alloc.sum()))
+        # Vectorized proportional allocation + ensure minimum 1 per present label
+        alloc_df = counts.with_columns(
+            pl.when((pl.col("_count") > 0) & ((pl.col("_count") / total * n).round().cast(pl.Int64) == 0))
+            .then(pl.lit(1, dtype=pl.Int64))
+            .otherwise((pl.col("_count") / total * n).round().cast(pl.Int64))
+            .alias("_alloc")
+        )
+
+        # Distribute rounding error — O(num_labels), not O(rows)
+        alloc_dict: dict[Any, int] = dict(
+            zip(alloc_df[col].to_list(), alloc_df["_alloc"].to_list(), strict=True)
+        )
+        count_dict: dict[Any, int] = dict(zip(counts[col].to_list(), counts["_count"].to_list(), strict=True))
+        diff = n - sum(alloc_dict.values())
         if diff != 0:
-            order = counts.sort_values(ascending=(diff < 0)).index
+            order = sorted(count_dict, key=lambda k: count_dict[k], reverse=(diff < 0))
             for lab in order:
                 if diff == 0:
                     break
-                new_v = alloc[lab] + (1 if diff > 0 else -1)
+                new_v = alloc_dict[lab] + (1 if diff > 0 else -1)
                 if new_v >= 0:
-                    alloc[lab] = new_v
+                    alloc_dict[lab] = new_v
                     diff += -1 if diff > 0 else 1
 
-        parts: list[pd.DataFrame] = []
-        for lab, k in alloc.items():
+        def _sample_group(grp: pl.DataFrame) -> pl.DataFrame:
+            label_val = grp[col][0]
+            k = alloc_dict.get(label_val, 0)
             if k <= 0:
-                continue
-            subset = df.loc[df[col] == lab]
-            actual_k = k if replace else min(k, len(subset))
-            if actual_k > 0:
-                parts.append(subset.sample(n=actual_k, replace=replace, random_state=seed))
-                _LOG.info("Sampled %d rows for label '%s' (global mode).", actual_k, lab)
+                return grp.clear()
+            actual_k = k if replace else min(k, len(grp))
+            if actual_k <= 0:
+                return grp.clear()
+            per_seed = (hash((seed, label_val)) & 0x7FFFFFFF) if seed is not None else None
+            _LOG.info("Sampled %d rows for label '%s' (global mode).", actual_k, label_val)
+            return grp.sample(n=actual_k, with_replacement=replace, seed=per_seed)
 
-        if not parts:
-            return df.iloc[0:0].copy()
-        out = pd.concat(parts, axis=0).reset_index(drop=True)
-        _LOG.info("Total sampled rows (global): %d", len(out))
-        return out
+        result = df.group_by(col).map_groups(_sample_group)
+        _LOG.info("Total sampled rows (global): %d", len(result))
+        return result
 
     # -------------------------------------------------------------------------
     # Distances
@@ -353,7 +359,7 @@ class UtilsLib:
     @classmethod
     def export_data(
         cls,
-        df_encoded: pd.DataFrame,
+        df_encoded: pl.DataFrame,
         path: str | Path,
         *,
         base_message: str = "Encoded data",
@@ -377,15 +383,6 @@ class UtilsLib:
         try:
             cls._do_export(df_encoded, dest, file_format, base_message)
         except Exception as e:
-            wrapped = wrap_optional_dependency_error(
-                e,
-                feature="Parquet export",
-                extra="parquet",
-                packages=("pyarrow", "fastparquet"),
-            )
-            if wrapped is not None:
-                _LOG.error("Failed export to %s (%s): %s", dest, file_format, wrapped)
-                raise wrapped from e
             _LOG.error("Failed export to %s (%s): %s", dest, file_format, e)
             raise
 
@@ -399,13 +396,13 @@ class UtilsLib:
         return "csv"
 
     @staticmethod
-    def _do_export(df: pd.DataFrame, dest: Path, fmt: str, msg: str) -> None:
+    def _do_export(df: pl.DataFrame, dest: Path, fmt: str, msg: str) -> None:
         if fmt == "csv":
-            df.to_csv(dest, index=False)
+            df.write_csv(dest)
         elif fmt == "npy":
             np.save(dest, df.to_numpy(), allow_pickle=True)
         elif fmt == "npz":
-            np.savez_compressed(dest, values=df.to_numpy(), columns=df.columns.to_numpy())
+            np.savez_compressed(dest, values=df.to_numpy(), columns=np.array(df.columns))
         elif fmt == "parquet":
-            df.to_parquet(dest, index=False)
+            df.write_parquet(dest)
         _LOG.info("%s exported to %s: %s", msg, fmt.upper(), dest)

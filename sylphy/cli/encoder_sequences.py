@@ -201,7 +201,7 @@ def encode_sequences(
                 debug_mode=level,
             )
             phys.run_process()
-            if phys.coded_dataset is None or phys.coded_dataset.empty:
+            if phys.coded_dataset is None or phys.coded_dataset.is_empty():
                 _fail("Physicochemical step produced empty features.")
 
             fft = cast(

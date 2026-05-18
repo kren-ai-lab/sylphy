@@ -6,7 +6,7 @@ import contextlib
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import torch
 from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
@@ -36,7 +36,7 @@ class ESMCEmbedding(EmbeddingBase):
         name_device: str = DEFAULT_DEVICE,
         name_model: str = "esmc_300m",
         _name_tokenizer: str | None = None,
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         column_seq: str | None = "sequence",
         debug_mode: int = DEFAULT_DEBUG_MODE,
         precision: PrecisionType = DEFAULT_PRECISION,
@@ -182,14 +182,14 @@ class ESMCEmbedding(EmbeddingBase):
         layers: LayerSpec = "last",
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """Embed all sequences with ESM-C and return pooled embeddings."""
         self.ensure_loaded()
         if self.dataset is None or self.column_seq not in self.dataset.columns:
             msg = f"Dataset invalid or column '{self.column_seq}' missing."
             raise ValueError(msg)
 
-        sequences = self.dataset[self.column_seq].astype(str).tolist()
+        sequences = self.dataset[self.column_seq].cast(pl.String).to_list()
         if seq_len is not None:
             sequences = [s[:seq_len].ljust(seq_len, "X") for s in sequences]
 
@@ -217,7 +217,5 @@ class ESMCEmbedding(EmbeddingBase):
 
         self.release_resources()
         mat = np.stack(out_vecs, axis=0)
-        cols = pd.Index([f"p_{k + 1}" for k in range(mat.shape[1])])
-        df_emb = pd.DataFrame(mat, columns=cols, index=self.dataset.index)
-        df_emb[self.column_seq] = self.dataset[self.column_seq].to_numpy()
-        return df_emb
+        col_names = [f"p_{k + 1}" for k in range(mat.shape[1])]
+        return pl.from_numpy(mat, schema=col_names).with_columns(self.dataset[self.column_seq])

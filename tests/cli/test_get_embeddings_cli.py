@@ -4,7 +4,7 @@ import sys
 from pathlib import Path  # noqa: TC003
 from typing import Any, cast
 
-import pandas as pd
+import polars as pl
 from typer.testing import CliRunner
 
 from sylphy.cli.get_embeddings import app
@@ -12,9 +12,9 @@ from sylphy.cli.get_embeddings import app
 
 def test_get_embeddings_runs_and_saves_csv(tmp_path: Path) -> None:
     """Verify CLI extracts embeddings and saves to CSV with correct shape."""
-    df = pd.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
+    df = pl.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
     inp = tmp_path / "seqs.csv"
-    df.to_csv(inp, index=False)
+    df.write_csv(inp)
     out = tmp_path / "out.csv"
 
     result = CliRunner().invoke(
@@ -42,7 +42,7 @@ def test_get_embeddings_runs_and_saves_csv(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0, result.output
 
-    got = pd.read_csv(out)
+    got = pl.read_csv(out)
     assert got.shape == (3, 5)  # 3 sequences, hidden_size=4 + sequence column
     assert "sequence" in got.columns
 
@@ -54,9 +54,9 @@ def test_get_embeddings_oom_backoff_succeeds(tmp_path: Path) -> None:
     _FakeModel.OOM_THRESHOLD = None
     _FakeModel.FORWARD_CALLS = 0
 
-    df = pd.DataFrame({"sequence": ["AAAA", "BBBB", "CCCCC", "DD"]})
+    df = pl.DataFrame({"sequence": ["AAAA", "BBBB", "CCCCC", "DD"]})
     inp = tmp_path / "seqs.csv"
-    df.to_csv(inp, index=False)
+    df.write_csv(inp)
     out = tmp_path / "out.csv"
 
     result = CliRunner().invoke(
@@ -83,5 +83,5 @@ def test_get_embeddings_oom_backoff_succeeds(tmp_path: Path) -> None:
         ],
     )
     assert result.exit_code == 0, result.output
-    assert pd.read_csv(out).shape == (4, 5)
+    assert pl.read_csv(out).shape == (4, 5)
     assert _FakeModel.FORWARD_CALLS >= 1

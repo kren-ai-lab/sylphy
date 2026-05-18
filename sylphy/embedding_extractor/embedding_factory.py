@@ -11,7 +11,7 @@ from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 from sylphy.logging import get_child_logger
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
     from sylphy.types import PrecisionType
 
@@ -65,7 +65,7 @@ _BACKENDS: list[tuple[tuple[str, ...], str, str, str, dict[str, Any]]] = [
 
 def create_embedding(
     model_name: str,
-    dataset: pd.DataFrame,
+    dataset: pl.DataFrame,
     column_seq: str,
     name_device: str = "cuda",
     precision: PrecisionType = "fp32",

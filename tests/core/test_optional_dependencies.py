@@ -21,9 +21,9 @@ def test_build_optional_dependency_error_mentions_extra() -> None:
 
 def test_build_optional_dependency_error_uses_plural_install_target() -> None:
     err = build_optional_dependency_error(
-        feature="Parquet export",
-        extra="parquet",
-        packages=("pyarrow", "fastparquet"),
+        feature="ESM-C embeddings",
+        extra="embeddings",
+        packages=("esm", "torch"),
     )
 
     assert "Install them with" in str(err)

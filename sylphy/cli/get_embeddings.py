@@ -7,7 +7,7 @@ factory and EmbeddingBase API.
 Design goals
 ------------
 - Factory-first (no backend is imported until execution).
-- Lazy imports (pandas, torch/transformers load only inside the command).
+- Lazy imports (torch/transformers load only inside the command).
 - Consistent, explicit options (model, device, precision, batch, max_length).
 - Robust OOM handling (halve batch size and retry, if enabled).
 - Correct output file extension based on --format-output.
@@ -207,7 +207,7 @@ def get_embedding(
         fmt_v = validate_choice(format_output, EXPORT_CHOICES, "format-output")
         lvl = level_from_str(log_level)
 
-        # CSV → DataFrame (lazy pandas)
+        # CSV → DataFrame
         df = load_csv(input_data, sequence_identifier)
 
         # Parse layers spec for convenience: accept ints or CSV of ints

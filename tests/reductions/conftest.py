@@ -4,7 +4,7 @@ import os
 from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import pytest
 
 if TYPE_CHECKING:
@@ -35,7 +35,6 @@ def X_nonneg() -> np.ndarray:
 
 
 @pytest.fixture
-def df_small(X_small: np.ndarray) -> pd.DataFrame:
+def df_small(X_small: np.ndarray) -> pl.DataFrame:
     """Wrap X_small in a DataFrame with feature columns."""
-    columns = pd.Index([f"f{i}" for i in range(X_small.shape[1])])
-    return pd.DataFrame(X_small, columns=columns)
+    return pl.from_numpy(X_small, schema=[f"f{i}" for i in range(X_small.shape[1])])

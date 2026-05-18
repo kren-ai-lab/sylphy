@@ -1,6 +1,6 @@
 import sys
 
-import pandas as pd
+import polars as pl
 import torch
 
 from sylphy.embedding_extractor import (
@@ -26,8 +26,8 @@ def run_backend(backend, name_out):
 
 
 def main():
-    df_train = pd.read_excel(sys.argv[1])
-    df_test = pd.read_excel(sys.argv[2])
+    df_train = pl.read_excel(sys.argv[1])
+    df_test = pl.read_excel(sys.argv[2])
 
     path_export = sys.argv[3]
 

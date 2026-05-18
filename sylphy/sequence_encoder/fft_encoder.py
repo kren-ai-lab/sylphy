@@ -6,7 +6,8 @@ import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
+import polars as pl
+import polars.selectors as cs
 from scipy.fft import fft
 
 from sylphy.logging import add_context, get_logger
@@ -29,7 +30,7 @@ class FFTEncoder:
 
     def __init__(
         self,
-        dataset: pd.DataFrame,
+        dataset: pl.DataFrame,
         sequence_column: str = "sequence",
         *,
         debug: bool = False,
@@ -42,60 +43,54 @@ class FFTEncoder:
         self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
         add_context(self.__logger__, component="sequence_encoder", encoder="FFTEncoder")
 
-        # Keep a copy and store sequences aside
-        self.dataset = dataset.copy()
-        self.sequence_list = self.dataset[self.sequence_column].to_numpy()
-        self.dataset = self.dataset.drop(columns=[self.sequence_column])
+        # Store sequences as a Series; strip from numeric frame
+        self.sequence_series: pl.Series = dataset[sequence_column]
+        self._numeric: pl.DataFrame = dataset.select(cs.numeric())
 
-        # Determine FFT size (next power of two >= number of numeric columns)
-        self.max_length = len(self.dataset.columns)
+        self.max_length = self._numeric.width
+        self.stop_value: int = 0
+        self.coded_dataset: pl.DataFrame | None = None
+
         self.init_process()
 
-        self.coded_dataset: pd.DataFrame | None = None
-
-    def __get_near_pow(self) -> None:
+    def _get_near_pow(self) -> None:
         self.__logger__.info("Computing nearest power-of-two for padding.")
         self.stop_value = int(2 ** int(np.ceil(np.log2(max(1, self.max_length)))))
         self.__logger__.info("FFT stop value set to %d.", self.stop_value)
 
-    def __complete_zero_padding(self) -> None:
+    def _zero_pad(self) -> None:
         self.__logger__.info("Applying zero-padding up to %d.", self.stop_value)
         pad = self.stop_value - self.max_length
         if pad > 0:
-            padding_df = pd.DataFrame(
-                data=np.zeros((self.dataset.shape[0], pad), dtype=float),
-                columns=pd.Index([f"p_{i + self.max_length}" for i in range(pad)]),
-                index=self.dataset.index,
+            self._numeric = self._numeric.with_columns(
+                pl.lit(0.0, dtype=pl.Float64).alias(f"p_{self.max_length + i}") for i in range(pad)
             )
-            self.dataset = pd.concat([self.dataset, padding_df], axis=1)
 
     def init_process(self) -> None:
         """Compute FFT length and zero-padding setup for the dataset."""
         self.__logger__.info("Initializing FFT encoding process.")
-        self.__get_near_pow()
-        self.__complete_zero_padding()
-
-    def __create_row(self, position: int) -> list[float]:
-        return self.dataset.iloc[position].tolist()
-
-    def __apply_fft(self, position: int) -> list[float]:
-        try:
-            row = self.__create_row(position)
-            yf = fft(row)
-            return np.abs(yf[: self.stop_value // 2]).tolist()
-        except (TypeError, ValueError, RuntimeError) as e:
-            self.__logger__.error("Error applying FFT at position %d: %s", position, e)
-            return [0.0] * (self.stop_value // 2)
+        self._get_near_pow()
+        self._zero_pad()
 
     def encoding_dataset(self) -> None:
-        """Encode the dataset by applying FFT to each row."""
+        """Encode the dataset by applying FFT row-wise."""
         try:
             self.__logger__.info("Encoding dataset with FFT.")
-            matrix = [self.__apply_fft(i) for i in range(len(self.dataset))]
-            header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
-            self.coded_dataset = pd.DataFrame(matrix, columns=header, index=self.dataset.index)
-            self.coded_dataset[self.sequence_column] = self.sequence_list
-            self.__logger__.info("FFT encoding complete. Output shape: %s", self.coded_dataset.shape)
+            # Exit to numpy once for bulk FFT, then return to polars immediately
+            numeric_matrix = self._numeric.to_numpy()
+            n_out = self.stop_value // 2
+            output = np.empty((len(numeric_matrix), n_out), dtype=np.float32)
+            for i, row in enumerate(numeric_matrix):
+                try:
+                    yf = fft(row)
+                    output[i] = np.abs(yf[:n_out]).astype(np.float32)
+                except (TypeError, ValueError, RuntimeError) as e:
+                    self.__logger__.error("Error applying FFT at row %d: %s", i, e)
+                    output[i] = 0.0
+
+            col_names = [f"p_{i}" for i in range(n_out)]
+            self.coded_dataset = pl.from_numpy(output, schema=col_names).with_columns(self.sequence_series)
+            self.__logger__.info("FFT encoding complete. Shape: %s", self.coded_dataset.shape)
         except Exception as e:
             self.__logger__.error("Failed to encode dataset with FFT: %s", e)
             msg = "FFT encoding failed."
@@ -110,7 +105,7 @@ class FFTEncoder:
         path: str | Path,
         file_format: FileFormat = "csv",
         *,
-        df_encoder: pd.DataFrame | None = None,
+        df_encoder: pl.DataFrame | None = None,
     ) -> None:
         """Export encoded FFT features to disk."""
         data = df_encoder if df_encoder is not None else self.coded_dataset

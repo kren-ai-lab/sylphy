@@ -182,7 +182,7 @@ FFT encoders expect numeric input. Common workflow:
 
 #### `Reductions` (reductions/reduction_methods.py)
 - Base for dimensionality reduction methods
-- Returns: numpy array, pandas DataFrame, or fitted model + data
+- Returns: numpy array, polars DataFrame, or fitted model + data
 - Preprocessing options: standardization, normalization
 - Linear methods: PCA, TruncatedSVD, NMF, Factor Analysis
 - Non-linear methods: UMAP, t-SNE, Isomap, MDS, etc.
@@ -239,14 +239,13 @@ tests/
 ## Dependencies
 
 ### Core (always required)
-- `pandas`, `numpy`, `scipy`, `scikit-learn`
+- `polars`, `numpy`, `scipy`, `scikit-learn`
 - `typer`, `rich` (CLI)
-- `appdirs`, `huggingface-hub` (cache/registry)
+- `platformdirs`, `huggingface-hub` (cache/registry)
 
 ### Optional Groups
 - `embeddings`: `torch`, `transformers`, `sentencepiece`, `esm` (ESM-C)
 - `reductions`: `umap-learn`, `clustpy`
-- `parquet`: `pyarrow`, `fastparquet`
 - `dev`: `pyrefly`, `pytest`, `ruff`, `taskipy`, `build`, `twine`
 - `tests`: `pytest`, `pytest-cov`
 - `all`: all optional dependencies

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-import pandas as pd
+import polars as pl
 import pytest
 
 from sylphy.embedding_extractor.prot_t5_embedding import ProtT5Embedding
 
 
 def test_prot5_missing_sentencepiece_suggests_embeddings_extra(monkeypatch: pytest.MonkeyPatch) -> None:
-    df = pd.DataFrame({"sequence": ["AAAA"]})
+    df = pl.DataFrame({"sequence": ["AAAA"]})
     inst = ProtT5Embedding(dataset=df, name_device="cpu")
     monkeypatch.setattr(inst, "_register_and_resolve", lambda: "fake-model-dir")
 

@@ -103,18 +103,30 @@ model, reduced = reduce_dimensionality(
 ```bash
 sylphy --help
 
+# Extract embeddings (ESM2, GPU, fp16)
 sylphy embed \
-  --model facebook/esm2_t6_8M_UR50D \
-  --input sequences.csv \
-  --output embeddings.parquet \
-  --device cuda --precision fp16 --batch-size 16
+  -i sequences.csv -o embeddings.parquet \
+  -m facebook/esm2_t6_8M_UR50D -d cuda -p fp16 -b 16
 
-sylphy encode \
-  --method one_hot \
-  --input sequences.csv \
-  --output encoded.csv
+# Extract embeddings (ProtT5, last 4 layers averaged)
+sylphy embed \
+  -i sequences.csv -o embeddings.npy \
+  -m Rostlab/prot_t5_xl_uniref50 -d cuda -p bf16 --layers last4 --layer-agg mean
 
+# Classical encoding — one-hot
+sylphy encode --method one_hot -i sequences.csv -o encoded.parquet
+
+# Classical encoding — physicochemical (AAIndex)
+sylphy encode --method physicochemical \
+  -i sequences.csv -o phys.parquet --name-property ARGP820101
+
+# Classical encoding — k-mers TF-IDF
+sylphy encode --method kmers -i sequences.csv -o kmers.csv -k 4
+
+# Cache management
 sylphy cache stats
+sylphy cache ls --recursive
+sylphy cache prune --max-size 10GB --apply
 ```
 
 ## Configuration

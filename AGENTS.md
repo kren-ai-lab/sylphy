@@ -257,7 +257,7 @@ pip install -e ".[embeddings,reductions,parquet]"
 
 - **Python 3.11+** required (3.12 target)
 - **Type annotations**: fully type-annotated with `from __future__ import annotations`
-- **Docstrings**: NumPy-style docstrings for all public functions/classes
+- **Docstrings**: Google-style docstrings for all public functions/classes
 - **Linting**: Ruff with line length 110
 - **No side effects**: imports are clean; no initialization on import
 - **Reproducibility**: use `random_state=0` in stochastic reducers

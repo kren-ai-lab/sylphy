@@ -71,7 +71,7 @@ _LOG_LEVEL = typer.Option(
 
 
 @app.command("embed", help="Extract per-sequence embeddings from a pretrained protein model.")
-def embed(  # noqa: D103
+def embed(
     *,
     input_path: Path = _INPUT,
     seq_col: str = _SEQ_COL,
@@ -87,6 +87,30 @@ def embed(  # noqa: D103
     pool: PoolChoice = _POOL,
     log_level: str = _LOG_LEVEL,
 ) -> None:
+    r"""Extract per-sequence embeddings from a pretrained protein model and export to disk.
+
+    Examples:
+        ESM2 on GPU, fp16, last layer, mean pool → parquet::
+
+            sylphy embed -i data/seqs.csv -o out/esm2.parquet \
+              -m facebook/esm2_t6_8M_UR50D -d cuda -p fp16 -b 16
+
+        ProtT5 on GPU, bf16, last 4 layers averaged → npy::
+
+            sylphy embed -i data/seqs.csv -o out/t5.npy \
+              -m Rostlab/prot_t5_xl_uniref50 -d cuda -p bf16 --layers last4 --layer-agg mean
+
+        Ankh2, all layers summed, CLS pooling → csv::
+
+            sylphy embed -i data/seqs.csv -o out/ankh.csv \
+              -m ElnaggarLab/ankh2-ext1 --layers all --layer-agg sum --pool cls
+
+        CPU inference, parquet input, specific layer indices::
+
+            sylphy embed -i data/seqs.parquet -o out/esm2_layers.csv \
+              -m facebook/esm2_t6_8M_UR50D -d cpu --layers 0,3,6 --layer-agg concat
+
+    """
     fmt = infer_format(output)
     df = load_dataset(input_path, seq_col)
 

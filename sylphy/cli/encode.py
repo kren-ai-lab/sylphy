@@ -58,7 +58,7 @@ _LOG_LEVEL = typer.Option(
 
 
 @app.command("encode", help="Encode sequences into a numeric feature matrix.")
-def encode(  # noqa: D103
+def encode(
     *,
     input_path: Path = _INPUT,
     seq_col: str = _SEQ_COL,
@@ -72,6 +72,32 @@ def encode(  # noqa: D103
     size_kmer: int = _SIZE_KMER,
     log_level: str = _LOG_LEVEL,
 ) -> None:
+    r"""Encode sequences and export feature matrices.
+
+    Examples:
+        One-hot encode from CSV, output to parquet::
+
+            sylphy encode --method one_hot -i data/seqs.csv -o out/onehot.parquet
+
+        Ordinal encode with custom max length::
+
+            sylphy encode --method ordinal -i data/seqs.csv -o out/ordinal.npy -l 512
+
+        Physicochemical (AAIndex property), allow unknown residues::
+
+            sylphy encode --method physicochemical -i data/seqs.csv -o out/phys.parquet \
+              --name-property ARGP820101 --allow-unknown
+
+        k-mers (TF-IDF) with k=4::
+
+            sylphy encode --method kmers -i data/seqs.parquet -o out/kmers.csv -k 4
+
+        FFT pipeline (physicochemical → FFT)::
+
+            sylphy encode --method fft -i data/seqs.csv -o out/fft.csv \
+              --type-descriptor aaindex --name-property ANDN920101
+
+    """
     fmt = infer_format(output)
     level = level_from_str(log_level)
     df = load_dataset(input_path, seq_col)

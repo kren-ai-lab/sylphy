@@ -137,8 +137,8 @@ class ESMCEmbedding(EmbeddingBase):
         layers: LayerSpec,
         layer_agg: LayerAgg,
         pool: Pool,
-    ) -> np.ndarray | None:
-        """Embed and pool a single sequence."""
+    ) -> torch.Tensor | None:
+        """Embed and pool a single sequence, returning a float32 tensor on device."""
         emb, hs = self._embed_one(seq, return_hidden_states=True)
 
         if self._has_hidden_states(hs):
@@ -151,19 +151,18 @@ class ESMCEmbedding(EmbeddingBase):
                 stacked = torch.stack(chosen, dim=0).sum(dim=0)
             else:
                 stacked = torch.stack(chosen, dim=0).mean(dim=0)
-            dummy_attn = torch.ones(stacked.shape[:2], dtype=stacked.dtype, device=stacked.device)
-            pooled = self._pool_tokens(stacked, dummy_attn, pool).squeeze(0)
+            attn = torch.ones(stacked.shape[:2], dtype=stacked.dtype, device=stacked.device)
+            pooled = self._pool_tokens(stacked, attn, pool).squeeze(0)
         elif emb is not None:
-            dummy_attn = torch.ones(emb.shape[:2], dtype=emb.dtype, device=emb.device)
-            pooled = self._pool_tokens(emb, dummy_attn, pool).squeeze(0)
+            attn = torch.ones(emb.shape[:2], dtype=emb.dtype, device=emb.device)
+            pooled = self._pool_tokens(emb, attn, pool).squeeze(0)
         else:
             return None
 
-        # Ensure FP32 before NumPy conversion
         pooled = pooled.contiguous()
         if pooled.dtype in (torch.bfloat16, torch.float16):
             pooled = pooled.to(torch.float32)
-        return pooled.detach().cpu().numpy()
+        return pooled.detach()
 
     def _adjust_batch_size_on_oom(self, current_bs: int, i: int) -> int:
         new_bs = max(current_bs // 2, 1)
@@ -191,7 +190,7 @@ class ESMCEmbedding(EmbeddingBase):
 
         sequences = self.dataset[self.column_seq].cast(pl.String).to_list()
         if seq_len is not None:
-            sequences = [s[:seq_len].ljust(seq_len, "X") for s in sequences]
+            sequences = [s[:seq_len] for s in sequences]
 
         self.__logger__.info("Embedding %d sequences with ESM-C.", len(sequences))
 
@@ -199,10 +198,13 @@ class ESMCEmbedding(EmbeddingBase):
         while i < len(sequences):
             chunk = sequences[i : i + current_bs]
             try:
+                chunk_tensors: list[torch.Tensor] = []
                 for seq in tqdm(chunk, desc=f"[ESMC] idx {i}", leave=False):
-                    vec = self._process_sequence(seq, layers, layer_agg, pool)
-                    if vec is not None:
-                        out_vecs.append(vec)
+                    t = self._process_sequence(seq, layers, layer_agg, pool)
+                    if t is not None:
+                        chunk_tensors.append(t)
+                if chunk_tensors:
+                    out_vecs.append(torch.stack(chunk_tensors).cpu().numpy())
                 i += current_bs
             except RuntimeError as e:
                 is_oom = ("CUDA out of memory" in str(e)) or ("CUBLAS_STATUS_ALLOC_FAILED" in str(e))
@@ -216,6 +218,6 @@ class ESMCEmbedding(EmbeddingBase):
             raise RuntimeError(msg)
 
         self.release_resources()
-        mat = np.stack(out_vecs, axis=0)
+        mat = np.vstack(out_vecs)
         col_names = [f"p_{k + 1}" for k in range(mat.shape[1])]
-        return pl.from_numpy(mat, schema=col_names).with_columns(self.dataset[self.column_seq])
+        return pl.from_numpy(mat, schema=col_names).insert_column(0, self.dataset[self.column_seq])

@@ -146,13 +146,23 @@ _fake_esm_models.__path__ = []
 _fake_esm_models_esmc = cast("Any", types.ModuleType("esm.models.esmc"))
 
 
-class _ESMCOut:
-    def __init__(self, last_hidden_state: torch.Tensor, hidden_states: tuple[torch.Tensor, ...]) -> None:
-        self.last_hidden_state = last_hidden_state
+class _ESMCLogitsOut:
+    def __init__(self, embeddings: torch.Tensor, hidden_states: tuple[torch.Tensor, ...]) -> None:
+        self.embeddings = embeddings
         self.hidden_states = hidden_states
 
 
+class _FakeProteinTensor:
+    def __init__(self, seq_len: int) -> None:
+        self._seq_len = seq_len
+
+    def to(self, _device: object) -> _FakeProteinTensor:
+        return self
+
+
 class ESMC:
+    H: int = 4
+
     @classmethod
     def from_pretrained(cls, *args: object, **kwargs: object) -> ESMC:  # noqa: ARG003
         return cls()
@@ -163,15 +173,17 @@ class ESMC:
     def eval(self) -> ESMC:
         return self
 
-    def __call__(self, **enc: object) -> _ESMCOut:
-        x: torch.Tensor = cast("torch.Tensor", enc["input_ids"])
-        B, L = x.shape
-        H = 4
-        base = torch.arange(1, H + 1, dtype=torch.float32, device=x.device).view(1, 1, H).repeat(B, L, 1)
-        hidden_states = tuple(base + float(i) for i in range(4))
-        last_hidden = hidden_states[-1]
+    def encode(self, protein: object) -> _FakeProteinTensor:
+        seq: str = getattr(protein, "sequence", "")
+        return _FakeProteinTensor(len(seq))
 
-        return _ESMCOut(last_hidden, hidden_states)
+    def logits(self, pt: object, cfg: object) -> _ESMCLogitsOut:  # noqa: ARG002
+        seq_len: int = getattr(pt, "_seq_len", 0)
+        L = seq_len + 2  # BOS + residues + EOS
+        H = self.H
+        base = torch.arange(1, H + 1, dtype=torch.float32).view(1, 1, H).repeat(1, L, 1)
+        hidden_states = tuple(base + float(i) for i in range(4))
+        return _ESMCLogitsOut(base, hidden_states)
 
 
 _fake_esm_models_esmc.ESMC = ESMC
@@ -183,11 +195,13 @@ _fake_esm_sdk_forge = cast("Any", types.ModuleType("esm.sdk.forge"))
 
 
 class ESMProtein:
-    pass
+    def __init__(self, *, sequence: str = "") -> None:
+        self.sequence = sequence
 
 
 class LogitsConfig:
-    pass
+    def __init__(self, *, return_embeddings: bool = False, return_hidden_states: bool = False) -> None:
+        pass
 
 
 class ESM3ForgeInferenceClient:

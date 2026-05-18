@@ -7,8 +7,8 @@ import typer
 from sylphy import __version__
 from sylphy.cli._shared import HELP_CONTEXT_SETTINGS
 from sylphy.cli.cache import app as cache_app
-from sylphy.cli.encoder_sequences import encode_sequences
-from sylphy.cli.get_embeddings import get_embedding
+from sylphy.cli.embed import embed
+from sylphy.cli.encode import encode
 
 app = typer.Typer(
     name="sylphy",
@@ -39,22 +39,9 @@ def main(
     """Sylphy CLI main callback."""
 
 
-# Cache management
-app.add_typer(
-    cache_app,
-    name="cache",
-    help="Inspect and manage the library cache (list, stats, prune, remove).",
-)
-
-app.command(
-    name="encode-sequences",
-    help="Encode sequences (one-hot, ordinal, freq, kmers, physchem, FFT)",
-)(encode_sequences)
-
-app.command(
-    name="get-embedding",
-    help="Extract embeddings from pretrained protein models",
-)(get_embedding)
+app.add_typer(cache_app, name="cache")
+app.command("encode")(encode)
+app.command("embed")(embed)
 
 if __name__ == "__main__":
     app()

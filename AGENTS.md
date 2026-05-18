@@ -68,18 +68,16 @@ sylphy --help
 sylphy --version
 
 # Extract embeddings
-sylphy get-embedding \
+sylphy embed \
   --model facebook/esm2_t6_8M_UR50D \
-  --input-data data/sequences.csv \
-  --sequence-identifier sequence \
+  --input data/sequences.csv \
   --output out/embeddings.parquet \
   --device cuda --precision fp16 --batch-size 16 --pool mean
 
 # Encode sequences
-sylphy encode-sequences \
-  --encoder one_hot \
-  --input-data data/sequences.csv \
-  --sequence-identifier sequence \
+sylphy encode \
+  --method one_hot \
+  --input data/sequences.csv \
   --output out/onehot.csv
 
 # Manage cache
@@ -191,8 +189,8 @@ FFT encoders expect numeric input. Common workflow:
 
 The CLI uses Typer with subcommands:
 - `sylphy cache` → cache management (ls, stats, prune, rm, clear, path)
-- `sylphy encode-sequences` → classical sequence encoders
-- `sylphy get-embedding` → embedding extraction
+- `sylphy encode` → classical sequence encoders
+- `sylphy embed` → embedding extraction
 
 Each CLI module follows the pattern:
 1. Define `app = typer.Typer(...)`
@@ -259,7 +257,7 @@ pip install -e ".[embeddings,reductions,parquet]"
 
 - **Python 3.11+** required (3.12 target)
 - **Type annotations**: fully type-annotated with `from __future__ import annotations`
-- **Docstrings**: NumPy-style docstrings for all public functions/classes
+- **Docstrings**: Google-style docstrings for all public functions/classes
 - **Linting**: Ruff with line length 110
 - **No side effects**: imports are clean; no initialization on import
 - **Reproducibility**: use `random_state=0` in stochastic reducers

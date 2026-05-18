@@ -33,8 +33,8 @@ Run tests:
 uv run task test
 uv run task test-v
 uv run task test-cov
-uv run pytest tests/cli/test_get_embeddings_cli.py -v
-uv run pytest tests/cli/test_get_embeddings_cli.py::test_get_embeddings_runs_and_saves_csv -vv
+uv run pytest tests/cli/test_embed_cli.py -v
+uv run pytest tests/cli/test_embed_cli.py::test_embed_runs_and_saves_csv -vv
 ```
 
 Lint, format, and type-check:

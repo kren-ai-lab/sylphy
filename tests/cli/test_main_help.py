@@ -13,8 +13,8 @@ def test_main_help_lists_subcommands() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     text = result.stdout
-    assert "get-embedding" in text
-    assert "encode-sequences" in text
+    assert "embed" in text
+    assert "encode" in text
     assert "cache" in text
 
 

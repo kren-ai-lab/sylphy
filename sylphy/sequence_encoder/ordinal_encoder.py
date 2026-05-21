@@ -38,7 +38,9 @@ class OrdinalEncoder(EncoderBase):
             debug_mode=debug_mode,
             name_logging=OrdinalEncoder.__name__,
         )
-        self._alpha = residues(extended=self.allow_extended) + (("X",) if self.allow_unknown and not self.allow_extended else ())
+        self._alpha = residues(extended=self.allow_extended) + (
+            ("X",) if self.allow_unknown and not self.allow_extended else ()
+        )
 
     def run_process(self) -> None:
         """Encode all validated sequences using ordinal representation."""

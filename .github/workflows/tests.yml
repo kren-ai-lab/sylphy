@@ -23,12 +23,25 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
+        include:
+          - python-version: "3.11"
+            embeddings: true
+          - python-version: "3.12"
+            embeddings: true
+          - python-version: "3.13"
+            embeddings: false
+          - python-version: "3.14"
+            embeddings: false
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Install dependencies (with embeddings)
+        if: matrix.embeddings == true
         run: uv sync --extra tests --extra embeddings --extra reductions
+      - name: Install dependencies (without embeddings)
+        if: matrix.embeddings == false
+        run: uv sync --extra tests --extra reductions
       - name: Run tests
         run: uv run pytest -q

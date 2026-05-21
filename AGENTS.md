@@ -119,11 +119,11 @@ sylphy/
 │   ├── non_linear_reductions.py # UMAP, Isomap, t-SNE, etc.
 │   └── factory.py              # reduce_dimensionality factory
 ├── sequence_encoder/      # Classical sequence encoders
-│   ├── base_encoder.py    # Common validation and preprocessing (EncoderBase class)
+│   ├── encoder_base.py    # Common validation and preprocessing (EncoderBase class)
 │   ├── one_hot_encoder.py # OneHotEncoder
 │   ├── ordinal_encoder.py # OrdinalEncoder
 │   ├── frequency_encoder.py # FrequencyEncoder
-│   ├── kmers_encoder.py   # KMerEncoder (TF-IDF)
+│   ├── kmer_encoder.py    # KMerEncoder (TF-IDF)
 │   ├── physicochemical_encoder.py # PhysicochemicalEncoder (AAIndex properties)
 │   ├── fft_encoder.py     # FFTEncoder (expects numeric input)
 │   └── factory.py         # create_encoder factory
@@ -161,7 +161,7 @@ FFT encoders expect numeric input. Common workflow:
 
 ### Base Classes
 
-#### `EncoderBase` (sequence_encoder/base_encoder.py)
+#### `EncoderBase` (sequence_encoder/encoder_base.py)
 - Common validation for all sequence encoders
 - Parameters: `dataset`, `sequence_column`, `max_length`, `allow_extended`, `allow_unknown`
 - Validates amino acid alphabet and filters sequences by length
@@ -266,7 +266,7 @@ pip install -e ".[embeddings,reductions,parquet]"
 ## Common Patterns
 
 ### Creating a new sequence encoder
-1. Inherit from `EncoderBase` in `sequence_encoder/base_encoder.py`
+1. Inherit from `EncoderBase` in `sequence_encoder/encoder_base.py`
 2. Implement `run_process(self) -> None` to populate `self.coded_dataset`
 3. Register in `sequence_encoder/factory.py` encoder mapping
 4. Add exports to `sequence_encoder/__init__.py`

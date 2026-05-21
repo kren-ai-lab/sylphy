@@ -41,7 +41,7 @@ class OneHotEncoder(EncoderBase):
             debug_mode=debug_mode,
             name_logging=OneHotEncoder.__name__,
         )
-        self._alpha = residues(extended=self.allow_extended or self.allow_unknown)
+        self._alpha = residues(extended=self.allow_extended) + (("X",) if self.allow_unknown and not self.allow_extended else ())
 
     def run_process(self) -> None:
         """Encode all validated sequences using one-hot representation."""

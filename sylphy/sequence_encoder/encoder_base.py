@@ -194,8 +194,8 @@ class EncoderBase(ABC):
     def check_allowed_alphabet(self) -> None:
         """Keep only sequences composed of the selected alphabet."""
         try:
-            alpha = set(residues(extended=self.allow_extended or self.allow_unknown))
-            if not self.allow_extended and self.allow_unknown:
+            alpha = set(residues(extended=self.allow_extended))
+            if self.allow_unknown:
                 alpha.add("X")
 
             # Build a regex that matches any character NOT in the allowed alphabet

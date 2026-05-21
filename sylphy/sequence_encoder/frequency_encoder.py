@@ -40,7 +40,10 @@ class FrequencyEncoder(EncoderBase):
             debug_mode=debug_mode,
             name_logging=FrequencyEncoder.__name__,
         )
-        self._alpha = list(residues(extended=self.allow_extended or self.allow_unknown))
+        alpha = list(residues(extended=self.allow_extended))
+        if self.allow_unknown and not self.allow_extended:
+            alpha.append("X")
+        self._alpha = alpha
 
     def run_process(self) -> None:
         """Encode each sequence as normalized residue frequencies."""

@@ -90,6 +90,7 @@ _ALLOWED: dict[str, set[str]] = {
         "dataset",
         "sequence_column",
         "size_kmer",
+        "as_sparse",
         "allow_extended",
         "allow_unknown",
         "debug",

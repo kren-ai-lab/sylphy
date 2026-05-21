@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Protein sequence representation: encoders, embeddings, and reductions."
 readme = "README.md"
 license = "GPL-3.0-only"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.15"
 authors = [
     { name = "Kren AI Lab", email = "krenai@umag.cl" },
 ]
@@ -34,6 +34,8 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [

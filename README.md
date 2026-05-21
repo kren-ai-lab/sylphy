@@ -14,7 +14,7 @@ It covers three main workflows:
 
 ## Installation
 
-Sylphy supports Python 3.11 and 3.12.
+Sylphy supports Python 3.11 through 3.14.
 
 ```bash
 pip install sylphy

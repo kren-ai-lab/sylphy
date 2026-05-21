@@ -70,7 +70,9 @@ _LOG_LEVEL = typer.Option(
 )
 
 
-@app.command("embed", help="Extract per-sequence embeddings from a pretrained protein model.")
+@app.callback(
+    invoke_without_command=True, help="Extract per-sequence embeddings from a pretrained protein model."
+)
 def embed(
     *,
     input_path: Path = _INPUT,

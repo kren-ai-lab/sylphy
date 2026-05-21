@@ -57,7 +57,7 @@ _LOG_LEVEL = typer.Option(
 )
 
 
-@app.command("encode", help="Encode sequences into a numeric feature matrix.")
+@app.callback(invoke_without_command=True, help="Encode sequences into a numeric feature matrix.")
 def encode(
     *,
     input_path: Path = _INPUT,

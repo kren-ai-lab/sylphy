@@ -150,7 +150,7 @@ Useful environment variables:
 
 ## License
 
-**GPL-3.0-only**. See [LICENSE](LICENSE).
+**MIT**. See [LICENSE](LICENSE).
 
 ## Acknowledgements
 

@@ -143,6 +143,25 @@ Useful environment variables:
 
 **GPL-3.0-only**. See [LICENSE](LICENSE).
 
+## Citation
+
+If you use Sylphy in your research, please cite:
+
+> Medina-Ortiz, D.; Álvarez-Saravia, D.; García-Vinuesa, J.  
+> *Sylphy: Protein Sequence Representation: Encoders, Embeddings, and Reductions*.  
+> Version 0.2.0, 2026.  
+> https://pypi.org/project/sylphy/
+
+```bibtex
+@misc{sylphy2026,
+  author       = {Medina-Ortiz, David and {\'A}lvarez-Saravia, Diego and Garc{\'i}a-Vinuesa, Juli{\'a}n},
+  title        = {{Sylphy}: Protein Sequence Representation: Encoders, Embeddings, and Reductions},
+  year         = {2026},
+  howpublished = {\url{https://pypi.org/project/sylphy/}},
+  note         = {Python package, version 0.2.0, accessed 12 May 2026}
+}
+```
+
 ## Acknowledgements
 
 Built with the Hugging Face Transformers ecosystem, the Meta ESM-C SDK, and the broader scientific Python stack including scikit-learn, PyTorch, UMAP, and ClustPy.

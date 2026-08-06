@@ -44,12 +44,15 @@ def main() -> None:
     model, transformed = reduce_dimensionality(
         "pca", X, n_components=2, return_type="numpy", preprocess="standardize", random_state=0, debug=False
     )
+    assert transformed is not None
+    assert model is not None
     print(f"PCA: {transformed.shape} | explained variance: {model.explained_variance_ratio_.sum():.3f}")
 
     # TruncatedSVD (linear, no centering required)
     _, transformed_svd = reduce_dimensionality(
         "truncated_svd", X, n_components=2, return_type="polars", random_state=0, debug=False
     )
+    assert transformed_svd is not None
     print(f"TruncatedSVD: {transformed_svd.shape}")
     print(transformed_svd)
 
@@ -57,18 +60,21 @@ def main() -> None:
     _, transformed_tsne = reduce_dimensionality(
         "tsne", X, n_components=2, perplexity=3, return_type="numpy", random_state=0, debug=False
     )
+    assert transformed_tsne is not None
     print(f"t-SNE: {transformed_tsne.shape}")
 
     # Isomap (nonlinear, sklearn)
     _, transformed_iso = reduce_dimensionality(
         "isomap", X, n_components=2, n_neighbors=3, return_type="numpy", debug=False
     )
+    assert transformed_iso is not None
     print(f"Isomap: {transformed_iso.shape}")
 
     # PCA with polars return and normalization preprocessing
     _, transformed_pl = reduce_dimensionality(
         "pca", X, n_components=3, return_type="polars", preprocess="normalize", random_state=0, debug=False
     )
+    assert transformed_pl is not None
     print(f"PCA (polars, 3 components): {transformed_pl.shape}")
     print(transformed_pl)
 

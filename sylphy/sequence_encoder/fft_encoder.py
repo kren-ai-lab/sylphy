@@ -49,7 +49,7 @@ class FFTEncoder:
 
         self.max_length = self._numeric.width
         self.stop_value: int = 0
-        self.coded_dataset: pl.DataFrame | None = None
+        self.coded_dataset: pl.DataFrame = pl.DataFrame()
 
         self.init_process()
 
@@ -95,9 +95,6 @@ class FFTEncoder:
     ) -> None:
         """Export encoded FFT features to disk."""
         data = df_encoder if df_encoder is not None else self.coded_dataset
-        if data is None:
-            msg = "No encoded FFT dataset available for export."
-            raise ValueError(msg)
 
         UtilsLib.export_data(
             df_encoded=data,

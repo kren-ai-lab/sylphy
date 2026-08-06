@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, cast, get_args
+from typing import TYPE_CHECKING, get_args
 
 import typer
 
@@ -58,4 +58,4 @@ def infer_format(path: Path) -> FileFormat:
     if ext not in EXPORT_CHOICES:
         msg = f"Unsupported output format '.{ext}'. Supported: {supported}"
         raise typer.BadParameter(msg)
-    return cast("FileFormat", ext)
+    return ext

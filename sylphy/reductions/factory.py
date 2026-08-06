@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from importlib import import_module
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import polars as pl
@@ -107,7 +107,7 @@ def reduce_dimensionality(
     debug_mode: int = logging.INFO,
     logger_name: str = "sylphy.reductions.factory",
     **kwargs: object,
-) -> tuple[object | None, np.ndarray | pl.DataFrame | None]:
+) -> tuple[Any | None, np.ndarray | pl.DataFrame | None]:
     """Run a dimensionality reduction by method name via a unified factory.
 
     For linear methods, returns ``(fitted_model, transformed)``.

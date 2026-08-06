@@ -3,11 +3,11 @@ from __future__ import annotations
 import sys
 from typing import Any, cast
 
-import pandas as pd
+import polars as pl
 import pytest
 import torch
 
-from sylphy.embedding_extractor import EmbeddingFactory
+from sylphy.embedding_extractor import create_embedding
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
@@ -18,8 +18,8 @@ def test_cuda_oom_backoff_retries_and_succeeds() -> None:
     _FakeModel.OOM_THRESHOLD = 2
     _FakeModel.FORWARD_CALLS = 0
 
-    df = pd.DataFrame({"sequence": ["AAAA", "BBBB", "CCCCC", "DD"]})
-    inst = EmbeddingFactory(
+    df = pl.DataFrame({"sequence": ["AAAA", "BBBB", "CCCCC", "DD"]})
+    inst = create_embedding(
         model_name="facebook/esm2_t6_8M_UR50D",
         dataset=df,
         column_seq="sequence",

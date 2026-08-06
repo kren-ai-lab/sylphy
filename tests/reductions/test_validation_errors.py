@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import pytest
 
 from sylphy.reductions import LinearReduction
@@ -9,8 +9,8 @@ from sylphy.reductions import LinearReduction
 
 def test_non_numeric_raises_type_error() -> None:
     """String-only frames should be rejected."""
-    df = pd.DataFrame({"a": ["x", "y"], "b": ["z", "w"]})
-    with pytest.raises(TypeError, match=r"Dataset must be numeric"):
+    df = pl.DataFrame({"a": ["x", "y"], "b": ["z", "w"]})
+    with pytest.raises(TypeError, match="Dataset must be numeric"):
         LinearReduction(df)
 
 

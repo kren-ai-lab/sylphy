@@ -2,32 +2,31 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from .embedding_based import EmbeddingBased
+from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
     from sylphy.types import PrecisionType
 
 
-class BertBasedEmbedding(EmbeddingBased):
+class ProtBertEmbedding(EmbeddingBase):
     """Extract embeddings using ProtBERT models."""
 
     def __init__(
         self,
-        name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        name_device: str = DEFAULT_DEVICE,
         name_model: str = "Rostlab/prot_bert",
         name_tokenizer: str = "Rostlab/prot_bert",
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         column_seq: str | None = "sequence",
-        debug_mode: int = logging.INFO,
-        precision: PrecisionType = "fp32",
+        debug_mode: int = DEFAULT_DEBUG_MODE,
+        precision: PrecisionType = DEFAULT_PRECISION,
         *,
         debug: bool = False,
         oom_backoff: bool = True,
@@ -60,7 +59,10 @@ class BertBasedEmbedding(EmbeddingBased):
 
             self.__logger__.info("Loading ProtBERT tokenizer from: %s", local_dir)
             tokenizer = AutoTokenizer.from_pretrained(
-                local_dir, do_lower_case=False, use_fast=True, trust_remote_code=False,
+                local_dir,
+                do_lower_case=False,
+                use_fast=True,
+                trust_remote_code=False,
             )
             if getattr(tokenizer, "pad_token_id", None) is None:
                 tokenizer.add_special_tokens({"pad_token": "[PAD]"})
@@ -73,9 +75,7 @@ class BertBasedEmbedding(EmbeddingBased):
             self.model = model
             model.eval()
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load ProtBERT tokenizer/model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load ProtBERT tokenizer/model: %s", e)
             raise
 
     def _pre_tokenize(self, batch: list[str]) -> list[str]:

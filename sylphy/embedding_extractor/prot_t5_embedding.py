@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import re
 from typing import TYPE_CHECKING, Any, cast
 
@@ -12,26 +11,26 @@ from transformers import AutoConfig, T5EncoderModel, T5Tokenizer
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
-from .embedding_based import EmbeddingBased
+from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
 if TYPE_CHECKING:
-    import pandas as pd
+    import polars as pl
 
     from sylphy.types import PrecisionType
 
 
-class Prot5Based(EmbeddingBased):
+class ProtT5Embedding(EmbeddingBase):
     """Extract embeddings using ProtT5 encoder models."""
 
     def __init__(
         self,
-        name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        name_device: str = DEFAULT_DEVICE,
         name_model: str = "Rostlab/prot_t5_xl_uniref50",
         name_tokenizer: str = "Rostlab/prot_t5_xl_uniref50",
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         column_seq: str | None = "sequence",
-        debug_mode: int = logging.INFO,
-        precision: PrecisionType = "fp32",
+        debug_mode: int = DEFAULT_DEBUG_MODE,
+        precision: PrecisionType = DEFAULT_PRECISION,
         *,
         debug: bool = False,
         oom_backoff: bool = True,
@@ -86,15 +85,11 @@ class Prot5Based(EmbeddingBased):
                 packages=("sentencepiece",),
             )
             if wrapped is not None:
-                self.status = False
-                self.message = str(wrapped)
-                self.__logger__.error(self.message)
+                self.__logger__.error("%s", wrapped)
                 raise wrapped from e
             raise
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load ProtT5 tokenizer/model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load ProtT5 tokenizer/model: %s", e)
             raise
 
     def _pre_tokenize(self, batch: list[str]) -> list[str]:

@@ -5,17 +5,17 @@ from __future__ import annotations
 import contextlib
 import gc
 import logging
-import os
 from collections.abc import Callable, Sequence
-from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
-from sylphy.constants.tool_configs import resolve_cache_dir
 from sylphy.core.model_registry import ModelSpec, register_model, resolve_model
 from sylphy.logging import add_context, get_logger
 from sylphy.misc.utils_lib import UtilsLib
@@ -25,8 +25,12 @@ Pool = PoolType
 LayerAgg = LayerAggType
 LayerSpec = str | int | Sequence[int]
 
+DEFAULT_DEVICE: str = "cuda" if torch.cuda.is_available() else "cpu"
+DEFAULT_PRECISION: PrecisionType = "fp32"
+DEFAULT_DEBUG_MODE: int = logging.INFO
 
-class EmbeddingBased:
+
+class EmbeddingBase:
     """Base class for embedding extraction from protein sequences.
 
     Supports:
@@ -40,7 +44,7 @@ class EmbeddingBased:
 
     def __init__(
         self,
-        dataset: pd.DataFrame,
+        dataset: pl.DataFrame,
         name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
         name_model: str = "",
         name_tokenizer: str = "",
@@ -55,10 +59,7 @@ class EmbeddingBased:
         oom_backoff: bool = True,
     ) -> None:
         """Initialize common state for embedding backends."""
-        self._cache_root = resolve_cache_dir()
-        self._wire_cache_envs(self._cache_root)
-
-        self.dataset: pd.DataFrame = dataset
+        self.dataset: pl.DataFrame = dataset
         self.column_seq = column_seq
 
         self.name_model = name_model
@@ -90,30 +91,10 @@ class EmbeddingBased:
 
         self.requires_tokenizer: bool = self.provider == "huggingface"
 
-        self.status: bool = True
-        self.message: str = ""
-
     @property
     def device(self) -> torch.device:
         """Return the torch device used for model execution."""
         return cast("torch.device", self._device)
-
-    @staticmethod
-    def _wire_cache_envs(root: Path) -> None:
-        root = Path(root).expanduser()
-        # Carpeta unificada de Sylphy
-        os.environ.setdefault("SYLPHY_CACHE_DIR", str(root))
-
-        # Hugging Face / Transformers / Datasets
-        os.environ.setdefault("HF_HOME", str(root / "hf"))
-        os.environ.setdefault("TRANSFORMERS_CACHE", str(root / "hf" / "transformers"))
-        os.environ.setdefault("HF_DATASETS_CACHE", str(root / "hf" / "datasets"))
-
-        # Torch hub
-        os.environ.setdefault("TORCH_HOME", str(root / "torch"))
-
-        # (opcional) Tokenizers (a veces usan su propia caché)
-        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
     # ---------------------------------------------------------------------
     # Model resolution & loading
@@ -167,10 +148,9 @@ class EmbeddingBased:
             self.model.eval()
 
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] Failed to load tokenizer/model: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] Failed to load tokenizer/model: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e
 
     # ---------------------------------------------------------------------
     # Readiness helpers
@@ -230,7 +210,7 @@ class EmbeddingBased:
         layers: LayerSpec = "last",
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """Process embeddings for non-tokenizer backends.
 
         Subclasses that set ``requires_tokenizer = False`` must override this method.
@@ -407,29 +387,27 @@ class EmbeddingBased:
 
     def clean_memory(self) -> None:
         """Release Python and CUDA memory caches when available."""
-        try:
-            if torch.cuda.is_available():
-                with contextlib.suppress(Exception):
-                    torch.cuda.synchronize()
-                torch.cuda.empty_cache()
-                with contextlib.suppress(Exception):
-                    torch.cuda.reset_peak_memory_stats()
-            gc.collect()
-        except Exception as e:  # noqa: BLE001
-            self.__logger__.debug("clean_memory() warning: %s", e)
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.synchronize()
+            except RuntimeError as e:
+                self.__logger__.debug("cuda.synchronize() skipped: %s", e)
+            torch.cuda.empty_cache()
+            try:
+                torch.cuda.reset_peak_memory_stats()
+            except RuntimeError as e:
+                self.__logger__.debug("reset_peak_memory_stats() skipped: %s", e)
+        gc.collect()
 
     def release_resources(self) -> None:
         """Move model off-device and clear model/tokenizer references."""
         try:
-            model = getattr(self, "model", None)
-            if model is not None:
-                with contextlib.suppress(Exception):
-                    model.to("cpu")
-            with contextlib.suppress(Exception):
-                del self.model
+            if self.model is not None:
+                try:
+                    self.model.to("cpu")
+                except RuntimeError as e:
+                    self.__logger__.debug("model.to('cpu') failed: %s", e)
             self.model = None
-            with contextlib.suppress(Exception):
-                del self.tokenizer
             self.tokenizer = None
         finally:
             self.clean_memory()
@@ -457,7 +435,7 @@ class EmbeddingBased:
 
         try:
             if not self.requires_tokenizer:
-                df = self.embedding_process(
+                result: pl.DataFrame = self.embedding_process(
                     batch_size=batch_size,
                     seq_len=max_length,
                     layers=layers,
@@ -465,19 +443,17 @@ class EmbeddingBased:
                     pool=pool,
                 )
                 self.release_resources()
-                self.coded_dataset = df
-                self.status = True
-                self.message = "OK"
+                self.coded_dataset = result
                 self.__logger__.info(
                     "Embedding extraction (non-HF) complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
-                    df.shape,
+                    result.shape,
                     layers,
                     layer_agg,
                     pool,
                 )
                 return
 
-            seqs = self.dataset[self.column_seq].astype(str).tolist()
+            seqs = self.dataset[self.column_seq].cast(pl.String).to_list()
             mats: list[np.ndarray] = []
             bs: int = int(batch_size)
             bs = max(bs, 1)
@@ -501,7 +477,7 @@ class EmbeddingBased:
                     bs = new_bs
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
-                        with contextlib.suppress(Exception):
+                        with contextlib.suppress(RuntimeError):
                             torch.cuda.reset_peak_memory_stats()
                     # retry this same chunk with smaller batch
                     for sub in self._make_batches(chunk, bs):
@@ -517,11 +493,9 @@ class EmbeddingBased:
             self.release_resources()
             Xall: np.ndarray = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
             header: list[str] = [f"p_{i}" for i in range(Xall.shape[1])]
-            columns_index = pd.Index(header)
-            self.coded_dataset = pd.DataFrame(Xall, columns=columns_index, index=self.dataset.index)
-            self.coded_dataset[self.column_seq] = self.dataset[self.column_seq].to_numpy()
-            self.status = True
-            self.message = "OK"
+            self.coded_dataset = pl.from_numpy(Xall, schema=header).insert_column(
+                0, self.dataset[self.column_seq]
+            )
             self.__logger__.info(
                 "Embedding extraction complete. Shape=%s | layers=%s | layer_agg=%s | pool=%s",
                 Xall.shape,
@@ -530,10 +504,9 @@ class EmbeddingBased:
                 pool,
             )
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] run_process failed: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] run_process failed: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e
 
     def export_encoder(
         self,

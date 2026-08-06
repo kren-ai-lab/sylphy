@@ -14,8 +14,6 @@ It covers three main workflows:
 
 ## Installation
 
-Sylphy supports Python 3.11 and 3.12.
-
 ```bash
 pip install sylphy
 ```
@@ -23,14 +21,15 @@ pip install sylphy
 Install optional extras as needed:
 
 - `embeddings` for PyTorch and Transformers-based embedding extraction
-- `parquet` for Parquet export support
 - `reductions` for UMAP and related optional reducers
 - `all` for all optional runtime dependencies
+
+> **Note:** The `embeddings` extra requires Python 3.11 or 3.12. `torchtext` (a dependency of ESM-C) doesn't providee support for Python 3.13+.
 
 The `reductions` extra may require a C++ compiler and Python development headers because of optional native dependencies such as ClustPy.
 
 ```bash
-pip install 'sylphy[embeddings,parquet]'
+pip install 'sylphy[embeddings]'
 pip install 'sylphy[all]'
 ```
 
@@ -51,10 +50,10 @@ sudo dnf install gcc gcc-c++ python3-devel
 Classical sequence encoding:
 
 ```python
-import pandas as pd
+import polars as pl
 from sylphy.sequence_encoder import create_encoder
 
-df = pd.DataFrame({"sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
+df = pl.DataFrame({"sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
 
 encoder = create_encoder(
     "one_hot",  # or: ordinal, kmers, frequency, physicochemical, fft
@@ -68,10 +67,10 @@ encoded = encoder.coded_dataset
 Embedding extraction:
 
 ```python
-import pandas as pd
+import polars as pl
 from sylphy.embedding_extractor import create_embedding
 
-df = pd.DataFrame({"sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
+df = pl.DataFrame({"sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
 
 embedder = create_embedding(
     model_name="facebook/esm2_t6_8M_UR50D",
@@ -104,20 +103,30 @@ model, reduced = reduce_dimensionality(
 ```bash
 sylphy --help
 
-sylphy get-embedding \
-  --model facebook/esm2_t6_8M_UR50D \
-  --input-data sequences.csv \
-  --sequence-identifier sequence \
-  --output embeddings.parquet \
-  --device cuda --precision fp16 --batch-size 16
+# Extract embeddings (ESM2, GPU, fp16)
+sylphy embed \
+  -i sequences.csv -o embeddings.parquet \
+  -m facebook/esm2_t6_8M_UR50D -d cuda -p fp16 -b 16
 
-sylphy encode-sequences \
-  --encoder one_hot \
-  --input-data sequences.csv \
-  --sequence-identifier sequence \
-  --output encoded.csv
+# Extract embeddings (ProtT5, last 4 layers averaged)
+sylphy embed \
+  -i sequences.csv -o embeddings.npy \
+  -m Rostlab/prot_t5_xl_uniref50 -d cuda -p bf16 --layers last4 --layer-agg mean
 
+# Classical encoding — one-hot
+sylphy encode --method one_hot -i sequences.csv -o encoded.parquet
+
+# Classical encoding — physicochemical (AAIndex)
+sylphy encode --method physicochemical \
+  -i sequences.csv -o phys.parquet --name-property ARGP820101
+
+# Classical encoding — k-mers TF-IDF
+sylphy encode --method kmers -i sequences.csv -o kmers.csv -k 4
+
+# Cache management
 sylphy cache stats
+sylphy cache ls --recursive
+sylphy cache prune --max-size 10GB --apply
 ```
 
 ## Configuration
@@ -141,7 +150,7 @@ Useful environment variables:
 
 ## License
 
-**GPL-3.0-only**. See [LICENSE](LICENSE).
+**MIT**. See [LICENSE](LICENSE).
 
 ## Acknowledgements
 

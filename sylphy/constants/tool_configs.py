@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 import os
-import platform
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from platformdirs import user_cache_dir
 
 from .config_constants import CachePaths
 from .logging_constants import env_log_level
@@ -17,14 +18,16 @@ DEFAULT_CACHE_DIR_ENV = "SYLPHY_CACHE_DIR"
 
 _logger = logging.getLogger(__name__)
 
-def _default_cache_parent() -> Path:
-    """Return the platform-specific parent directory used for application caches."""
-    system = platform.system().lower()
-    if system == "darwin":
-        return Path.home() / "Library" / "Caches"
-    if system == "windows":
-        return Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    return Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
+
+def _wire_cache_envs(root: Path) -> None:
+    """Set HF/Torch env vars to subdirs of the Sylphy cache root (only if not already set)."""
+    root = Path(root).expanduser()
+    os.environ.setdefault("SYLPHY_CACHE_DIR", str(root))
+    os.environ.setdefault("HF_HOME", str(root / "hf"))
+    os.environ.setdefault("TRANSFORMERS_CACHE", str(root / "hf" / "transformers"))
+    os.environ.setdefault("HF_DATASETS_CACHE", str(root / "hf" / "datasets"))
+    os.environ.setdefault("TORCH_HOME", str(root / "torch"))
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 
 def resolve_cache_dir() -> Path:
@@ -37,7 +40,7 @@ def resolve_cache_dir() -> Path:
     if env_root:
         return (Path(env_root).expanduser().resolve() / DEFAULT_CACHE_APP).resolve()
 
-    return (_default_cache_parent() / DEFAULT_CACHE_APP).expanduser().resolve()
+    return Path(user_cache_dir(DEFAULT_CACHE_APP))
 
 
 def default_cache_paths() -> CachePaths:
@@ -100,6 +103,7 @@ class _ConfigStore:
         if cls._instance is None:
             cls._instance = ToolConfig()
             cls._instance.cache_paths.ensure_all()
+            _wire_cache_envs(cls._instance.cache_paths.base())
         return cls._instance
 
     @classmethod

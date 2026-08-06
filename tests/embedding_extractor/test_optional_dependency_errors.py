@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-import pandas as pd
+import polars as pl
 import pytest
 
-from sylphy.embedding_extractor.prot5_based import Prot5Based
+from sylphy.embedding_extractor.prot_t5_embedding import ProtT5Embedding
 
 
 def test_prot5_missing_sentencepiece_suggests_embeddings_extra(monkeypatch: pytest.MonkeyPatch) -> None:
-    df = pd.DataFrame({"sequence": ["AAAA"]})
-    inst = Prot5Based(dataset=df, name_device="cpu")
+    df = pl.DataFrame({"sequence": ["AAAA"]})
+    inst = ProtT5Embedding(dataset=df, name_device="cpu")
     monkeypatch.setattr(inst, "_register_and_resolve", lambda: "fake-model-dir")
 
     def _boom(*_args: object, **_kwargs: object) -> object:
@@ -24,5 +24,3 @@ def test_prot5_missing_sentencepiece_suggests_embeddings_extra(monkeypatch: pyte
 
     with pytest.raises(ImportError, match=r"sylphy\[embeddings\]"):
         inst.load_model_tokenizer()
-
-    assert "sentencepiece" in inst.message.lower()

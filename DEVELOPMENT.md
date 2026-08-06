@@ -9,21 +9,24 @@ Sylphy uses `uv` for environment management and `taskipy` for common developer c
 Install development dependencies:
 
 ```bash
-uv sync --extra dev
+uv sync
 ```
 
 If you also need embeddings, parquet, and reduction extras locally:
 
 ```bash
-uv sync --extra dev --extra all
+uv sync --extra all
 ```
 
 Editable install with `pip` also works:
 
 ```bash
-pip install -e ".[dev]"
-pip install -e ".[all,dev]"
+pip install -e "."
+pip install -e ".[all]"
 ```
+
+Note: `pip` does not install dependency groups, so the dev tooling
+(`ruff`, `pytest`, `taskipy`, ...) needs `uv sync` or a manual install.
 
 ## Common Commands
 
@@ -33,8 +36,8 @@ Run tests:
 uv run task test
 uv run task test-v
 uv run task test-cov
-uv run pytest tests/cli/test_get_embeddings_cli.py -v
-uv run pytest tests/cli/test_get_embeddings_cli.py::test_get_embeddings_runs_and_saves_csv -vv
+uv run pytest tests/cli/test_embed_cli.py -v
+uv run pytest tests/cli/test_embed_cli.py::test_embed_runs_and_saves_csv -vv
 ```
 
 Lint, format, and type-check:

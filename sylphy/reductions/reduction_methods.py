@@ -6,13 +6,13 @@ import logging
 from typing import Literal
 
 import numpy as np
-import pandas as pd
+import polars as pl
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
 from sylphy.constants.tool_configs import get_config
 from sylphy.logging import add_context, get_logger
 
-ReturnType = Literal["numpy", "pandas"]
+ReturnType = Literal["numpy", "polars"]
 Preprocess = Literal["none", "standardize", "normalize", "robust"]
 _EXPECTED_NDIM = 2
 
@@ -24,7 +24,7 @@ class Reductions:
         - Hold and validate the input matrix (2D numeric array).
         - Apply optional preprocessing.
         - Provide unified component logging.
-        - Convert transformed arrays into NumPy or pandas outputs.
+        - Convert transformed arrays into NumPy or polars outputs.
 
     Args:
         dataset: Input feature matrix of shape ``(N, D)``.
@@ -39,7 +39,7 @@ class Reductions:
 
     def __init__(
         self,
-        dataset: np.ndarray | pd.DataFrame,
+        dataset: np.ndarray | pl.DataFrame,
         *,
         return_type: ReturnType = "numpy",
         preprocess: Preprocess = "none",
@@ -60,7 +60,7 @@ class Reductions:
         self.random_state: int = int(get_config().seed if random_state is None else random_state)
 
         # Normalize dataset → np.ndarray (float32), validate 2D numeric
-        if isinstance(dataset, pd.DataFrame):
+        if isinstance(dataset, pl.DataFrame):
             dataset = dataset.to_numpy()
         arr = np.asarray(dataset)
         if arr.ndim != _EXPECTED_NDIM:
@@ -116,11 +116,11 @@ class Reductions:
         self,
         transform_values: np.ndarray | list[list[float]],
         n_components: int | None = None,
-    ) -> np.ndarray | pd.DataFrame:
+    ) -> np.ndarray | pl.DataFrame:
         """Build the final reduced output.
 
         - If ``return_type='numpy'`` → returns a numpy array (N, K).
-        - If ``return_type='pandas'`` → returns a DataFrame with columns ``p_1..p_K``.
+        - If ``return_type='polars'`` → returns a DataFrame with columns ``p_1..p_K``.
         """
         transform_array = np.asarray(transform_values)
         if transform_array.ndim != _EXPECTED_NDIM:
@@ -139,8 +139,8 @@ class Reductions:
                 self.__logger__.info("Prepared NumPy output with %d components.", n_components)
                 return transform_array
             headers = self._make_headers(n_components)
-            self.__logger__.info("Prepared pandas DataFrame with %d components.", n_components)
-            return pd.DataFrame(data=transform_array, columns=pd.Index(headers))
+            self.__logger__.info("Prepared polars DataFrame with %d components.", n_components)
+            return pl.from_numpy(transform_array, schema=headers)
 
         except Exception as e:
             self.__logger__.error("Failed to build post-reduction output: %s", e)

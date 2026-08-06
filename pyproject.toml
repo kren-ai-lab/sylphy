@@ -1,17 +1,13 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [project]
 name = "sylphy"
 dynamic = ["version"]
 description = "Protein sequence representation: encoders, embeddings, and reductions."
 readme = "README.md"
-license = "GPL-3.0-only"
-requires-python = ">=3.11,<3.13"
-authors = [
-    { name = "Kren AI Lab", email = "krenai@umag.cl" },
-]
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<3.15"
+authors = [{ name = "Kren AI Lab", email = "krenai@umag.cl" }]
 keywords = [
     "AAindex",
     "ESM",
@@ -27,21 +23,20 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
-    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "appdirs>=1.4.4,<2.0",
-    "huggingface-hub>=0.36.0,<2.0",
+    "platformdirs>=4.0,<5.0",
+    "huggingface-hub>=0.36.0,<1.0",
     "numpy>=2.3.5,<3.0",
-    "pandas>=3.0.1,<4.0",
-    "requests>=2.32.5,<3.0",
+    "polars>=1.20,<2.0",
+    "niquests>=3.0,<4.0",
     "rich>=15.0,<16.0",
     "scikit-learn>=1.8.0,<2.0",
     "scipy>=1.17.1,<2.0",
@@ -52,21 +47,12 @@ dependencies = [
 all = [
     "clustpy>=0.0.2,<1.0",
     "esm>=3.2.1,<4.0",
-    "fastparquet>=2024.11.0",
     "llvmlite>=0.46.0",
     "numba>=0.64.0",
-    "pyarrow>=23.0.1",
     "sentencepiece>=0.2.1,<1.0",
     "torch>=2.10.0,<3.0",
     "transformers>=4.48,<5.0",
     "umap-learn>=0.5.9,<1.0",
-]
-dev = [
-    "pyrefly>=0.60.0",
-    "pytest~=9.0.2",
-    "ruff~=0.15.5",
-    "taskipy~=1.14.0",
-    "ty>=0.0.30",
 ]
 embeddings = [
     "esm>=3.2.1,<4.0",
@@ -74,19 +60,21 @@ embeddings = [
     "torch>=2.10.0,<3.0",
     "transformers>=4.48,<5.0",
 ]
-parquet = [
-    "fastparquet>=2024.11.0",
-    "pyarrow>=23.0.1",
-]
 reductions = [
     "clustpy>=0.0.2,<1.0",
     "llvmlite>=0.46.0",
     "numba>=0.64.0",
     "umap-learn>=0.5.9,<1.0",
 ]
-tests = [
+
+[dependency-groups]
+dev = [
+    "pyrefly>=1.0.0",
     "pytest-cov~=7.1.0",
     "pytest~=9.0.2",
+    "ruff~=0.15.5",
+    "taskipy~=1.14.0",
+    "ty>=0.0.30",
 ]
 
 [project.scripts]
@@ -98,14 +86,16 @@ Homepage = "https://github.com/kren-ai-lab/sylphy"
 Issues = "https://github.com/kren-ai-lab/sylphy/issues"
 Source = "https://github.com/kren-ai-lab/sylphy"
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [tool.hatch.version]
 path = "sylphy/__init__.py"
 pattern = '__version__ = "(?P<version>[^"]+)"'
 
 [tool.hatch.build.targets.sdist]
-include = [
-    "/sylphy",
-]
+include = ["/sylphy"]
 
 [tool.ruff]
 line-length = 110
@@ -117,12 +107,22 @@ ignore = ["COM812", "D203", "D213", "N802", "N803", "N806", "PLR0913"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "PLC0415", "PLR2004", "S101"]
+"examples/*" = [
+    "ANN",     # type annotations not required in examples
+    "D",       # docstrings not required in examples
+    "ERA001",  # section comments in examples look like commented-out code
+    "INP001",  # example scripts are intentionally standalone modules
+    "PLR2004", # small referential scripts can compare against literal sizes
+    "S101",    # lightweight runtime checks are fine in examples
+    "S603",    # subprocess usage is explicit in CLI examples
+    "T201",    # examples print result snippets by design
+]
 
 [tool.taskipy.tasks]
-sort-imports = "ruff check --fix --select I,F401 sylphy/ tests/"
-format = "task sort-imports && ruff format sylphy/ tests/"
-lint = "ruff check sylphy/ tests/"
-lint-fix = "ruff check --fix sylphy/ tests/"
+sort-imports = "ruff check --fix --select I,F401 sylphy/ tests/ examples/"
+format = "task sort-imports && ruff format sylphy/ tests/ examples/"
+lint = "ruff check sylphy/ tests/ examples/"
+lint-fix = "ruff check --fix sylphy/ tests/ examples/"
 test = "pytest -q"
 test-v = "pytest -v"
 test-cov = "pytest --cov=sylphy --cov-report=html"

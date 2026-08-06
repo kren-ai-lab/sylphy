@@ -3,21 +3,22 @@
 from __future__ import annotations
 
 import logging
-from typing import cast
+from typing import TYPE_CHECKING
 
-import pandas as pd
+from sylphy.constants import residues
 
-from sylphy.constants import get_index, residues
+if TYPE_CHECKING:
+    import polars as pl
 
-from .base_encoder import Encoders
+from .encoder_base import EncoderBase, encode_ordinal
 
 
-class OrdinalEncoder(Encoders):
+class OrdinalEncoder(EncoderBase):
     """Encode residues as alphabet indices padded to ``max_length``."""
 
     def __init__(
         self,
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         sequence_column: str | None = "sequence",
         max_length: int = 1024,
         *,
@@ -37,46 +38,19 @@ class OrdinalEncoder(Encoders):
             debug_mode=debug_mode,
             name_logging=OrdinalEncoder.__name__,
         )
-        self._alpha = residues(extended=self.allow_extended or self.allow_unknown)
-
-    def __zero_padding(self, current_length: int) -> list[int]:
-        return [0] * (self.max_length - current_length)
-
-    def __encode_sequence(self, sequence: str) -> list[int]:
-        coded: list[int] = []
-        for r in sequence:
-            try:
-                coded.append(
-                    get_index(
-                        r,
-                        extended=(self.allow_extended or self.allow_unknown),
-                        allow_unknown=self.allow_unknown,
-                    ),
-                )
-            except KeyError:
-                coded.append(0)
-        if len(sequence) < self.max_length:
-            coded += self.__zero_padding(len(coded))
-        return coded
+        self._alpha = residues(extended=self.allow_extended) + (
+            ("X",) if self.allow_unknown and not self.allow_extended else ()
+        )
 
     def run_process(self) -> None:
         """Encode all validated sequences using ordinal representation."""
-        if not self.status:
-            self.__logger__.warning("Encoding skipped; dataset validation failed.")
-            return
-
         try:
             self.__logger__.info("Starting ordinal encoding for %d sequences.", len(self.dataset))
-            matrix = [
-                self.__encode_sequence(cast("str", self.dataset.loc[i, self.sequence_column]))
-                for i in self.dataset.index
-            ]
-            header = pd.Index([f"p_{i}" for i in range(len(matrix[0]))])
-            self.coded_dataset = pd.DataFrame(matrix, columns=header)
-            self.coded_dataset[self.sequence_column] = self.dataset[self.sequence_column].to_numpy()
-            self.__logger__.info("Ordinal encoding completed with %d features.", self.coded_dataset.shape[1])
+            sequences = self.dataset[self.sequence_column].to_list()
+            matrix = encode_ordinal(sequences, self._alpha, self.max_length)
+            self._finalize_encoding(sequences, matrix)
+            self.__logger__.info("Ordinal encoding completed with %d features.", self.coded_dataset.width)
         except Exception as e:
-            self.status = False
-            self.message = f"[ERROR] Ordinal encoding failed: {e}"
-            self.__logger__.exception(self.message)
-            raise RuntimeError(self.message) from e
+            msg = f"[ERROR] Ordinal encoding failed: {e}"
+            self.__logger__.exception(msg)
+            raise RuntimeError(msg) from e

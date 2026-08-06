@@ -3,17 +3,24 @@
 from __future__ import annotations
 
 import contextlib
-import logging
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import torch
 from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
 from tqdm import tqdm
 
-from .embedding_based import EmbeddingBased, LayerAgg, LayerSpec, Pool
+from .embedding_base import (
+    DEFAULT_DEBUG_MODE,
+    DEFAULT_DEVICE,
+    DEFAULT_PRECISION,
+    EmbeddingBase,
+    LayerAgg,
+    LayerSpec,
+    Pool,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -21,18 +28,18 @@ if TYPE_CHECKING:
     from sylphy.types import PrecisionType
 
 
-class ESMCBasedEmbedding(EmbeddingBased):
+class ESMCEmbedding(EmbeddingBase):
     """ESM-C backend using Meta's ESM SDK."""
 
     def __init__(
         self,
-        name_device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        name_device: str = DEFAULT_DEVICE,
         name_model: str = "esmc_300m",
         _name_tokenizer: str | None = None,
-        dataset: pd.DataFrame | None = None,
+        dataset: pl.DataFrame | None = None,
         column_seq: str | None = "sequence",
-        debug_mode: int = logging.INFO,
-        precision: PrecisionType = "fp32",
+        debug_mode: int = DEFAULT_DEBUG_MODE,
+        precision: PrecisionType = DEFAULT_PRECISION,
         *,
         debug: bool = False,
         oom_backoff: bool = True,
@@ -89,13 +96,9 @@ class ESMCBasedEmbedding(EmbeddingBased):
             mdl.to(self.device)
             mdl.eval()
             self.model = mdl
-            self.status = True
-            self.message = "ESM-C model loaded."
             self.__logger__.info("ESM-C model '%s' loaded successfully.", load_ref)
         except Exception as e:
-            self.status = False
-            self.message = f"Failed to load ESM-C model: {e}"
-            self.__logger__.error(self.message)
+            self.__logger__.error("Failed to load ESM-C model: %s", e)
             raise
 
     @torch.no_grad()
@@ -129,9 +132,13 @@ class ESMCBasedEmbedding(EmbeddingBased):
             return out.embeddings, getattr(out, "hidden_states", None)
 
     def _process_sequence(
-        self, seq: str, layers: LayerSpec, layer_agg: LayerAgg, pool: Pool,
-    ) -> np.ndarray | None:
-        """Embed and pool a single sequence."""
+        self,
+        seq: str,
+        layers: LayerSpec,
+        layer_agg: LayerAgg,
+        pool: Pool,
+    ) -> torch.Tensor | None:
+        """Embed and pool a single sequence, returning a float32 tensor on device."""
         emb, hs = self._embed_one(seq, return_hidden_states=True)
 
         if self._has_hidden_states(hs):
@@ -144,19 +151,18 @@ class ESMCBasedEmbedding(EmbeddingBased):
                 stacked = torch.stack(chosen, dim=0).sum(dim=0)
             else:
                 stacked = torch.stack(chosen, dim=0).mean(dim=0)
-            dummy_attn = torch.ones(stacked.shape[:2], dtype=stacked.dtype, device=stacked.device)
-            pooled = self._pool_tokens(stacked, dummy_attn, pool).squeeze(0)
+            attn = torch.ones(stacked.shape[:2], dtype=stacked.dtype, device=stacked.device)
+            pooled = self._pool_tokens(stacked, attn, pool).squeeze(0)
         elif emb is not None:
-            dummy_attn = torch.ones(emb.shape[:2], dtype=emb.dtype, device=emb.device)
-            pooled = self._pool_tokens(emb, dummy_attn, pool).squeeze(0)
+            attn = torch.ones(emb.shape[:2], dtype=emb.dtype, device=emb.device)
+            pooled = self._pool_tokens(emb, attn, pool).squeeze(0)
         else:
             return None
 
-        # Ensure FP32 before NumPy conversion
         pooled = pooled.contiguous()
         if pooled.dtype in (torch.bfloat16, torch.float16):
             pooled = pooled.to(torch.float32)
-        return pooled.detach().cpu().numpy()
+        return pooled.detach()
 
     def _adjust_batch_size_on_oom(self, current_bs: int, i: int) -> int:
         new_bs = max(current_bs // 2, 1)
@@ -175,16 +181,16 @@ class ESMCBasedEmbedding(EmbeddingBased):
         layers: LayerSpec = "last",
         layer_agg: LayerAgg = "mean",
         pool: Pool = "mean",
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """Embed all sequences with ESM-C and return pooled embeddings."""
         self.ensure_loaded()
         if self.dataset is None or self.column_seq not in self.dataset.columns:
             msg = f"Dataset invalid or column '{self.column_seq}' missing."
             raise ValueError(msg)
 
-        sequences = self.dataset[self.column_seq].astype(str).tolist()
+        sequences = self.dataset[self.column_seq].cast(pl.String).to_list()
         if seq_len is not None:
-            sequences = [s[:seq_len].ljust(seq_len, "X") for s in sequences]
+            sequences = [s[:seq_len] for s in sequences]
 
         self.__logger__.info("Embedding %d sequences with ESM-C.", len(sequences))
 
@@ -192,10 +198,13 @@ class ESMCBasedEmbedding(EmbeddingBased):
         while i < len(sequences):
             chunk = sequences[i : i + current_bs]
             try:
+                chunk_tensors: list[torch.Tensor] = []
                 for seq in tqdm(chunk, desc=f"[ESMC] idx {i}", leave=False):
-                    vec = self._process_sequence(seq, layers, layer_agg, pool)
-                    if vec is not None:
-                        out_vecs.append(vec)
+                    t = self._process_sequence(seq, layers, layer_agg, pool)
+                    if t is not None:
+                        chunk_tensors.append(t)
+                if chunk_tensors:
+                    out_vecs.append(torch.stack(chunk_tensors).cpu().numpy())
                 i += current_bs
             except RuntimeError as e:
                 is_oom = ("CUDA out of memory" in str(e)) or ("CUBLAS_STATUS_ALLOC_FAILED" in str(e))
@@ -209,8 +218,6 @@ class ESMCBasedEmbedding(EmbeddingBased):
             raise RuntimeError(msg)
 
         self.release_resources()
-        mat = np.stack(out_vecs, axis=0)
-        cols = pd.Index([f"p_{k+1}" for k in range(mat.shape[1])])
-        df_emb = pd.DataFrame(mat, columns=cols, index=self.dataset.index)
-        df_emb[self.column_seq] = self.dataset[self.column_seq].to_numpy()
-        return df_emb
+        mat = np.vstack(out_vecs)
+        col_names = [f"p_{k + 1}" for k in range(mat.shape[1])]
+        return pl.from_numpy(mat, schema=col_names).insert_column(0, self.dataset[self.column_seq])

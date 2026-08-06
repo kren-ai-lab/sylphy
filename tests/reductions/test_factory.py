@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
+import polars as pl
 import pytest
 
 from sylphy.reductions import reduce_dimensionality
@@ -13,43 +13,32 @@ def _any_log_contains(caplog: pytest.LogCaptureFixture, needle: str) -> bool:
     return any(needle in r.getMessage().lower() for r in caplog.records)
 
 
-def test_factory_linear_pandas(df_small: pd.DataFrame, caplog: pytest.LogCaptureFixture) -> None:
-    """
-    Linear dispatch: 'pca' should return a fitted linear model and a pandas DataFrame with
-    the expected number of components (2).
-    Logging content is optional and tolerant to wording.
-    """
-    caplog.set_level("INFO")  # do not rely on a specific logger name
+def test_factory_linear_polars(df_small: pl.DataFrame, caplog: pytest.LogCaptureFixture) -> None:
+    """Linear dispatch: 'pca' should return a fitted linear model and a polars DataFrame."""
+    caplog.set_level("INFO")
     model, Z = reduce_dimensionality(
         "pca",
         df_small,
-        return_type="pandas",
+        return_type="polars",
         n_components=2,
         random_state=0,
         debug=True,
     )
-    # Output checks
     assert Z is not None
-    assert isinstance(Z, pd.DataFrame)
-    assert list(Z.columns) == ["p_1", "p_2"]
+    assert isinstance(Z, pl.DataFrame)
+    assert Z.columns == ["p_1", "p_2"]
     assert Z.shape[0] == df_small.shape[0]
 
-    # Model checks: should look like a fitted PCA (common PCA attributes)
-    # We avoid hard-importing sklearn here; instead, check characteristic attrs.
     assert hasattr(model, "components_")
     assert hasattr(model, "explained_variance_ratio_")
     assert getattr(model, "n_components_", 2) == 2
 
-    # Optional, non-failing log check (robust to message text and logger name)
-    # If no logs captured, we don't fail the test.
     if caplog.records:
         assert _any_log_contains(caplog, "pca") or _any_log_contains(caplog, "linear")
 
 
 def test_factory_nonlinear_numpy(X_small: np.ndarray, caplog: pytest.LogCaptureFixture) -> None:
-    """
-    Non-linear dispatch: 'isomap' usually returns (None, np.ndarray) in our API.
-    """
+    """Non-linear dispatch: 'isomap' returns (None, np.ndarray)."""
     caplog.set_level("INFO")
     model, Z = reduce_dimensionality(
         "isomap",
@@ -59,13 +48,11 @@ def test_factory_nonlinear_numpy(X_small: np.ndarray, caplog: pytest.LogCaptureF
         n_neighbors=3,
         debug=True,
     )
-    # Output checks
-    assert model is None  # non-linear path returns no sklearn model object
+    assert model is None
     assert Z is not None
     assert isinstance(Z, np.ndarray)
     assert Z.shape == (X_small.shape[0], 2)
 
-    # Optional, non-failing log check
     if caplog.records:
         assert _any_log_contains(caplog, "isomap") or _any_log_contains(caplog, "nonlinear")
 

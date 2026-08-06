@@ -8,35 +8,32 @@ from typing import TYPE_CHECKING
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
 
 __all__ = [
-    "Ankh2BasedEmbedding",
-    "BertBasedEmbedding",
-    "ESMBasedEmbedding",
-    "ESMCBasedEmbedding",
-    "EmbeddingBased",
-    "EmbeddingFactory",
-    "MistralBasedEmbedding",
-    "Prot5Based",
+    "Ankh2Embedding",
+    "ESMCEmbedding",
+    "ESMEmbedding",
+    "EmbeddingBase",
+    "MistralEmbedding",
+    "ProtBertEmbedding",
+    "ProtT5Embedding",
     "create_embedding",
 ]
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
-    "EmbeddingBased": (".embedding_based", "EmbeddingBased"),
-    "ESMBasedEmbedding": (".esm_based", "ESMBasedEmbedding"),
-    "Prot5Based": (".prot5_based", "Prot5Based"),
-    "BertBasedEmbedding": (".bert_based", "BertBasedEmbedding"),
-    "MistralBasedEmbedding": (".mistral_based", "MistralBasedEmbedding"),
-    "ESMCBasedEmbedding": (".esmc_based", "ESMCBasedEmbedding"),
-    "Ankh2BasedEmbedding": (".ankh2_based", "Ankh2BasedEmbedding"),
-    "EmbeddingFactory": (".embedding_factory", "EmbeddingFactory"),
+    "EmbeddingBase": (".embedding_base", "EmbeddingBase"),
+    "ESMEmbedding": (".esm_embedding", "ESMEmbedding"),
+    "ProtT5Embedding": (".prot_t5_embedding", "ProtT5Embedding"),
+    "ProtBertEmbedding": (".prot_bert_embedding", "ProtBertEmbedding"),
+    "MistralEmbedding": (".mistral_embedding", "MistralEmbedding"),
+    "ESMCEmbedding": (".esmc_embedding", "ESMCEmbedding"),
+    "Ankh2Embedding": (".ankh2_embedding", "Ankh2Embedding"),
+    "create_embedding": (".embedding_factory", "create_embedding"),
 }
+
 
 def __getattr__(name: str) -> object:
     """Resolve lazy exports and cache the loaded symbol."""
     spec = _LAZY_EXPORTS.get(name)
     if spec is None:
-        if name == "create_embedding":
-            module = import_module(".embedding_factory", package=__name__)
-            return module.EmbeddingFactory
         msg = f"module '{__name__}' has no attribute '{name}'"
         raise AttributeError(msg)
     mod_name, attr = spec
@@ -64,13 +61,11 @@ def __dir__() -> list[str]:
 
 # Optional typing-only exposure (keeps runtime lazy)
 if TYPE_CHECKING:  # pragma: no cover
-    from .ankh2_based import Ankh2BasedEmbedding
-    from .bert_based import BertBasedEmbedding
-    from .embedding_based import EmbeddingBased
-    from .embedding_factory import EmbeddingFactory
-    from .esm_based import ESMBasedEmbedding
-    from .esmc_based import ESMCBasedEmbedding
-    from .mistral_based import MistralBasedEmbedding
-    from .prot5_based import Prot5Based
-
-    create_embedding = EmbeddingFactory
+    from .ankh2_embedding import Ankh2Embedding
+    from .embedding_base import EmbeddingBase
+    from .embedding_factory import create_embedding
+    from .esm_embedding import ESMEmbedding
+    from .esmc_embedding import ESMCEmbedding
+    from .mistral_embedding import MistralEmbedding
+    from .prot_bert_embedding import ProtBertEmbedding
+    from .prot_t5_embedding import ProtT5Embedding

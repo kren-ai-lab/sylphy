@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .logging_config import (
     add_context,
+    get_child_logger,
     get_logger,
     reset_logging,
     set_global_level,
@@ -13,6 +14,7 @@ from .logging_config import (
 
 __all__ = [
     "add_context",
+    "get_child_logger",
     "get_logger",
     "reset_logging",
     "set_global_level",

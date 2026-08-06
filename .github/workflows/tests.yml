@@ -39,9 +39,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies (with embeddings)
         if: matrix.embeddings == true
-        run: uv sync --extra dev --extra embeddings --extra reductions
+        run: uv sync --extra embeddings --extra reductions
       - name: Install dependencies (without embeddings)
         if: matrix.embeddings == false
-        run: uv sync --extra dev --extra reductions
+        run: uv sync --extra reductions
       - name: Run tests
         run: uv run pytest -q

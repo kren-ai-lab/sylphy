@@ -54,14 +54,6 @@ all = [
     "transformers>=4.48,<5.0",
     "umap-learn>=0.5.9,<1.0",
 ]
-dev = [
-    "pyrefly>=1.0.0",
-    "pytest-cov~=7.1.0",
-    "pytest~=9.0.2",
-    "ruff~=0.15.5",
-    "taskipy~=1.14.0",
-    "ty>=0.0.30",
-]
 embeddings = [
     "esm>=3.2.1,<4.0",
     "sentencepiece>=0.2.1,<1.0",
@@ -73,6 +65,16 @@ reductions = [
     "llvmlite>=0.46.0",
     "numba>=0.64.0",
     "umap-learn>=0.5.9,<1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyrefly>=1.0.0",
+    "pytest-cov~=7.1.0",
+    "pytest~=9.0.2",
+    "ruff~=0.15.5",
+    "taskipy~=1.14.0",
+    "ty>=0.0.30",
 ]
 
 [project.scripts]

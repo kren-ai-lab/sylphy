@@ -9,21 +9,24 @@ Sylphy uses `uv` for environment management and `taskipy` for common developer c
 Install development dependencies:
 
 ```bash
-uv sync --extra dev
+uv sync
 ```
 
 If you also need embeddings, parquet, and reduction extras locally:
 
 ```bash
-uv sync --extra dev --extra all
+uv sync --extra all
 ```
 
 Editable install with `pip` also works:
 
 ```bash
-pip install -e ".[dev]"
-pip install -e ".[all,dev]"
+pip install -e "."
+pip install -e ".[all]"
 ```
+
+Note: `pip` does not install dependency groups, so the dev tooling
+(`ruff`, `pytest`, `taskipy`, ...) needs `uv sync` or a manual install.
 
 ## Common Commands
 

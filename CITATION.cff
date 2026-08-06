@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use Sylphy in your research, please cite it as below."
+title: "Sylphy: Protein Sequence Representation: Encoders, Embeddings, and Reductions"
+abstract: "Protein sequence representation: encoders, embeddings, and reductions."
+type: software
+version: 1.0.0
+date-released: "2026-08-06"
+license: MIT
+doi: 10.5281/zenodo.21819735
+authors:
+  - family-names: Medina-Ortiz
+    given-names: David
+    affiliation: "Leibniz Institute of Plant Biochemistry"
+  - family-names: Álvarez Saravia
+    given-names: Diego
+    affiliation: "Universidad de Magallanes"
+  - family-names: García-Vinuesa
+    given-names: Julián
+    affiliation: "Universidad de Magallanes"
+repository-code: "https://github.com/kren-ai-lab/sylphy"
+url: "https://github.com/kren-ai-lab/sylphy"
+keywords:
+  - protein
+  - bioinformatics
+  - embeddings
+  - dimension-reduction
+  - ESM
+  - ProtBERT
+  - ProtT5
+  - AAindex
+  - k-mers
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.21819735
+    description: "Concept DOI (all versions)"
+  - type: doi
+    value: 10.5281/zenodo.21819736
+    description: "Version DOI (v1.0.0)"

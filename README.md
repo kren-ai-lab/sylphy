@@ -148,6 +148,30 @@ Useful environment variables:
 - [DEVELOPMENT.md](DEVELOPMENT.md) for local setup, tests, architecture, and contribution notes
 - [examples/README.md](examples/README.md) for the examples index and runnable scripts/notebooks
 
+## Citation
+
+If you use Sylphy in your research, please cite:
+
+> Medina-Ortiz, D.; Álvarez Saravia, D.; García-Vinuesa, J.
+> *Sylphy: Protein Sequence Representation: Encoders, Embeddings, and Reductions*.
+> Version 1.0.0, 2026. Zenodo.
+> https://doi.org/10.5281/zenodo.21819735
+
+```bibtex
+@software{sylphy2026,
+  author    = {Medina-Ortiz, David and Álvarez Saravia, Diego and García-Vinuesa, Julián},
+  title     = {{Sylphy}: Protein Sequence Representation: Encoders, Embeddings, and Reductions},
+  year      = {2026},
+  version   = {1.0.0},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.21819735},
+  url       = {https://doi.org/10.5281/zenodo.21819735}
+}
+```
+
+To cite this exact release, use the version DOI [10.5281/zenodo.21819736](https://doi.org/10.5281/zenodo.21819736).
+Machine-readable metadata lives in [CITATION.cff](CITATION.cff).
+
 ## License
 
 **MIT**. See [LICENSE](LICENSE).

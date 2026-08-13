@@ -3,6 +3,7 @@
 [![PyVersions](https://img.shields.io/pypi/pyversions/sylphy?style=flat-square)](https://github.com/kren-ai-lab/sylphy)
 [![Tests](https://img.shields.io/github/actions/workflow/status/kren-ai-lab/sylphy/tests.yml?style=flat-square)](https://github.com/kren-ai-lab/sylphy/actions/workflows/tests.yml)
 ![License](https://img.shields.io/github/license/kren-ai-lab/sylphy?style=flat-square)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21819735-blue?style=flat-square)](https://doi.org/10.5281/zenodo.21819735)
 
 Sylphy is a Python toolkit for turning protein sequences into machine-learning-ready representations.
 

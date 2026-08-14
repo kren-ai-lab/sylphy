@@ -11,12 +11,15 @@ authors:
   - family-names: Medina-Ortiz
     given-names: David
     affiliation: "Universidad de Magallanes"
+    orcid: "https://orcid.org/0000-0002-8369-5746"
   - family-names: Álvarez Saravia
     given-names: Diego
     affiliation: "Universidad de Magallanes"
+    orcid: "https://orcid.org/0000-0003-0753-274X"
   - family-names: García-Vinuesa
     given-names: Julián
     affiliation: "Universidad de Magallanes"
+    orcid: "https://orcid.org/0009-0009-1121-2993"
 repository-code: "https://github.com/kren-ai-lab/sylphy"
 url: "https://github.com/kren-ai-lab/sylphy"
 keywords:

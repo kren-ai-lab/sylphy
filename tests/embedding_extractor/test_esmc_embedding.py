@@ -21,7 +21,7 @@ def _make_inst(sequences: list[str], monkeypatch: pytest.MonkeyPatch) -> ESMCEmb
     inst = ESMCEmbedding(dataset=df, name_device="cpu")
     monkeypatch.setattr(inst, "ensure_loaded", lambda: None)
     monkeypatch.setattr(inst, "release_resources", lambda: None)
-    inst.model = ESMC()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+    inst.model = ESMC()  # type: ignore[call-arg]
     return inst
 
 

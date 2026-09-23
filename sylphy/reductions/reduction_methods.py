@@ -57,7 +57,7 @@ class Reductions:
 
         self.return_type: ReturnType = return_type
         self.preprocess: Preprocess = preprocess
-        self.random_state: int = int(get_config().seed if random_state is None else random_state)
+        self.random_state: int = get_config().seed if random_state is None else random_state
 
         # Normalize dataset → np.ndarray (float32), validate 2D numeric
         if isinstance(dataset, pl.DataFrame):
@@ -138,7 +138,7 @@ class Reductions:
             if self.return_type == "numpy":
                 self.__logger__.info("Prepared NumPy output with %d components.", n_components)
                 return transform_array
-            headers = self._make_headers(n_components)
+            headers = self._make_headers(k)
             self.__logger__.info("Prepared polars DataFrame with %d components.", n_components)
             return pl.from_numpy(transform_array, schema=headers)
 

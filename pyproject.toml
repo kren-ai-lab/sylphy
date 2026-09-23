@@ -77,8 +77,9 @@ dev = [
     "pytest-cov~=7.1.0",
     "pytest~=9.1.1",
     "ruff~=0.16.8",
+    "scipy-stubs>=1.17.1.5",
     "taskipy~=1.14.1",
-    "ty>=0.0.30",
+    "types-tqdm>=4.70.0.20260906",
 ]
 
 [project.scripts]
@@ -122,6 +123,12 @@ ignore = ["COM812", "CPY001", "D203", "D213", "N802", "N803", "N806", "PLR0913",
     "T201",    # examples print result snippets by design
 ]
 
+[tool.pyrefly]
+# Without a config section Pyrefly falls back to the `basic` preset, which
+# silences most of its checks; `default` is the real baseline.
+preset = "default"
+project-includes = ["sylphy", "tests"]
+
 [tool.taskipy.tasks]
 sort-imports = "ruff check --fix --select I,F401 sylphy/ tests/ examples/"
 format = "task sort-imports && ruff format sylphy/ tests/ examples/"
@@ -131,4 +138,3 @@ test = "pytest -q"
 test-v = "pytest -v"
 test-cov = "pytest --cov=sylphy --cov-report=html"
 pyrefly = "pyrefly check sylphy/ tests/"
-ty = "ty check sylphy/ tests/"

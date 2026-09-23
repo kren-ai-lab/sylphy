@@ -24,8 +24,6 @@ Install optional extras as needed:
 - `reductions` for UMAP and related optional reducers
 - `all` for all optional runtime dependencies
 
-> **Note:** The `embeddings` extra requires Python 3.11 or 3.12. `torchtext` (a dependency of ESM-C) doesn't providee support for Python 3.13+.
-
 The `reductions` extra may require a C++ compiler and Python development headers because of optional native dependencies such as ClustPy.
 
 ```bash

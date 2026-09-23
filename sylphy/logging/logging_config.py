@@ -207,7 +207,7 @@ def _resolve_setup_params(
     elif isinstance(level, str):
         lvl = LOG_LEVEL_MAP.get(level.upper(), LOG_DEFAULT_LEVEL)
     else:
-        lvl = int(level)
+        lvl = level
 
     wc = env_log_stderr(default=LOG_DEFAULT_STDERR) if with_console is None else with_console
     uj = env_log_json(default=LOG_DEFAULT_JSON) if use_json is None else use_json
@@ -375,7 +375,7 @@ def get_child_logger(suffix: str, **context: object) -> logging.Logger:
 
 def set_global_level(level: int | str, name: str = LOG_DEFAULT_NAME) -> None:
     """Change the level of the root logger and its handlers."""
-    lvl = LOG_LEVEL_MAP.get(level.upper(), LOG_DEFAULT_LEVEL) if isinstance(level, str) else int(level)
+    lvl = LOG_LEVEL_MAP.get(level.upper(), LOG_DEFAULT_LEVEL) if isinstance(level, str) else level
     logger = get_logger(name)
     logger.setLevel(lvl)
     for h in logger.handlers:

@@ -194,7 +194,7 @@ class ESMCEmbedding(EmbeddingBase):
 
         self.__logger__.info("Embedding %d sequences with ESM-C.", len(sequences))
 
-        current_bs, out_vecs, i = max(int(batch_size), 1), [], 0
+        current_bs, out_vecs, i = max(batch_size, 1), [], 0
         while i < len(sequences):
             chunk = sequences[i : i + current_bs]
             try:

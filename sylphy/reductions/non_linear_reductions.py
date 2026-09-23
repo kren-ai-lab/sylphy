@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast  # noqa: UP035
 
 import numpy as np
 import umap.umap_ as umap
-from clustpy.partition import DipExt
+from clustpy.centroid import DipExt
 from sklearn.decomposition import DictionaryLearning, MiniBatchDictionaryLearning
 from sklearn.manifold import MDS, TSNE, Isomap, LocallyLinearEmbedding, SpectralEmbedding
 

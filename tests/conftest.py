@@ -108,7 +108,7 @@ class _FakeModel:
         _FakeModel.FORWARD_CALLS += 1
         x: torch.Tensor = cast("torch.Tensor", enc["input_ids"])
         B, L = x.shape
-        if self.OOM_THRESHOLD is not None and int(self.OOM_THRESHOLD) < B:
+        if self.OOM_THRESHOLD is not None and self.OOM_THRESHOLD < B:
             msg = "simulated OOM"
             raise torch.cuda.OutOfMemoryError(msg)
         H = 4

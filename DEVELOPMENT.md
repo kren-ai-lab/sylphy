@@ -47,7 +47,6 @@ uv run task lint
 uv run task lint-fix
 uv run task format
 uv run task sort-imports
-uv run task ty
 uv run task pyrefly
 ```
 

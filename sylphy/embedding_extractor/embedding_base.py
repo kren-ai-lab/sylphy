@@ -455,7 +455,7 @@ class EmbeddingBase:
 
             seqs = self.dataset[self.column_seq].cast(pl.String).to_list()
             mats: list[np.ndarray] = []
-            bs: int = int(batch_size)
+            bs: int = batch_size
             bs = max(bs, 1)
 
             for chunk in self._make_batches(seqs, bs):

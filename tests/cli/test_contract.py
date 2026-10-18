@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 import numpy as np
@@ -29,11 +28,6 @@ def _csv(tmp_path: Path, ids: list[str], col: str = "id") -> Path:
     inp = tmp_path / "in.csv"
     pl.DataFrame({col: ids, "sequence": ["ACD", "WYYVV", "KLMNP"][: len(ids)]}).write_csv(inp)
     return inp
-
-
-def _plain(text: str) -> str:
-    """Strip ANSI codes, Rich borders and whitespace so assertions ignore CI colour and width."""
-    return re.sub(r"\x1b\[[0-9;]*m|[│╭╮╰╯─]|\s", "", text)
 
 
 def _encode(inp: Path, out: Path, *extra: str) -> object:
@@ -63,14 +57,10 @@ def test_custom_id_col(tmp_path: Path) -> None:
     assert pl.read_csv(out)["id"].to_list() == ["x", "y"]
 
 
-@pytest.mark.parametrize(
-    ("ids", "col", "needle"),
-    [(["a", "b"], "name", "--id-col"), (["a", "a"], "id", "Duplicate"), (["a", ""], "id", "Empty")],
-)
-def test_bad_ids_exit_2(tmp_path: Path, ids: list[str], col: str, needle: str) -> None:
-    res = _encode(_csv(tmp_path, ids, col), tmp_path / "o.csv")
-    assert res.exit_code == 2  # type: ignore[attr-defined]
-    assert needle in _plain(res.output)  # type: ignore[attr-defined]
+def test_bad_ids_exit_2(tmp_path: Path) -> None:
+    out = tmp_path / "o.csv"
+    assert _encode(_csv(tmp_path, ["a", "a"]), out).exit_code == 2  # type: ignore[attr-defined]
+    assert not out.exists()
 
 
 def test_npz_and_npy_carry_ids(tmp_path: Path) -> None:

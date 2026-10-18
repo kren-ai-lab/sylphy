@@ -12,7 +12,7 @@ from sylphy.cli.embed import app
 
 def test_embed_runs_and_saves_csv(tmp_path: Path) -> None:
     """Verify CLI extracts embeddings and saves to CSV with correct shape."""
-    df = pl.DataFrame({"sequence": ["AAAA", "BBB", "CCCCC"]})
+    df = pl.DataFrame({"id": ["s0", "s1", "s2"], "sequence": ["AAAA", "BBB", "CCCCC"]})
     inp = tmp_path / "seqs.csv"
     df.write_csv(inp)
     out = tmp_path / "out.csv"
@@ -39,8 +39,9 @@ def test_embed_runs_and_saves_csv(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
 
     got = pl.read_csv(out)
-    assert got.shape == (3, 5)  # 3 sequences, hidden_size=4 + sequence column
-    assert "sequence" in got.columns
+    assert got.shape == (3, 5)  # 3 sequences, hidden_size=4 + id column
+    assert got.columns[0] == "id"
+    assert "sequence" not in got.columns
 
 
 def test_embed_oom_backoff_succeeds(tmp_path: Path) -> None:
@@ -50,7 +51,7 @@ def test_embed_oom_backoff_succeeds(tmp_path: Path) -> None:
     _FakeModel.OOM_THRESHOLD = None
     _FakeModel.FORWARD_CALLS = 0
 
-    df = pl.DataFrame({"sequence": ["AAAA", "BBBB", "CCCCC", "DD"]})
+    df = pl.DataFrame({"id": ["s0", "s1", "s2", "s3"], "sequence": ["AAAA", "BBBB", "CCCCC", "DD"]})
     inp = tmp_path / "seqs.csv"
     df.write_csv(inp)
     out = tmp_path / "out.csv"
@@ -81,7 +82,7 @@ def test_embed_oom_backoff_succeeds(tmp_path: Path) -> None:
 
 def test_embed_parquet_input(tmp_path: Path) -> None:
     """Load sequences from parquet input file."""
-    df = pl.DataFrame({"sequence": ["AAAA", "BBB"]})
+    df = pl.DataFrame({"id": ["s0", "s1"], "sequence": ["AAAA", "BBB"]})
     inp = tmp_path / "seqs.parquet"
     df.write_parquet(inp)
     out = tmp_path / "out.csv"
@@ -107,7 +108,7 @@ def test_embed_parquet_input(tmp_path: Path) -> None:
 
 def test_embed_parquet_output(tmp_path: Path) -> None:
     """Save embeddings to parquet format."""
-    df = pl.DataFrame({"sequence": ["AAAA", "BBB"]})
+    df = pl.DataFrame({"id": ["s0", "s1"], "sequence": ["AAAA", "BBB"]})
     inp = tmp_path / "seqs.csv"
     df.write_csv(inp)
     out = tmp_path / "out.parquet"
@@ -133,7 +134,7 @@ def test_embed_parquet_output(tmp_path: Path) -> None:
 
 def test_embed_output_missing_extension_errors(tmp_path: Path) -> None:
     """Output path without extension should exit with error."""
-    df = pl.DataFrame({"sequence": ["AAAA"]})
+    df = pl.DataFrame({"id": ["s0"], "sequence": ["AAAA"]})
     inp = tmp_path / "seqs.csv"
     df.write_csv(inp)
 
@@ -153,7 +154,7 @@ def test_embed_output_missing_extension_errors(tmp_path: Path) -> None:
 
 def test_embed_output_unsupported_extension_errors(tmp_path: Path) -> None:
     """Output path with unsupported extension should exit with error."""
-    df = pl.DataFrame({"sequence": ["AAAA"]})
+    df = pl.DataFrame({"id": ["s0"], "sequence": ["AAAA"]})
     inp = tmp_path / "seqs.csv"
     df.write_csv(inp)
 
@@ -173,7 +174,7 @@ def test_embed_output_unsupported_extension_errors(tmp_path: Path) -> None:
 
 def test_embed_custom_seq_col(tmp_path: Path) -> None:
     """--seq-col selects the correct column."""
-    df = pl.DataFrame({"prot": ["AAAA", "BBB", "CCCCC"]})
+    df = pl.DataFrame({"id": ["s0", "s1", "s2"], "prot": ["AAAA", "BBB", "CCCCC"]})
     inp = tmp_path / "seqs.csv"
     df.write_csv(inp)
     out = tmp_path / "out.csv"

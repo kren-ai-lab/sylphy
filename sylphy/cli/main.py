@@ -9,6 +9,7 @@ from sylphy.cli._shared import HELP_CONTEXT_SETTINGS
 from sylphy.cli.cache import app as cache_app
 from sylphy.cli.embed import app as embed_app
 from sylphy.cli.encode import app as encode_app
+from sylphy.cli.validate import validate
 
 app = typer.Typer(
     name="sylphy",
@@ -42,6 +43,7 @@ def main(
 app.add_typer(cache_app, name="cache")
 app.add_typer(encode_app, name="encode")
 app.add_typer(embed_app, name="embed")
+app.command(name="validate")(validate)
 
 if __name__ == "__main__":
     app()

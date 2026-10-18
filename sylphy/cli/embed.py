@@ -2,13 +2,25 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, cast
 
 import typer
 
 from sylphy.cli._enums import DeviceChoice, LayerAggChoice, PoolChoice, PrecisionChoice
-from sylphy.cli._shared import HELP_CONTEXT_SETTINGS, LOG_LEVELS, infer_format, level_from_str, load_dataset
+from sylphy.cli._provenance import utc_now
+from sylphy.cli._shared import (
+    CONFIG_OPTION,
+    HELP_CONTEXT_SETTINGS,
+    LOG_LEVELS,
+    infer_format,
+    level_from_str,
+    load_dataset,
+    snapshot_commit,
+    write_features,
+    write_run_provenance,
+)
 
 if TYPE_CHECKING:
     from sylphy.types import LayerAggType, PoolType, PrecisionType
@@ -55,7 +67,13 @@ _LAYER_AGG = typer.Option(
     LayerAggChoice.mean, "--layer-agg", show_default=True, help="Aggregation across selected layers."
 )
 _POOL = typer.Option(PoolChoice.mean, "--pool", show_default=True, help="Token pooling strategy.")
-_INPUT = typer.Option(..., "--input", "-i", help="Input file (csv/tsv/parquet).")
+_INPUT = typer.Option(..., "--input", "-i", help="Input file (fasta/csv/tsv/parquet).")
+_ID_COL = typer.Option(
+    "id", "--id-col", show_default=True, help="Column with unique record ids (tables; FASTA uses the header)."
+)
+_REVISION = typer.Option(
+    None, "--revision", help="Model revision (branch, tag or commit); default: the registry's."
+)
 _SEQ_COL = typer.Option(
     "sequence", "--seq-col", "-s", show_default=True, help="Column with amino acid sequences."
 )
@@ -75,10 +93,13 @@ _LOG_LEVEL = typer.Option(
 )
 def embed(
     *,
+    ctx: typer.Context,
     input_path: Path = _INPUT,
+    id_col: str = _ID_COL,
     seq_col: str = _SEQ_COL,
     output: Path = _OUTPUT,
     model: str = _MODEL,
+    revision: str | None = _REVISION,
     device: DeviceChoice = _DEVICE,
     precision: PrecisionChoice = _PRECISION,
     batch_size: int = _BATCH_SIZE,
@@ -88,6 +109,7 @@ def embed(
     layer_agg: LayerAggChoice = _LAYER_AGG,
     pool: PoolChoice = _POOL,
     log_level: str = _LOG_LEVEL,
+    config: Path | None = CONFIG_OPTION,  # noqa: ARG001
 ) -> None:
     r"""Extract per-sequence embeddings from a pretrained protein model and export to disk.
 
@@ -113,8 +135,9 @@ def embed(
               -m facebook/esm2_t6_8M_UR50D -d cpu --layers 0,3,6 --layer-agg concat
 
     """
+    created_at = utc_now()
     fmt = infer_format(output)
-    df = load_dataset(input_path, seq_col)
+    df = load_dataset(input_path, seq_col, id_col)
 
     ls = (layers or "last").strip().lower()
     layers_spec: str | int | list[int]
@@ -128,6 +151,9 @@ def embed(
             raise typer.BadParameter(msg) from None
 
     from sylphy.embedding_extractor import create_embedding  # noqa: PLC0415
+
+    if revision:
+        _pin_revision(model, revision)
 
     embedder = create_embedding(
         model_name=model,
@@ -145,5 +171,38 @@ def embed(
         layer_agg=cast("LayerAggType", layer_agg),
         pool=cast("PoolType", pool),
     )
-    embedder.export_encoder(str(output), file_format=fmt)
+    features = embedder.coded_dataset.drop(seq_col)
+    write_features(features, df[id_col], output, fmt)
+    write_run_provenance(
+        ctx,
+        output,
+        command="embed",
+        created_at=created_at,
+        n_rows=features.height,
+        n_cols=features.width,
+        packages=("sylphy", "numpy", "polars", "torch", "transformers"),
+        extensions={
+            "model": model,
+            "revision_requested": revision,
+            "revision_resolved": snapshot_commit(embedder.resolved_path),
+            "device": embedder.device.type,
+            "precision": precision.value,
+            "batch_size_effective": embedder.effective_batch_size or batch_size,
+        },
+    )
     typer.echo(f"Embeddings saved to: {output}")
+
+
+def _pin_revision(model: str, revision: str) -> None:
+    """Register ``model`` with ``revision`` so the registry's ``snapshot_download`` call uses it."""
+    from sylphy.core.model_registry import ModelNotFoundError, get_model_spec, register_model  # noqa: PLC0415
+    from sylphy.core.model_spec import ModelSpec  # noqa: PLC0415
+
+    try:
+        spec = get_model_spec(model)
+    except ModelNotFoundError:
+        if "/" not in model:
+            msg = f"--revision needs a registered model or a HuggingFace 'org/name' ref, got '{model}'."
+            raise typer.BadParameter(msg) from None
+        spec = ModelSpec(name=model, provider="huggingface", ref=model)
+    register_model(replace(spec, revision=revision))

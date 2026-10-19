@@ -9,7 +9,7 @@ Adopts the shared ecosystem CLI contract for `sylphy encode` and `sylphy embed`.
 
 - Input may be FASTA (`.fa`, `.fasta`, `.faa`); the id is the first token of the header.
 - New `--id-col` (default `id`) for tabular input. A missing, empty or duplicated id is an error (exit code 2).
-- New `--config PATH` (YAML/JSON, keys are option names; defaults < file < flags) and `sylphy validate {encode|embed} CONFIG [--json]`.
+- New `--config PATH` (YAML/JSON, keys are option names; defaults < file < flags) and `sylphy validate-config {encode|embed} CONFIG [--json]`.
 - New `sylphy embed --revision` to pin the model revision.
 - Every run writes `<output>.provenance.json`; `embed` records the requested and resolved revision, the device actually used and the effective batch size.
 - Exit codes: `2` usage/config error, `3` runtime or data error (sylphy's own exceptions, `OSError`, model loading/download, unparsable input), `4` unexpected error with traceback. Previously runtime failures exited 1.

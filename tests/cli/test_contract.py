@@ -1,4 +1,4 @@
-"""Shared ecosystem CLI contract: record ids, ``--config``, ``validate`` and provenance."""
+"""Shared ecosystem CLI contract: record ids, ``--config``, ``validate-config`` and provenance."""
 
 from __future__ import annotations
 
@@ -110,7 +110,7 @@ def test_bad_config_exit_2(tmp_path: Path, body: str) -> None:
 def test_validate_json_conforms(tmp_path: Path, target: str, body: str, valid: bool) -> None:  # noqa: FBT001
     cfg = tmp_path / "c.yaml"
     cfg.write_text(body, encoding="utf-8")
-    res = CliRunner().invoke(main_app, ["validate", target, str(cfg), "--json"])
+    res = CliRunner().invoke(main_app, ["validate-config", target, str(cfg), "--json"])
     assert res.exit_code == (0 if valid else 2)
     issues = json.loads(res.stdout)
     _schema("validate-errors.schema.json").validate(issues)
@@ -120,7 +120,7 @@ def test_validate_json_conforms(tmp_path: Path, target: str, body: str, valid: b
 def test_validate_plain_lists_problems_on_stderr(tmp_path: Path) -> None:
     cfg = tmp_path / "c.yaml"
     cfg.write_text("nope: 1\n", encoding="utf-8")
-    res = CliRunner().invoke(main_app, ["validate", "encode", str(cfg)])
+    res = CliRunner().invoke(main_app, ["validate-config", "encode", str(cfg)])
     assert res.exit_code == 2
     assert "nope: unknown key" in res.output
 

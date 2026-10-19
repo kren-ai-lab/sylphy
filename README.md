@@ -129,7 +129,7 @@ sylphy encode --method kmers -i sequences.csv -o kmers.csv -k 4
 
 # Options from a YAML/JSON file (keys are option names, e.g. max_length); flags override the file
 sylphy encode -i sequences.csv -o encoded.parquet --config encode.yaml
-sylphy validate encode encode.yaml --json
+sylphy validate-config encode encode.yaml --json
 
 # Cache management
 sylphy cache stats

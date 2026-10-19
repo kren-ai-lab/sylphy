@@ -80,7 +80,7 @@ def main(
 app.add_typer(cache_app, name="cache")
 app.add_typer(encode_app, name="encode")
 app.add_typer(embed_app, name="embed")
-app.command(name="validate")(validate)
+app.command(name="validate-config")(validate)
 
 if __name__ == "__main__":
     app()

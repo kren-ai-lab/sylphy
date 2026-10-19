@@ -1,4 +1,4 @@
-"""sylphy validate — check a ``--config`` file without touching network, GPU or input data."""
+"""sylphy validate-config — check a ``--config`` file without touching network, GPU or input data."""
 
 from __future__ import annotations
 

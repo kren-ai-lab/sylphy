@@ -99,7 +99,7 @@ def _read_fasta(path: Path, id_col: str, seq_col: str) -> pl.DataFrame:
             seqs[-1] += line
         elif line:
             msg = f"Invalid FASTA {path}: sequence data before the first header."
-            raise typer.BadParameter(msg)
+            raise DataError(msg)
     return pl.DataFrame({id_col: ids, seq_col: seqs}, schema={id_col: pl.String, seq_col: pl.String})
 
 
@@ -112,7 +112,7 @@ def load_dataset(input_path: Path, seq_col: str, id_col: str = "id") -> pl.DataF
 
     if not input_path.exists():
         msg = f"Input file not found: {input_path}"
-        raise typer.BadParameter(msg)
+        raise DataError(msg)
 
     suffix = input_path.suffix.lower()
     if suffix in FASTA_SUFFIXES:
@@ -142,7 +142,7 @@ def load_dataset(input_path: Path, seq_col: str, id_col: str = "id") -> pl.DataF
         check_ids(df, id_col)
     except DataError as exc:
         msg = f"{exc} Fix the input or set --id-col."
-        raise typer.BadParameter(msg) from exc
+        raise DataError(msg) from exc
     return df
 
 

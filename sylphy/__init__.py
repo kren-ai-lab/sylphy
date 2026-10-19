@@ -18,9 +18,11 @@ from .core import (
     temporary_cache_root,
     unregister,
 )
+from .validation import ConfigIssue, validate_config
 
 __all__ = [
     # core API
+    "ConfigIssue",
     "ModelSpec",
     "__version__",
     "clear_registry",
@@ -33,4 +35,5 @@ __all__ = [
     "set_cache_root",
     "temporary_cache_root",
     "unregister",
+    "validate_config",
 ]

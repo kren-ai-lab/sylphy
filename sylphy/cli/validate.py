@@ -6,10 +6,9 @@ from enum import StrEnum
 from pathlib import Path  # noqa: TC003
 
 import typer
-import typer.main
 
-from sylphy.cli._config_file import check_config, read_config, report_issues
-from sylphy.cli._shared import CONFIG_EXCLUDE
+from sylphy.cli._config_file import report_issues
+from sylphy.validation import validate_config
 
 
 class Target(StrEnum):
@@ -26,11 +25,4 @@ def validate(
     as_json: bool = typer.Option(False, "--json", help="Print problems as a JSON array on stdout."),  # noqa: FBT003
 ) -> None:
     """Validate CONFIG as accepted by `sylphy TARGET --config CONFIG`."""
-    if target is Target.encode_cmd:
-        from sylphy.cli.encode import app  # noqa: PLC0415
-    else:
-        from sylphy.cli.embed import app  # noqa: PLC0415
-
-    raw, issues = read_config(config)
-    issues = issues or check_config(typer.main.get_command(app), raw, exclude=CONFIG_EXCLUDE)
-    raise typer.Exit(report_issues(issues, as_json=as_json))
+    raise typer.Exit(report_issues(validate_config(config, target.value), as_json=as_json))

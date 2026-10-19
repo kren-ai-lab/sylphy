@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import typer.main
@@ -35,7 +36,5 @@ def validate_config(
     if isinstance(config, Mapping):
         raw, issues = dict(config), []
     else:
-        from pathlib import Path  # noqa: PLC0415
-
         raw, issues = read_config(Path(config))
     return issues or check_config(typer.main.get_command(app), raw, exclude=CONFIG_EXCLUDE)

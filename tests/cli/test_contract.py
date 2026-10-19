@@ -9,7 +9,7 @@ import numpy as np
 import polars as pl
 import pytest
 from jsonschema import Draft202012Validator
-from typer.testing import CliRunner
+from typer.testing import CliRunner, Result
 
 from sylphy.cli._shared import snapshot_commit
 from sylphy.cli.embed import app as embed_app
@@ -57,10 +57,28 @@ def test_custom_id_col(tmp_path: Path) -> None:
     assert pl.read_csv(out)["id"].to_list() == ["x", "y"]
 
 
-def test_bad_ids_exit_2(tmp_path: Path) -> None:
+def _encode_main(inp: Path, out: Path) -> Result:
+    return CliRunner().invoke(main_app, ["encode", *ENCODE, "-i", str(inp), "-o", str(out)])
+
+
+def test_bad_ids_exit_3(tmp_path: Path) -> None:
     out = tmp_path / "o.csv"
-    assert _encode(_csv(tmp_path, ["a", "a"]), out).exit_code == 2  # type: ignore[attr-defined]
+    assert _encode_main(_csv(tmp_path, ["a", "a"]), out).exit_code == 3
     assert not out.exists()
+
+
+def test_fasta_sequence_before_header_exit_3(tmp_path: Path) -> None:
+    inp = tmp_path / "in.fasta"
+    inp.write_text("ACD\n>p1\nEF\n", encoding="utf-8")
+    assert _encode_main(inp, tmp_path / "o.csv").exit_code == 3
+
+
+def test_non_utf8_config_exit_2(tmp_path: Path) -> None:
+    cfg = tmp_path / "c.yaml"
+    cfg.write_bytes(b"method: \xff\xfe\n")
+    out = tmp_path / "o.csv"
+    args = ["-i", str(_csv(tmp_path, ["a"])), "-o", str(out), "--config", str(cfg)]
+    assert CliRunner().invoke(encode_app, args).exit_code == 2
 
 
 def test_npz_and_npy_carry_ids(tmp_path: Path) -> None:

@@ -73,6 +73,8 @@ class EmbeddingBase:
         self.trust_remote_code = trust_remote_code
         self.precision = precision
         self.oom_backoff = oom_backoff
+        self.resolved_path: str | None = None  # local model dir, set once the model is resolved
+        self.effective_batch_size: int | None = None  # batch size after any OOM backoff
 
         # logger
         backend_name = type(self).__name__
@@ -110,12 +112,14 @@ class EmbeddingBase:
         """
         try:
             local_dir = resolve_model(self.name_model)
-            return str(local_dir)
+            self.resolved_path = str(local_dir)
+            return self.resolved_path  # noqa: TRY300
         except Exception:
             if self.provider == "huggingface" and ("/" in self.name_model):
                 register_model(ModelSpec(name=self.name_model, provider="huggingface", ref=self.name_model))
                 local_dir = resolve_model(self.name_model)
-                return str(local_dir)
+                self.resolved_path = str(local_dir)
+                return self.resolved_path
             raise
 
     def load_hf_tokenizer_and_model(self) -> None:
@@ -490,6 +494,7 @@ class EmbeddingBase:
                         )
                         mats.append(X)
 
+            self.effective_batch_size = bs
             self.release_resources()
             Xall: np.ndarray = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
             header: list[str] = [f"p_{i}" for i in range(Xall.shape[1])]

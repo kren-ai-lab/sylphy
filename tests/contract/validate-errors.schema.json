@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "validate-errors/1",
+  "title": "validate --json output",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["path", "message"],
+    "properties": {
+      "path": { "type": "string" },
+      "message": { "type": "string", "minLength": 1 }
+    }
+  }
+}

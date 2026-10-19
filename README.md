@@ -122,11 +122,23 @@ sylphy encode --method physicochemical \
 # Classical encoding — k-mers TF-IDF
 sylphy encode --method kmers -i sequences.csv -o kmers.csv -k 4
 
+# Options from a YAML/JSON file (keys are option names, e.g. max_length); flags override the file
+sylphy encode -i sequences.csv -o encoded.parquet --config encode.yaml
+sylphy validate encode encode.yaml --json
+
 # Cache management
 sylphy cache stats
 sylphy cache ls --recursive
 sylphy cache prune --max-size 10GB --apply
 ```
+
+### Inputs and outputs
+
+- Input: FASTA (`.fa`, `.fasta`, `.faa`; the id is the first token of the header), or CSV/TSV/Parquet with an id column (`--id-col`, default `id`) and a sequence column (`--seq-col`). Ids must be present, non-empty and unique.
+- Output tables (`.csv`, `.parquet`): a string `id` column followed by the feature columns; the sequence is not written.
+- `.npz`: `values`, `columns` and `ids`. `.npy`: the numeric matrix only, plus `<stem>.ids.txt` with one id per line.
+- Each run also writes `<output>.provenance.json` (parameters, input/output hashes, package versions; for `embed`, the model revision, device and batch size actually used).
+- `sylphy embed --revision` pins the model revision (branch, tag or commit).
 
 ## Configuration
 

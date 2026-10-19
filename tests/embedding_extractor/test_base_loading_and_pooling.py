@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import polars as pl
 
 from sylphy.embedding_extractor import create_embedding
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_load_and_pool_mean_cls_eos_and_layers() -> None:
@@ -52,3 +57,19 @@ def test_run_process_end_to_end() -> None:
 
     assert inst.coded_dataset.shape == (3, 5)
     assert "sequence" in inst.coded_dataset.columns
+
+
+def test_export_encoder_keyed_by_id(tmp_path: Path) -> None:
+    """API export has id first and no sequence column."""
+    df = pl.DataFrame({"id": ["a", "b", "c"], "sequence": ["AAAA", "BBB", "CCCCC"]})
+    inst = create_embedding(
+        model_name="facebook/esm2_t6_8M_UR50D", dataset=df, column_seq="sequence", name_device="cpu"
+    )
+    inst.load_hf_tokenizer_and_model()
+    inst.run_process(max_length=16, batch_size=2)
+    out = tmp_path / "e.csv"
+    inst.export_encoder(out)
+    got = pl.read_csv(out)
+    assert got.columns[0] == "id"
+    assert "sequence" not in got.columns
+    assert got.height == 3

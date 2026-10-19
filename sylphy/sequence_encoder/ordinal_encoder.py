@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from sylphy.constants import residues
+from sylphy.exceptions import SylphyRuntimeError
 
 if TYPE_CHECKING:
     import polars as pl
@@ -53,4 +54,4 @@ class OrdinalEncoder(EncoderBase):
         except Exception as e:
             msg = f"[ERROR] Ordinal encoding failed: {e}"
             self.__logger__.exception(msg)
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e

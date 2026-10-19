@@ -12,6 +12,9 @@ Adopts the shared ecosystem CLI contract for `sylphy encode` and `sylphy embed`.
 - New `--config PATH` (YAML/JSON, keys are option names; defaults < file < flags) and `sylphy validate {encode|embed} CONFIG [--json]`.
 - New `sylphy embed --revision` to pin the model revision.
 - Every run writes `<output>.provenance.json`; `embed` records the requested and resolved revision, the device actually used and the effective batch size.
+- Exit codes: `2` usage/config error, `3` runtime or data error (sylphy's own exceptions, `OSError`, model loading/download, unparsable input), `4` unexpected error with traceback. Previously runtime failures exited 1.
+- New `sylphy.exceptions` (`SylphyError`, `DataError`, `SylphyRuntimeError`); the model registry errors now derive from `SylphyError`.
+- The Python API writes the same files as the CLI through one shared writer (`sylphy.feature_io.write_features`).
 - `pyyaml` is now a runtime dependency; `jsonschema` a dev dependency.
 
 ### Breaking changes
@@ -20,6 +23,8 @@ Adopts the shared ecosystem CLI contract for `sylphy encode` and `sylphy embed`.
 - Output tables no longer contain the sequence column: `id` first, then feature columns only.
 - `.npz` output gains an `ids` array.
 - `.npy` output is a numeric matrix (no object dtype, no pickle) with a sibling `<stem>.ids.txt`.
+- API: `export_encoder` (encoders and embeddings) now writes the CLI format (`id` first, no sequence column, `ids` in `.npz`, `<stem>.ids.txt` for `.npy`) and requires an id column in the input dataset, selected with the new keyword `id_col="id"`; a missing, empty or duplicated id raises `DataError`. `FFTEncoder` takes `id_col` in its constructor and needs the id column in its input dataset to export.
+- API: `export_encoder` no longer pickles object arrays in `.npy`.
 
 ## 1.1.0
 

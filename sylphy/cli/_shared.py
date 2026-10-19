@@ -10,6 +10,8 @@ import typer
 from sylphy import __version__
 from sylphy.cli._config_file import apply_config
 from sylphy.cli._provenance import write_provenance
+from sylphy.exceptions import DataError
+from sylphy.feature_io import check_ids
 from sylphy.types import FileFormat
 
 if TYPE_CHECKING:
@@ -136,38 +138,12 @@ def load_dataset(input_path: Path, seq_col: str, id_col: str = "id") -> pl.DataF
         pl.col(id_col).cast(pl.String).fill_null(""),
         pl.col(seq_col).cast(pl.String).fill_null("").alias(seq_col),
     )
-    if (df[id_col].str.strip_chars() == "").any():
-        msg = f"Empty ids in column '{id_col}'; fix the input or set --id-col."
-        raise typer.BadParameter(msg)
-    dups = df.filter(df[id_col].is_duplicated())[id_col].unique().sort().to_list()
-    if dups:
-        msg = f"Duplicate ids in column '{id_col}' (e.g. {dups[:3]}); set --id-col to a unique column."
-        raise typer.BadParameter(msg)
+    try:
+        check_ids(df, id_col)
+    except DataError as exc:
+        msg = f"{exc} Fix the input or set --id-col."
+        raise typer.BadParameter(msg) from exc
     return df
-
-
-def write_features(features: pl.DataFrame, ids: pl.Series, output: Path, fmt: FileFormat) -> None:
-    """Write numeric ``features`` keyed by ``ids`` (tables: ``id`` first; arrays: ids alongside)."""
-    import numpy as np  # noqa: PLC0415
-    import polars as pl  # noqa: PLC0415
-
-    output.parent.mkdir(parents=True, exist_ok=True)
-    id_list = ids.cast(pl.String).to_list()
-    if fmt in {"csv", "parquet"}:
-        table = pl.DataFrame({"id": id_list}, schema={"id": pl.String}).hstack(features)
-        if fmt == "csv":
-            table.write_csv(output)
-        else:
-            table.write_parquet(output)
-        return
-    values = features.to_numpy()
-    if fmt == "npz":
-        np.savez_compressed(
-            output, values=values, columns=np.array(features.columns), ids=np.array(id_list, dtype=str)
-        )
-    else:
-        np.save(output, values, allow_pickle=False)
-        output.with_suffix(".ids.txt").write_text("".join(f"{i}\n" for i in id_list), encoding="utf-8")
 
 
 def snapshot_commit(model_path: str | None) -> str | None:

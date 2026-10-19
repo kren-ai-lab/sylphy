@@ -12,6 +12,7 @@ from threading import RLock
 from urllib.parse import urlparse
 
 from sylphy.constants.tool_constants import _ENV_PREFIX
+from sylphy.exceptions import SylphyError, SylphyRuntimeError
 from sylphy.logging import get_logger
 
 from .config import get_config
@@ -31,7 +32,7 @@ def normalize_name(s: str) -> str:
 # ----------------------------
 
 
-class ModelRegistryError(Exception):
+class ModelRegistryError(SylphyError):
     """Base error for the model registry."""
 
 
@@ -183,7 +184,7 @@ def _resolve_huggingface(spec: ModelSpec) -> Path:
         from huggingface_hub import snapshot_download  # noqa: PLC0415
     except Exception as e:  # pragma: no cover
         msg = "huggingface_hub is required. Install with: pip install 'huggingface_hub>=0.23'"
-        raise RuntimeError(msg) from e
+        raise SylphyRuntimeError(msg) from e
 
     logger.info("Resolving HF model %s (rev=%s)", spec.ref, spec.revision or "default")
     path = Path(snapshot_download(spec.ref, revision=spec.revision))

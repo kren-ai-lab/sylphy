@@ -16,9 +16,10 @@ from sylphy.cli._shared import (
     infer_format,
     level_from_str,
     load_dataset,
-    write_features,
     write_run_provenance,
 )
+from sylphy.exceptions import SylphyRuntimeError
+from sylphy.feature_io import write_features
 
 if TYPE_CHECKING:
     import polars as pl
@@ -195,7 +196,7 @@ def _save(
     """
     if len(ids) != features.height:
         msg = f"Internal error: {len(ids)} ids for {features.height} encoded rows."
-        raise RuntimeError(msg)
+        raise SylphyRuntimeError(msg)
     write_features(features, ids, output, fmt)
     write_run_provenance(
         ctx,

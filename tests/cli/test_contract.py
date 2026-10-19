@@ -189,3 +189,19 @@ def test_fft_keeps_ids(tmp_path: Path) -> None:
     got = pl.read_csv(out)
     assert got["id"].to_list() == ["a", "b", "c"]
     assert "sequence" not in got.columns
+
+
+@pytest.mark.parametrize("cmd", ["encode", "embed"])
+def test_missing_input_file_exits_3(tmp_path: Path, cmd: str) -> None:
+    args = ["--method", "ordinal"] if cmd == "encode" else []
+    res = CliRunner().invoke(
+        main_app, [cmd, *args, "-i", str(tmp_path / "missing.csv"), "-o", str(tmp_path / "o.csv")]
+    )
+    assert res.exit_code == 3
+
+
+def test_bad_config_file_still_exits_2(tmp_path: Path) -> None:
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text("nope: 1\n", encoding="utf-8")
+    res = CliRunner().invoke(main_app, ["encode", "-i", str(_csv(tmp_path, ["a"])), "--config", str(cfg)])
+    assert res.exit_code == 2

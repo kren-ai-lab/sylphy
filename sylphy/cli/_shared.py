@@ -112,7 +112,7 @@ def load_dataset(input_path: Path, seq_col: str, id_col: str = "id") -> pl.DataF
 
     if not input_path.exists():
         msg = f"Input file not found: {input_path}"
-        raise typer.BadParameter(msg)
+        raise DataError(msg)
 
     suffix = input_path.suffix.lower()
     if suffix in FASTA_SUFFIXES:

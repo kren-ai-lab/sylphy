@@ -52,7 +52,7 @@ Classical sequence encoding:
 import polars as pl
 from sylphy.sequence_encoder import create_encoder
 
-df = pl.DataFrame({"sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
+df = pl.DataFrame({"id": ["p1", "p2", "p3"], "sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
 
 encoder = create_encoder(
     "one_hot",  # or: ordinal, kmers, frequency, physicochemical, fft
@@ -61,6 +61,7 @@ encoder = create_encoder(
 )
 encoder.run_process()
 encoded = encoder.coded_dataset
+encoder.export_encoder("encoded.parquet")  # same format as the CLI
 ```
 
 Embedding extraction:
@@ -69,7 +70,7 @@ Embedding extraction:
 import polars as pl
 from sylphy.embedding_extractor import create_embedding
 
-df = pl.DataFrame({"sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
+df = pl.DataFrame({"id": ["p1", "p2", "p3"], "sequence": ["MKTAYIAKQR", "GAVLIMPFWK", "PEPTIDE"]})
 
 embedder = create_embedding(
     model_name="facebook/esm2_t6_8M_UR50D",
@@ -81,8 +82,12 @@ embedder = create_embedding(
 
 embedder.run_process(batch_size=8, pool="mean")  # mean, cls, or eos
 embeddings = embedder.coded_dataset
-embedder.export_encoder("embeddings.parquet")
+embedder.export_encoder("embeddings.parquet")  # id_col="id" by default
 ```
+
+`export_encoder(path, file_format, *, id_col="id")` writes the same files as the CLI (see [Inputs and outputs](#inputs-and-outputs)), keyed by the `id_col` column of the input dataset.
+A missing, empty or duplicated id raises `sylphy.exceptions.DataError`.
+For `fft`, pass the id along with the physicochemical matrix: `phys.coded_dataset.with_columns(phys.dataset["id"])`.
 
 Dimensionality reduction:
 
@@ -139,6 +144,10 @@ sylphy cache prune --max-size 10GB --apply
 - `.npz`: `values`, `columns` and `ids`. `.npy`: the numeric matrix only, plus `<stem>.ids.txt` with one id per line.
 - Each run also writes `<output>.provenance.json` (parameters, input/output hashes, package versions; for `embed`, the model revision, device and batch size actually used).
 - `sylphy embed --revision` pins the model revision (branch, tag or commit).
+
+### Exit codes
+
+- `0` success; `2` usage or config error; `3` runtime or data error (sylphy errors, I/O, model loading, unparsable input); `4` unexpected error (traceback on stderr).
 
 ## Configuration
 

@@ -67,3 +67,31 @@ def test_factory_unknown_raises() -> None:
     """Verify factory raises ValueError for unknown encoder names."""
     with pytest.raises(ValueError, match=r"Unknown encoder 'nope'"):
         create_encoder("nope", dataset=pl.DataFrame({"sequence": ["AAA"]}))
+
+
+def test_export_encoder_matches_cli_format(tmp_path: Path) -> None:
+    """API export is keyed by id and carries no sequence column."""
+    df = pl.DataFrame({"id": ["a", "b"], "sequence": ["ACD", "WYV"]})
+    enc = create_encoder("ordinal", dataset=df, max_length=4)
+    enc.run_process()
+    out = tmp_path / "o.csv"
+    enc.export_encoder(out)
+    got = pl.read_csv(out)
+    assert got.columns[0] == "id"
+    assert "sequence" not in got.columns
+    assert got["id"].to_list() == ["a", "b"]
+
+
+def test_export_encoder_rejects_bad_ids(tmp_path: Path) -> None:
+    """Missing or duplicated ids raise the library's DataError."""
+    from sylphy.exceptions import DataError
+
+    kw = {"sequence_column": "sequence", "max_length": 4}
+    for df in (
+        pl.DataFrame({"sequence": ["ACD", "WYV"]}),
+        pl.DataFrame({"id": ["x", "x"], "sequence": ["ACD", "WYV"]}),
+    ):
+        enc = OrdinalEncoder(dataset=df, **kw)
+        enc.run_process()
+        with pytest.raises(DataError):
+            enc.export_encoder(tmp_path / "o.csv")

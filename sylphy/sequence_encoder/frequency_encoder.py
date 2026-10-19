@@ -8,6 +8,7 @@ import re
 import polars as pl
 
 from sylphy.constants import residues
+from sylphy.exceptions import SylphyRuntimeError
 
 from .encoder_base import EncoderBase
 
@@ -64,4 +65,4 @@ class FrequencyEncoder(EncoderBase):
         except Exception as e:
             msg = f"[ERROR] Failed to encode sequences: {e}"
             self.__logger__.exception(msg)
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e

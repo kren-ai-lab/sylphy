@@ -64,6 +64,8 @@ def check_config(command: Any, raw: dict[str, Any], *, exclude: frozenset[str]) 
                 param.type_cast_value(ctx, value)
             except typer.BadParameter as exc:
                 issues.append(ConfigIssue(key, exc.format_message()))
+            except (AttributeError, TypeError):  # Click's BOOL type calls .strip() on non-strings
+                issues.append(ConfigIssue(key, f"invalid value {value!r}"))
     return issues
 
 

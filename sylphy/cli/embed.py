@@ -18,9 +18,9 @@ from sylphy.cli._shared import (
     level_from_str,
     load_dataset,
     snapshot_commit,
-    write_features,
     write_run_provenance,
 )
+from sylphy.feature_io import write_features
 
 if TYPE_CHECKING:
     from sylphy.types import LayerAggType, PoolType, PrecisionType

@@ -12,6 +12,8 @@ from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
 from tqdm import tqdm
 
+from sylphy.exceptions import SylphyRuntimeError
+
 from .embedding_base import (
     DEFAULT_DEBUG_MODE,
     DEFAULT_DEVICE,
@@ -112,7 +114,7 @@ class ESMCEmbedding(EmbeddingBase):
         self.ensure_loaded()
         if self.model is None:
             msg = "ESM-C model not loaded."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
 
         try:
             protein = ESMProtein(sequence=sequence)
@@ -215,7 +217,7 @@ class ESMCEmbedding(EmbeddingBase):
 
         if not out_vecs:
             msg = "No embeddings generated with ESM-C."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
 
         self.release_resources()
         mat = np.vstack(out_vecs)

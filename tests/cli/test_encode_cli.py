@@ -134,3 +134,33 @@ def test_encode_basic_methods(tmp_path: Path, method: str) -> None:
     )
     assert res.exit_code == 0, res.stdout
     assert out.exists()
+
+
+def test_exit_code_3_on_data_error(tmp_path: Path) -> None:
+    """A corrupt input file is a data error: exit code 3."""
+    from sylphy.cli.main import app as main_app
+
+    inp = tmp_path / "bad.parquet"
+    inp.write_bytes(b"not parquet")
+    res = CliRunner().invoke(
+        main_app, ["encode", "--method", "ordinal", "-i", str(inp), "-o", str(tmp_path / "o.csv")]
+    )
+    assert res.exit_code == 3
+
+
+def test_exit_code_4_on_unexpected_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unexpected exception exits 4."""
+    from sylphy.cli.main import app as main_app
+    from sylphy.sequence_encoder import factory
+
+    def _boom(*_a: object, **_k: object) -> None:
+        msg = "bug"
+        raise KeyError(msg)
+
+    monkeypatch.setattr(factory, "create_encoder", _boom)
+    inp = tmp_path / "s.csv"
+    pl.DataFrame({"id": ["a"], "sequence": ["ACD"]}).write_csv(inp)
+    res = CliRunner().invoke(
+        main_app, ["encode", "--method", "ordinal", "-i", str(inp), "-o", str(tmp_path / "o.csv")]
+    )
+    assert res.exit_code == 4

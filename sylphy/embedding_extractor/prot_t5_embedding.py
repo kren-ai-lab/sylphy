@@ -10,6 +10,7 @@ from torch import nn
 from transformers import AutoConfig, T5EncoderModel, T5Tokenizer
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
+from sylphy.exceptions import SylphyRuntimeError
 
 from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
@@ -114,5 +115,5 @@ class ProtT5Embedding(EmbeddingBase):
         self.ensure_loaded()
         if self.tokenizer is None:
             msg = "Tokenizer not loaded."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
         return self._forward_hidden_states(batch, max_length=max_length)

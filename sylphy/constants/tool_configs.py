@@ -88,7 +88,7 @@ class ToolConfig:
 
     cache_paths: CachePaths = field(default_factory=default_cache_paths)
     debug: bool = False
-    default_device: str = field(default_factory=_default_device)
+    default_device: str | None = None  # None: resolve with _default_device() (probing CUDA imports torch)
     log_level: int = field(default_factory=env_log_level)
     seed: int = int(os.getenv("SYLPHY_SEED", "42"))
 

@@ -31,7 +31,7 @@ def read_config(path: Path) -> tuple[dict[str, Any], list[ConfigIssue]]:
     """Parse a YAML (or JSON) config whose root must be a mapping. An empty file is ``{}``."""
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as exc:
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
         return {}, [ConfigIssue("", f"cannot read config: {exc}")]
     if raw is None:
         return {}, []

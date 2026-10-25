@@ -137,6 +137,18 @@ sylphy cache ls --recursive
 sylphy cache prune --max-size 10GB --apply
 ```
 
+### Validate a config from Python
+
+```python
+from sylphy import ConfigIssue, validate_config
+
+issues = validate_config("encode.yaml", "encode")  # or a mapping; target is "encode" or "embed"
+for issue in issues:
+    print(issue.path or "<root>", issue.message)
+```
+
+An empty list means the config is valid; a missing or unparsable file is one issue with path `""`.
+
 ### Inputs and outputs
 
 - Input: FASTA (`.fa`, `.fasta`, `.faa`; the id is the first token of the header), or CSV/TSV/Parquet with an id column (`--id-col`, default `id`) and a sequence column (`--seq-col`). Ids must be present, non-empty and unique.

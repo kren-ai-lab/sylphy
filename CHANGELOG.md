@@ -18,6 +18,7 @@ Adopts the shared ecosystem CLI contract for `sylphy encode` and `sylphy embed`.
 - New public `sylphy.validate_config(config, target)` (and `ConfigIssue`): the check behind `validate-config`, for Python; returns a list of issues, never raises for config problems.
 - A missing input data file now exits `3` (it was `2`).
 - `pyyaml` is now a runtime dependency; `jsonschema` a dev dependency.
+- `UtilsLib.random_selection(..., replace=True)` with a label column gives the same rows for the same `random_state` in every process (it derived per-label seeds from Python's randomized `hash`), and returns the labels in first-appearance order.
 
 ### Breaking changes
 

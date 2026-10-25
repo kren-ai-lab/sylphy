@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -10,12 +11,11 @@ import polars as pl
 import polars.selectors as cs
 from scipy.fft import fft
 
+from sylphy.exceptions import SylphyRuntimeError
+from sylphy.feature_io import check_ids, write_features
 from sylphy.logging import add_context, get_logger
-from sylphy.misc.utils_lib import UtilsLib
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from sylphy.types import FileFormat
 
 
@@ -33,11 +33,14 @@ class FFTEncoder:
         dataset: pl.DataFrame,
         sequence_column: str = "sequence",
         *,
+        id_col: str = "id",
         debug: bool = False,
         debug_mode: int = logging.INFO,
     ) -> None:
         """Initialize the FFT encoder and precompute padding parameters."""
         self.sequence_column = sequence_column
+        self.id_col = id_col
+        self._ids = dataset.select(pl.col(id_col)) if id_col in dataset.columns else pl.DataFrame()
         _ = get_logger("sylphy")
         self.__logger__ = logging.getLogger("sylphy.sequence_encoder.FFTEncoder")
         self.__logger__.setLevel(debug_mode if debug else logging.NOTSET)
@@ -45,7 +48,7 @@ class FFTEncoder:
 
         # Store sequences as a Series; strip from numeric frame
         self.sequence_series: pl.Series = dataset[sequence_column]
-        self._numeric: pl.DataFrame = dataset.select(cs.numeric())
+        self._numeric: pl.DataFrame = dataset.drop(id_col, strict=False).select(cs.numeric())
 
         self.max_length = self._numeric.width
         self.stop_value: int = 0
@@ -80,7 +83,7 @@ class FFTEncoder:
         except Exception as e:
             self.__logger__.error("Failed to encode dataset with FFT: %s", e)
             msg = "FFT encoding failed."
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e
 
     def run_process(self) -> None:
         """Run FFT encoding."""
@@ -93,12 +96,14 @@ class FFTEncoder:
         *,
         df_encoder: pl.DataFrame | None = None,
     ) -> None:
-        """Export encoded FFT features to disk."""
-        data = df_encoder if df_encoder is not None else self.coded_dataset
+        """Export encoded FFT features to disk, keyed by the constructor's ``id_col``.
 
-        UtilsLib.export_data(
-            df_encoded=data,
-            path=path,
-            base_message="FFT encoder output",
-            file_format=file_format,
-        )
+        Output matches the CLI: tables have ``id`` first and no sequence column.
+
+        Raises:
+            DataError: If the input dataset had no ``id_col``, or its ids are empty or duplicated.
+
+        """
+        data = df_encoder if df_encoder is not None else self.coded_dataset
+        ids = check_ids(self._ids, self.id_col)
+        write_features(data.drop(self.sequence_column, strict=False), ids, Path(path), file_format)

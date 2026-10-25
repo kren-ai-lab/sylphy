@@ -9,6 +9,8 @@ import numpy as np
 import polars as pl
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from sylphy.exceptions import SylphyRuntimeError
+
 from .encoder_base import EncoderBase
 
 if TYPE_CHECKING:
@@ -89,4 +91,4 @@ class KMerEncoder(EncoderBase):
         except Exception as e:
             msg = f"[ERROR] K-mer encoding failed: {e}"
             self.__logger__.exception(msg)
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e

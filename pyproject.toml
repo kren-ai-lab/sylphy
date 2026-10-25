@@ -7,7 +7,16 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.15"
-authors = [{ name = "Kren AI Lab", email = "krenai@umag.cl" }]
+authors = [
+    { name = "David Medina-Ortiz" },
+    { name = "Diego Alvarez Saravia" },
+    { name = "Julián García-Vinuesa" }
+]
+maintainers = [
+    { name = "David Medina-Ortiz" },
+    { name = "Diego Alvarez Saravia" },
+    { name = "Julián García-Vinuesa" }
+]
 keywords = [
     "AAindex",
     "ESM",
@@ -35,12 +44,13 @@ dependencies = [
     "platformdirs>=4.0,<5.0",
     "huggingface-hub>=0.36.0,<1.0",
     "numpy>=2.3.5,<3.0",
-    "polars>=1.20,<2.0",
+    "polars>=1.20,<3",
     "niquests>=3.0,<4.0",
     "rich>=15.0,<16.0",
     "scikit-learn>=1.8.0,<2.0",
     "scipy>=1.17.1,<2.0",
     "typer>=0.24.1,<1.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
@@ -73,10 +83,11 @@ reductions = [
 
 [dependency-groups]
 dev = [
+    "jsonschema>=4.26.0",
     "pyrefly>=1.0.0",
     "pytest-cov~=7.1.0",
     "pytest~=9.1.1",
-    "ruff~=0.16.8",
+    "ruff~=0.17.2",
     "scipy-stubs>=1.17.1.5",
     "taskipy~=1.14.1",
     "types-tqdm>=4.70.0.20260906",

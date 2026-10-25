@@ -5,18 +5,18 @@ from __future__ import annotations
 import logging
 import re
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
 
 from sylphy.constants import residues
+from sylphy.exceptions import SylphyRuntimeError
+from sylphy.feature_io import check_ids, write_features
 from sylphy.logging import add_context, get_logger
-from sylphy.misc.utils_lib import UtilsLib
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from sylphy.types import FileFormat
 
 
@@ -189,7 +189,7 @@ class EncoderBase(ABC):
         except Exception as e:
             msg = f"[ERROR] Failed during revision steps: {e}"
             self.__logger__.exception(msg)
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e
 
     def check_allowed_alphabet(self) -> None:
         """Keep only sequences composed of the selected alphabet."""
@@ -210,7 +210,7 @@ class EncoderBase(ABC):
         except Exception as exc:
             self.__logger__.exception("[ERROR] Failed during alphabet validation.")
             msg = "Failed during alphabet validation."
-            raise RuntimeError(msg) from exc
+            raise SylphyRuntimeError(msg) from exc
 
     def process_length_sequences(self) -> None:
         """Filter out sequences longer than `max_length`."""
@@ -224,7 +224,7 @@ class EncoderBase(ABC):
         except Exception as exc:
             self.__logger__.exception("[ERROR] Failed during length validation.")
             msg = "Failed during length validation."
-            raise RuntimeError(msg) from exc
+            raise SylphyRuntimeError(msg) from exc
 
     # ----------------------------
     # IO
@@ -245,11 +245,17 @@ class EncoderBase(ABC):
         self,
         path: str | Path,
         file_format: FileFormat = "csv",
+        *,
+        id_col: str = "id",
     ) -> None:
-        """Persist the encoded matrix to disk."""
-        UtilsLib.export_data(
-            df_encoded=self.coded_dataset,
-            path=path,
-            base_message="Encoded features",
-            file_format=file_format,
-        )
+        """Persist the encoded matrix to disk, keyed by the ``id_col`` column of the input dataset.
+
+        Output matches the CLI: tables have ``id`` first and no sequence column; ``npz`` adds an
+        ``ids`` array; ``npy`` gets a sibling ``<stem>.ids.txt``.
+
+        Raises:
+            DataError: If ``id_col`` is missing, or has empty or duplicated ids.
+
+        """
+        ids = check_ids(self.dataset, id_col)
+        write_features(self.coded_dataset.drop(self.sequence_column), ids, Path(path), file_format)

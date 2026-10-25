@@ -19,10 +19,12 @@ def _quiet_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _stub_model_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point model resolution to a temporary directory to avoid network calls."""
-    model_dir = tmp_path / "fake_model_dir"
+    model_dir = tmp_path / "models--org--fake" / "snapshots" / "c0ffee"
     model_dir.mkdir(parents=True, exist_ok=True)
     (model_dir / "config.json").write_text("{}", encoding="utf-8")
 
     from sylphy.core import model_registry as reg
+    from sylphy.embedding_extractor import embedding_base
 
     monkeypatch.setattr(reg, "resolve_model", lambda _: model_dir, raising=True)
+    monkeypatch.setattr(embedding_base, "resolve_model", lambda _: model_dir, raising=True)

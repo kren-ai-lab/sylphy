@@ -9,6 +9,7 @@ from torch import nn
 from transformers import AutoConfig, AutoTokenizer, T5EncoderModel
 
 from sylphy.core.optional_dependencies import wrap_optional_dependency_error
+from sylphy.exceptions import SylphyRuntimeError
 
 from .embedding_base import DEFAULT_DEBUG_MODE, DEFAULT_DEVICE, DEFAULT_PRECISION, EmbeddingBase
 
@@ -111,7 +112,7 @@ class Ankh2Embedding(EmbeddingBase):
         model = self.model
         if tokenizer is None or model is None:
             msg = "Tokenizer/model not loaded."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
 
         enc = tokenizer(
             batch,

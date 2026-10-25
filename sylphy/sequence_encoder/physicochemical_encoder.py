@@ -11,6 +11,7 @@ import polars as pl
 
 from sylphy.constants import BASE_URL_AAINDEX, BASE_URL_CLUSTERS_DESCRIPTORS
 from sylphy.core import get_config
+from sylphy.exceptions import SylphyRuntimeError
 
 from .encoder_base import EncoderBase, encode_physicochemical
 
@@ -83,14 +84,14 @@ class PhysicochemicalEncoder(EncoderBase):
             except Exception as e:
                 self.__logger__.error("Failed to download descriptor file: %s", e)
                 msg = "Failed to load or download descriptor file."
-                raise RuntimeError(msg) from e
+                raise SylphyRuntimeError(msg) from e
 
         try:
             df = pl.read_csv(filepath)
         except Exception as e:
             self.__logger__.error("Failed to read descriptor file from cache: %s", e)
             msg = "Failed to read cached descriptor file."
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e
 
         # First column is the residue key
         residue_col = df.columns[0]
@@ -119,7 +120,7 @@ class PhysicochemicalEncoder(EncoderBase):
         except Exception as e:
             self.__logger__.error("Error encoding dataset: %s", e)
             msg = "Failed to encode dataset."
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e
 
     def run_process(self) -> None:
         """Encode validated sequences using the configured descriptor property."""

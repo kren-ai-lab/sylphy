@@ -8,10 +8,25 @@ from typing import TYPE_CHECKING, Annotated, cast
 import typer
 
 from sylphy.cli._enums import DescriptorType, EncodeMethod
-from sylphy.cli._shared import HELP_CONTEXT_SETTINGS, LOG_LEVELS, infer_format, level_from_str, load_dataset
+from sylphy.cli._provenance import utc_now
+from sylphy.cli._shared import (
+    CONFIG_OPTION,
+    HELP_CONTEXT_SETTINGS,
+    LOG_LEVELS,
+    infer_format,
+    level_from_str,
+    load_dataset,
+    write_run_provenance,
+)
+from sylphy.exceptions import SylphyRuntimeError
+from sylphy.feature_io import write_features
 
 if TYPE_CHECKING:
+    import polars as pl
+
+    from sylphy.sequence_encoder.encoder_base import EncoderBase
     from sylphy.sequence_encoder.fft_encoder import FFTEncoder
+    from sylphy.types import FileFormat
 
 app = typer.Typer(
     name="encode",
@@ -22,7 +37,10 @@ app = typer.Typer(
 _METHOD = typer.Option(
     EncodeMethod.physicochemical, "--method", "-e", show_default=True, help="Encoding method."
 )
-_INPUT = typer.Option(..., "--input", "-i", help="Input file (csv/tsv/parquet).")
+_INPUT = typer.Option(..., "--input", "-i", help="Input file (fasta/csv/tsv/parquet).")
+_ID_COL = typer.Option(
+    "id", "--id-col", show_default=True, help="Column with unique record ids (tables; FASTA uses the header)."
+)
 _SEQ_COL = typer.Option(
     "sequence", "--seq-col", "-s", show_default=True, help="Column with amino acid sequences."
 )
@@ -60,7 +78,9 @@ _LOG_LEVEL = typer.Option(
 @app.callback(invoke_without_command=True, help="Encode sequences into a numeric feature matrix.")
 def encode(
     *,
+    ctx: typer.Context,
     input_path: Path = _INPUT,
+    id_col: str = _ID_COL,
     seq_col: str = _SEQ_COL,
     output: Path = _OUTPUT,
     method: EncodeMethod = _METHOD,
@@ -71,6 +91,7 @@ def encode(
     name_property: str = _NAME_PROP,
     size_kmer: int = _SIZE_KMER,
     log_level: str = _LOG_LEVEL,
+    config: Path | None = CONFIG_OPTION,  # noqa: ARG001
 ) -> None:
     r"""Encode sequences and export feature matrices.
 
@@ -98,9 +119,10 @@ def encode(
               --type-descriptor aaindex --name-property ANDN920101
 
     """
+    created_at = utc_now()
     fmt = infer_format(output)
     level = level_from_str(log_level)
-    df = load_dataset(input_path, seq_col)
+    df = load_dataset(input_path, seq_col, id_col)
 
     from sylphy.sequence_encoder.factory import create_encoder  # noqa: PLC0415
 
@@ -126,7 +148,14 @@ def encode(
             create_encoder("fft", dataset=phys.coded_dataset, sequence_column=seq_col, debug_mode=level),
         )
         fft.run_process()
-        fft.export_encoder(str(output), file_format=fmt, df_encoder=fft.coded_dataset)
+        _save(
+            ctx,
+            cast("EncoderBase", phys).dataset[id_col],
+            fft.coded_dataset.drop(seq_col),
+            output,
+            fmt,
+            created_at,
+        )
         typer.echo(f"[fft] Saved to: {output}")
         return
 
@@ -147,5 +176,34 @@ def encode(
 
     enc = create_encoder(str(method), **kwargs)
     enc.run_process()
-    enc.export_encoder(str(output), file_format=fmt)
+    _save(
+        ctx,
+        cast("EncoderBase", enc).dataset[id_col],
+        enc.coded_dataset.drop(seq_col),
+        output,
+        fmt,
+        created_at,
+    )
     typer.echo(f"[{method}] Saved to: {output}")
+
+
+def _save(
+    ctx: typer.Context, ids: pl.Series, features: pl.DataFrame, output: Path, fmt: FileFormat, created_at: str
+) -> None:
+    """Write ``id`` + feature columns and the provenance sidecar.
+
+    Encoders may drop rows (alphabet/length filters); ``ids`` must come from the encoder's surviving dataset.
+    """
+    if len(ids) != features.height:
+        msg = f"Internal error: {len(ids)} ids for {features.height} encoded rows."
+        raise SylphyRuntimeError(msg)
+    write_features(features, ids, output, fmt)
+    write_run_provenance(
+        ctx,
+        output,
+        command="encode",
+        created_at=created_at,
+        n_rows=features.height,
+        n_cols=features.width,
+        packages=("sylphy", "numpy", "polars"),
+    )

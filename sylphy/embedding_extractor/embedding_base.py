@@ -6,10 +6,8 @@ import contextlib
 import gc
 import logging
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Any, cast
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import polars as pl
@@ -17,8 +15,9 @@ import torch
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from sylphy.core.model_registry import ModelSpec, register_model, resolve_model
+from sylphy.exceptions import SylphyRuntimeError
+from sylphy.feature_io import check_ids, write_features
 from sylphy.logging import add_context, get_logger
-from sylphy.misc.utils_lib import UtilsLib
 from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
 
 Pool = PoolType
@@ -73,6 +72,8 @@ class EmbeddingBase:
         self.trust_remote_code = trust_remote_code
         self.precision = precision
         self.oom_backoff = oom_backoff
+        self.resolved_path: str | None = None  # local model dir, set once the model is resolved
+        self.effective_batch_size: int | None = None  # batch size after any OOM backoff
 
         # logger
         backend_name = type(self).__name__
@@ -110,12 +111,14 @@ class EmbeddingBase:
         """
         try:
             local_dir = resolve_model(self.name_model)
-            return str(local_dir)
+            self.resolved_path = str(local_dir)
+            return self.resolved_path  # noqa: TRY300
         except Exception:
             if self.provider == "huggingface" and ("/" in self.name_model):
                 register_model(ModelSpec(name=self.name_model, provider="huggingface", ref=self.name_model))
                 local_dir = resolve_model(self.name_model)
-                return str(local_dir)
+                self.resolved_path = str(local_dir)
+                return self.resolved_path
             raise
 
     def load_hf_tokenizer_and_model(self) -> None:
@@ -150,7 +153,7 @@ class EmbeddingBase:
         except Exception as e:
             msg = f"[ERROR] Failed to load tokenizer/model: {e}"
             self.__logger__.exception(msg)
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e
 
     # ---------------------------------------------------------------------
     # Readiness helpers
@@ -185,7 +188,7 @@ class EmbeddingBase:
             self.load_hf_tokenizer_and_model()
         else:
             msg = "No loader available to initialize model/tokenizer."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
 
     # ---------------------------------------------------------------------
     # Hooks & utilities
@@ -241,13 +244,13 @@ class EmbeddingBase:
         """
         if (self.model is None) or (self.requires_tokenizer and self.tokenizer is None):
             msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
 
         tokenizer = self.tokenizer
         model = self.model
         if tokenizer is None or model is None:
             msg = "Model/tokenizer not loaded."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
 
         batch = self._pre_tokenize(sequences)
         enc = tokenizer(
@@ -375,7 +378,7 @@ class EmbeddingBase:
         self.ensure_loaded()
         if not self._is_ready():
             msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
 
         hidden_states, attn = self._forward_hidden_states(sequences, max_length=max_length)
         n_layers = len(hidden_states)
@@ -431,7 +434,7 @@ class EmbeddingBase:
         self.ensure_loaded()
         if not self._is_ready():
             msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
-            raise RuntimeError(msg)
+            raise SylphyRuntimeError(msg)
 
         try:
             if not self.requires_tokenizer:
@@ -490,6 +493,7 @@ class EmbeddingBase:
                         )
                         mats.append(X)
 
+            self.effective_batch_size = bs
             self.release_resources()
             Xall: np.ndarray = np.vstack(mats) if mats else np.zeros((0, 0), dtype=np.float32)
             header: list[str] = [f"p_{i}" for i in range(Xall.shape[1])]
@@ -506,17 +510,23 @@ class EmbeddingBase:
         except Exception as e:
             msg = f"[ERROR] run_process failed: {e}"
             self.__logger__.exception(msg)
-            raise RuntimeError(msg) from e
+            raise SylphyRuntimeError(msg) from e
 
     def export_encoder(
         self,
         path: str | Path,
         file_format: FileFormat = "csv",
+        *,
+        id_col: str = "id",
     ) -> None:
-        """Persist the encoded matrix to disk."""
-        UtilsLib.export_data(
-            df_encoded=self.coded_dataset,
-            path=path,
-            base_message="Embeddings",
-            file_format=file_format,
-        )
+        """Persist the embeddings to disk, keyed by the ``id_col`` column of the input dataset.
+
+        Output matches the CLI: tables have ``id`` first and no sequence column; ``npz`` adds an
+        ``ids`` array; ``npy`` gets a sibling ``<stem>.ids.txt``.
+
+        Raises:
+            DataError: If ``id_col`` is missing, or has empty or duplicated ids.
+
+        """
+        ids = check_ids(self.dataset, id_col)
+        write_features(self.coded_dataset.drop(self.column_seq), ids, Path(path), file_format)

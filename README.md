@@ -186,7 +186,7 @@ If you use Sylphy in your research, please cite:
 
 > Medina-Ortiz, D.; Álvarez Saravia, D.; García-Vinuesa, J.
 > *Sylphy: Protein Sequence Representation: Encoders, Embeddings, and Reductions*.
-> Version 1.0.0, 2026. Zenodo.
+> Version 1.2.0, 2026. Zenodo.
 > https://doi.org/10.5281/zenodo.21819735
 
 ```bibtex
@@ -194,7 +194,7 @@ If you use Sylphy in your research, please cite:
   author    = {Medina-Ortiz, David and Álvarez Saravia, Diego and García-Vinuesa, Julián},
   title     = {{Sylphy}: Protein Sequence Representation: Encoders, Embeddings, and Reductions},
   year      = {2026},
-  version   = {1.0.0},
+  version   = {1.2.0},
   publisher = {Zenodo},
   doi       = {10.5281/zenodo.21819735},
   url       = {https://doi.org/10.5281/zenodo.21819735}

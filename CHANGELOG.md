@@ -3,6 +3,10 @@
 All notable changes to Sylphy are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 1.2.1
+
+- Bound `typer` to `>=0.27.2,<0.28`: 1.2.0 imports `typer.exceptions` (added in 0.27.2), and typer 0.28+ reworked its vendored Click so `sylphy validate-config` rejected every valid value.
+
 ## 1.2.0
 
 Adopts the shared ecosystem CLI contract for `sylphy encode` and `sylphy embed`.

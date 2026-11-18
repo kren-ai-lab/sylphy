@@ -60,8 +60,10 @@ def check_config(command: Any, raw: dict[str, Any], *, exclude: frozenset[str]) 
         elif param.multiple and not isinstance(value, list):
             issues.append(ConfigIssue(key, f"expected a list, got {type(value).__name__}"))
         else:
+            # process_value exists in both Typer's vendored Click (<0.28) and its own parameter types
+            # (>=0.28), which dropped type_cast_value.
             try:
-                param.type_cast_value(ctx, value)
+                param.process_value(ctx, value)
             except typer.BadParameter as exc:
                 issues.append(ConfigIssue(key, exc.format_message()))
             except (AttributeError, TypeError):  # Click's BOOL type calls .strip() on non-strings

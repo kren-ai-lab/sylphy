@@ -3,6 +3,10 @@
 All notable changes to Sylphy are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 1.2.1
+
+- Supports typer 0.28 and later: `--config` and `validate-config` coerced values with an option method that typer 0.28 removed, so they rejected every valid value. The minimum is now typer 0.27.2, the first with `typer.exceptions`, which 1.2.0 already imported.
+
 ## 1.2.0
 
 Adopts the shared ecosystem CLI contract for `sylphy encode` and `sylphy embed`.

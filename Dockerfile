@@ -16,11 +16,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends procps \
     && rm -rf /var/lib/apt/lists/*
 
-# Releases up to 1.2.0 allow typer 0.28+, which breaks `validate-config`; drop once a release carries the bound.
 # gcc: the `all`/`reductions` extras pull sdist-only packages (clustpy, biotraj) that compile C; removed afterwards.
 RUN test -n "${SYLPHY_VERSION}" \
-    && echo "typer>=0.27.2,<0.28" > /tmp/constraints.txt \
     && if [ -n "${EXTRAS}" ]; then apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev; fi \
-    && pip install --no-cache-dir -c /tmp/constraints.txt "sylphy${EXTRAS}==${SYLPHY_VERSION}" \
+    && pip install --no-cache-dir "sylphy${EXTRAS}==${SYLPHY_VERSION}" \
     && if [ -n "${EXTRAS}" ]; then apt-get purge -y --auto-remove gcc libc6-dev; fi \
     && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,96 @@
+name: publish-container
+
+# Builds ghcr.io/kren-ai-lab/sylphy from the PyPI release (see Dockerfile), in two variants:
+#   slim: <version>, latest            (no extras)
+#   full: <version>-full, latest-full  (every extra the release declares on PyPI)
+# - After publish-pypi succeeds on a v* tag: pushes the version tags and the latest tags.
+# - Manually (workflow_dispatch): pushes the version tags only, to backfill past releases.
+
+on:
+  workflow_run:
+    workflows: [publish-pypi]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Released version on PyPI (e.g. 1.2.0)"
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [slim, full]
+    env:
+      PACKAGE: sylphy
+      IMAGE: ghcr.io/kren-ai-lab/sylphy
+      VERSION: ${{ inputs.version || github.event.workflow_run.head_branch }}
+      VARIANT: ${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # PyPI's index can lag a little behind the upload that just finished.
+      - name: Wait for the release on PyPI
+        run: |
+          v="${VERSION#v}"
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          for i in $(seq 1 20); do
+            curl -sf "https://pypi.org/pypi/$PACKAGE/$v/json" -o release.json && exit 0
+            sleep 15
+          done
+          echo "$PACKAGE==$v not found on PyPI" >&2; exit 1
+
+      - name: Resolve extras and tags
+        run: |
+          suffix=""; extras=""
+          if [ "$VARIANT" = full ]; then
+            suffix="-full"
+            extras=$(jq -r '.info.provides_extra // [] | if length > 0 then "[" + join(",") + "]" else "" end' release.json)
+          fi
+          tags="$IMAGE:$VERSION$suffix"
+          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then tags="$tags,$IMAGE:latest$suffix"; fi
+          echo "EXTRAS=$extras" >> "$GITHUB_ENV"
+          echo "TAGS=$tags" >> "$GITHUB_ENV"
+          echo "$VARIANT: $PACKAGE$extras==$VERSION -> $tags"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          build-args: |
+            SYLPHY_VERSION=${{ env.VERSION }}
+            EXTRAS=${{ env.EXTRAS }}
+          tags: sylphy:test
+          load: true
+
+      - name: Smoke test
+        run: |
+          docker run --rm sylphy:test sylphy --version | grep -Fx "sylphy $VERSION"
+          docker run --rm sylphy:test pip check
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          build-args: |
+            SYLPHY_VERSION=${{ env.VERSION }}
+            EXTRAS=${{ env.EXTRAS }}
+          tags: ${{ env.TAGS }}
+          push: true

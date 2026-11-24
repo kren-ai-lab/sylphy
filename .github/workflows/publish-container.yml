@@ -38,13 +38,15 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # PyPI's index can lag a little behind the upload that just finished.
+      # PyPI can lag a little behind the upload that just finished, and the simple index pip reads
+      # can lag behind the JSON API, so wait for both.
       - name: Wait for the release on PyPI
         run: |
           v="${VERSION#v}"
           echo "VERSION=$v" >> "$GITHUB_ENV"
           for i in $(seq 1 20); do
-            curl -sf "https://pypi.org/pypi/$PACKAGE/$v/json" -o release.json && exit 0
+            curl -sf "https://pypi.org/pypi/$PACKAGE/$v/json" -o release.json \
+              && curl -sf "https://pypi.org/simple/$PACKAGE/" | grep -qF "$PACKAGE-$v" && exit 0
             sleep 15
           done
           echo "$PACKAGE==$v not found on PyPI" >&2; exit 1

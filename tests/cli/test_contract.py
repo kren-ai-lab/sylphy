@@ -102,8 +102,8 @@ def test_config_precedence(tmp_path: Path) -> None:
     base = ["-i", str(inp), "-o", str(out), "--config", str(cfg)]
     assert CliRunner().invoke(encode_app, base).exit_code == 0
     assert pl.read_csv(out).width == 1 + 7  # file overrides default (1024)
-    assert CliRunner().invoke(encode_app, [*base, "--max-length", "4"]).exit_code == 0
-    assert pl.read_csv(out).width == 1 + 4  # flag overrides file
+    assert CliRunner().invoke(encode_app, [*base, "--max-length", "5"]).exit_code == 0
+    assert pl.read_csv(out).width == 1 + 5  # flag overrides file
 
 
 @pytest.mark.parametrize("body", ["nope: 1\n", "max_length: three\n", "input_path: x\n", "- a\n"])
@@ -223,3 +223,47 @@ def test_bad_config_file_still_exits_2(tmp_path: Path) -> None:
     cfg.write_text("nope: 1\n", encoding="utf-8")
     res = CliRunner().invoke(main_app, ["encode", "-i", str(_csv(tmp_path, ["a"])), "--config", str(cfg)])
     assert res.exit_code == 2
+
+
+def _run(inp: Path, out: Path, *extra: str) -> Result:
+    return CliRunner().invoke(main_app, ["encode", "-i", str(inp), "-o", str(out), *extra])
+
+
+def test_invalid_sequences_fail_with_ids_and_chars(tmp_path: Path) -> None:
+    inp = tmp_path / "in.csv"
+    pl.DataFrame({"id": ["a", "b", "c"], "sequence": [" ac d\t", "AC*", "AC-X"]}).write_csv(inp)
+    res = _run(inp, tmp_path / "o.csv", "--method", "frequency")
+    assert res.exit_code == 3
+    assert "Invalid characters ['*', '-', 'X']" in res.output
+    assert "2 record(s): b, c" in res.output
+
+
+def test_empty_sequence_fails_with_id(tmp_path: Path) -> None:
+    inp = tmp_path / "in.csv"
+    pl.DataFrame({"id": ["a", "b"], "sequence": ["ACD", ""]}).write_csv(inp)
+    res = _run(inp, tmp_path / "o.csv", "--method", "frequency")
+    assert res.exit_code == 3
+    assert "Empty sequences" in res.output
+    assert "b" in res.output
+
+
+def test_duplicate_columns_fail(tmp_path: Path) -> None:
+    inp = tmp_path / "in.csv"
+    inp.write_text("id,sequence,sequence\na,ACD,ACD\n", encoding="utf-8")
+    res = _run(inp, tmp_path / "o.csv")
+    assert res.exit_code == 3
+    assert "['sequence']" in res.output
+
+
+@pytest.mark.parametrize("k", ["0", "-1"])
+def test_size_kmer_must_be_positive(tmp_path: Path, k: str) -> None:
+    res = _run(_csv(tmp_path, ["a"]), tmp_path / "o.csv", "--method", "kmers", "--size-kmer", k)
+    assert res.exit_code == 2
+
+
+def test_provenance_omits_unused_parameters(tmp_path: Path) -> None:
+    out = tmp_path / "o.csv"
+    assert _run(_csv(tmp_path, ["a"]), out, "--method", "frequency").exit_code == 0
+    params = json.loads((tmp_path / "o.csv.provenance.json").read_text(encoding="utf-8"))["parameters"]
+    assert "max_length" not in params
+    assert "size_kmer" not in params

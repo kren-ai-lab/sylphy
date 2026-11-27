@@ -13,6 +13,9 @@ if TYPE_CHECKING:
     from sylphy.types import FileFormat
 
 
+_SHOWN = 5
+
+
 def check_ids(df: pl.DataFrame, id_col: str) -> pl.Series:
     """Return ``df[id_col]`` as strings; raise ``DataError`` if missing, empty or duplicated."""
     import polars as pl  # noqa: PLC0415
@@ -29,6 +32,24 @@ def check_ids(df: pl.DataFrame, id_col: str) -> pl.Series:
         msg = f"Duplicate ids in column '{id_col}' (e.g. {dups[:3]})."
         raise DataError(msg)
     return ids
+
+
+def describe_rows(df: pl.DataFrame, mask: pl.Series, id_col: str) -> str:
+    """Name the rows selected by ``mask``: the count and the first few ids (row numbers if no ``id_col``)."""
+    names = df[id_col].cast(str) if id_col in df.columns else df.with_row_index("i")["i"] + 1
+    hits = names.filter(mask).to_list()
+    more = f" (+{len(hits) - _SHOWN} more)" if len(hits) > _SHOWN else ""
+    return f"{len(hits)} record(s): {', '.join(map(str, hits[:_SHOWN]))}{more}"
+
+
+def normalize_sequences(df: pl.DataFrame, seq_col: str, id_col: str = "id") -> pl.DataFrame:
+    """Uppercase ``seq_col`` and remove all whitespace; raise ``DataError`` naming records left empty."""
+    df = df.with_columns(df[seq_col].cast(str).fill_null("").str.replace_all(r"\s+", "").str.to_uppercase())
+    empty = df[seq_col] == ""
+    if empty.any():
+        msg = f"Empty sequences in column '{seq_col}': {describe_rows(df, empty, id_col)}."
+        raise DataError(msg)
+    return df
 
 
 def write_features(features: pl.DataFrame, ids: pl.Series, output: Path, fmt: FileFormat) -> None:

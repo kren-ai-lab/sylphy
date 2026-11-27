@@ -109,7 +109,7 @@ class ESMCEmbedding(EmbeddingBase):
         sequence: str,
         *,
         return_hidden_states: bool,
-    ) -> tuple[torch.Tensor | None, Sequence[torch.Tensor] | None]:
+    ) -> tuple[torch.Tensor | None, torch.Tensor | Sequence[torch.Tensor] | None]:
         """Encode one sequence."""
         self.ensure_loaded()
         if self.model is None:

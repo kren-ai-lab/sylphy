@@ -166,7 +166,7 @@ def reduce_dimensionality(
     try:
         module = import_module(".non_linear_reductions", package=__package__)
         NonLinearReductions = module.NonLinearReductions
-    except (ImportError, ModuleNotFoundError) as exc:
+    except ImportError as exc:
         wrapped = wrap_optional_dependency_error(
             exc,
             feature=f"Reduction method '{method}'",

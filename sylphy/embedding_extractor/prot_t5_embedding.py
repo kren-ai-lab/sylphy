@@ -78,7 +78,7 @@ class ProtT5Embedding(EmbeddingBase):
             cast("nn.Module", model).to(self.device)
             self.model = model
             model.eval()
-        except (ImportError, ModuleNotFoundError) as e:
+        except ImportError as e:
             wrapped = wrap_optional_dependency_error(
                 e,
                 feature="ProtT5 embeddings",

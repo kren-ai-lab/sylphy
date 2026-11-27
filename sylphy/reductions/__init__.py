@@ -52,7 +52,7 @@ def __getattr__(name: str) -> object:
     mod_name, attr = spec
     try:
         module = import_module(mod_name, package=__name__)
-    except (ImportError, ModuleNotFoundError) as exc:
+    except ImportError as exc:
         optional_spec = _OPTIONAL_DEPENDENCY_EXPORTS.get(name)
         if optional_spec is not None:
             feature, extra, packages = optional_spec

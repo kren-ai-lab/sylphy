@@ -54,7 +54,7 @@ def check_config(command: Any, raw: dict[str, Any], *, exclude: frozenset[str]) 
     for key, value in raw.items():
         param = options.get(key)
         if param is None:
-            issues.append(ConfigIssue(str(key), "unknown key"))
+            issues.append(ConfigIssue(key, "unknown key"))
         elif key in exclude:
             issues.append(ConfigIssue(key, f"pass {param.opts[0]} on the command line, not in the config"))
         elif param.multiple and not isinstance(value, list):

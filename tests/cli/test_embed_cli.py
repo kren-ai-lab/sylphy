@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path  # noqa: TC003
 from typing import Any, cast
@@ -197,3 +198,27 @@ def test_embed_custom_seq_col(tmp_path: Path) -> None:
         ],
     )
     assert result.exit_code == 0, result.output
+
+
+def test_embed_records_truncated_sequences(tmp_path: Path) -> None:
+    inp = tmp_path / "seqs.csv"
+    pl.DataFrame({"id": ["s0", "s1"], "sequence": ["AAAA", "C" * 20]}).write_csv(inp)
+    out = tmp_path / "out.csv"
+    result = CliRunner().invoke(
+        app,
+        [
+            "-m",
+            "facebook/esm2_t6_8M_UR50D",
+            "-d",
+            "cpu",
+            "--max-length",
+            "16",
+            "-i",
+            str(inp),
+            "-o",
+            str(out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    doc = json.loads((tmp_path / "out.csv.provenance.json").read_text(encoding="utf-8"))
+    assert doc["extensions"]["truncated"] == {"count": 1, "ids": ["s1"]}

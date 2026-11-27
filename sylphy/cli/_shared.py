@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import logging
 from enum import Enum
 from pathlib import Path
@@ -11,7 +12,7 @@ from sylphy import __version__
 from sylphy.cli._config_file import apply_config
 from sylphy.cli._provenance import write_provenance
 from sylphy.exceptions import DataError
-from sylphy.feature_io import check_ids
+from sylphy.feature_io import check_ids, normalize_sequences
 from sylphy.types import FileFormat
 
 if TYPE_CHECKING:
@@ -53,13 +54,14 @@ def write_run_provenance(
     n_cols: int,
     packages: tuple[str, ...],
     extensions: dict[str, Any] | None = None,
+    unused: frozenset[str] = frozenset(),
 ) -> None:
-    """Write the provenance sidecar for a finished encode/embed run."""
+    """Write the provenance sidecar for a finished encode/embed run; ``unused`` options are left out."""
     # log_level doesn't change results, so it stays out of the fingerprint
     params = {
         k: (v.value if isinstance(v, Enum) else v)
         for k, v in ctx.params.items()
-        if k not in CONFIG_EXCLUDE and k != "log_level"
+        if k not in CONFIG_EXCLUDE | unused and k != "log_level"
     }
     write_provenance(
         output,
@@ -103,6 +105,16 @@ def _read_fasta(path: Path, id_col: str, seq_col: str) -> pl.DataFrame:
     return pl.DataFrame({id_col: ids, seq_col: seqs}, schema={id_col: pl.String, seq_col: pl.String})
 
 
+def _check_unique_columns(path: Path, sep: str) -> None:
+    """Raise ``DataError`` on duplicated header names (polars silently renames them)."""
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        header = next(csv.reader(handle, delimiter=sep), [])
+    dups = sorted({h for h in header if header.count(h) > 1})
+    if dups:
+        msg = f"Duplicate column names in {path}: {dups}."
+        raise DataError(msg)
+
+
 def load_dataset(input_path: Path, seq_col: str, id_col: str = "id") -> pl.DataFrame:
     """Load a FASTA, CSV, TSV, or Parquet file; validate the id and sequence columns.
 
@@ -118,8 +130,10 @@ def load_dataset(input_path: Path, seq_col: str, id_col: str = "id") -> pl.DataF
     if suffix in FASTA_SUFFIXES:
         df = _read_fasta(input_path, id_col, seq_col)
     elif suffix == ".csv":
+        _check_unique_columns(input_path, ",")
         df = pl.read_csv(input_path, infer_schema=False)
     elif suffix == ".tsv":
+        _check_unique_columns(input_path, "\t")
         df = pl.read_csv(input_path, separator="\t", infer_schema=False)
     elif suffix == ".parquet":
         df = pl.read_parquet(input_path)
@@ -143,7 +157,7 @@ def load_dataset(input_path: Path, seq_col: str, id_col: str = "id") -> pl.DataF
     except DataError as exc:
         msg = f"{exc} Fix the input or set --id-col."
         raise DataError(msg) from exc
-    return df
+    return normalize_sequences(df, seq_col, id_col)
 
 
 def snapshot_commit(model_path: str | None) -> str | None:

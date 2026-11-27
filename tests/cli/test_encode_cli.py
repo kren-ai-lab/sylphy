@@ -27,7 +27,7 @@ def test_encode_onehot_csv_input(tmp_path: Path) -> None:
 
 def test_encode_ordinal_npy_output(tmp_path: Path) -> None:
     """Ordinal encode to npy format."""
-    df = pl.DataFrame({"id": ["s0", "s1"], "sequence": ["AAAA", "BBB"]})
+    df = pl.DataFrame({"id": ["s0", "s1"], "sequence": ["AAAA", "CCC"]})
     inp = tmp_path / "seq.csv"
     df.write_csv(inp)
     out = tmp_path / "ordinal.npy"

@@ -12,8 +12,8 @@ import numpy as np
 import polars as pl
 
 from sylphy.constants import residues
-from sylphy.exceptions import SylphyRuntimeError
-from sylphy.feature_io import check_ids, write_features
+from sylphy.exceptions import DataError, SylphyError, SylphyRuntimeError
+from sylphy.feature_io import check_ids, describe_rows, normalize_sequences, write_features
 from sylphy.logging import add_context, get_logger
 
 if TYPE_CHECKING:
@@ -179,6 +179,7 @@ class EncoderBase(ABC):
             raise ValueError(msg)
 
         try:
+            self.dataset = normalize_sequences(self.dataset, self.sequence_column)
             self.__logger__.info(
                 "Validating alphabet (%s).",
                 "extended" if self.allow_extended or self.allow_unknown else "canonical",
@@ -186,45 +187,37 @@ class EncoderBase(ABC):
             self.check_allowed_alphabet()
             self.__logger__.info("Validating sequence lengths (≤ %d).", self.max_length)
             self.process_length_sequences()
+        except SylphyError:
+            raise
         except Exception as e:
             msg = f"[ERROR] Failed during revision steps: {e}"
             self.__logger__.exception(msg)
             raise SylphyRuntimeError(msg) from e
 
     def check_allowed_alphabet(self) -> None:
-        """Keep only sequences composed of the selected alphabet."""
-        try:
-            alpha = set(residues(extended=self.allow_extended))
-            if self.allow_unknown:
-                alpha.add("X")
-
-            # Build a regex that matches any character NOT in the allowed alphabet
-            escaped = re.escape("".join(sorted(alpha)))
-            invalid_pattern = f"[^{escaped}]"
-
-            before = len(self.dataset)
-            has_invalid = pl.col(self.sequence_column).str.contains(invalid_pattern).fill_null(value=True)
-            self.dataset = self.dataset.filter(~has_invalid)
-            removed = before - len(self.dataset)
-            self.__logger__.info("Filtered sequences outside alphabet: %d removed.", removed)
-        except Exception as exc:
-            self.__logger__.exception("[ERROR] Failed during alphabet validation.")
-            msg = "Failed during alphabet validation."
-            raise SylphyRuntimeError(msg) from exc
+        """Raise ``DataError`` if any sequence has characters outside the selected alphabet."""
+        alpha = set(residues(extended=self.allow_extended))
+        if self.allow_unknown:
+            alpha.add("X")
+        seqs = self.dataset[self.sequence_column]
+        bad = seqs.str.contains(f"[^{re.escape(''.join(sorted(alpha)))}]")
+        if bad.any():
+            chars = sorted(set("".join(seqs.filter(bad).to_list())) - alpha)
+            msg = (
+                f"Invalid characters {chars} in column '{self.sequence_column}': "
+                f"{describe_rows(self.dataset, bad, 'id')}."
+            )
+            raise DataError(msg)
 
     def process_length_sequences(self) -> None:
-        """Filter out sequences longer than `max_length`."""
-        try:
-            before = len(self.dataset)
-            self.dataset = self.dataset.filter(
-                pl.col(self.sequence_column).str.len_chars() <= self.max_length
+        """Raise ``DataError`` if any sequence is longer than ``max_length``."""
+        too_long = self.dataset[self.sequence_column].str.len_chars() > self.max_length
+        if too_long.any():
+            msg = (
+                f"Sequences longer than max_length={self.max_length}: "
+                f"{describe_rows(self.dataset, too_long, 'id')}."
             )
-            removed = before - len(self.dataset)
-            self.__logger__.info("Filtered long sequences: %d removed.", removed)
-        except Exception as exc:
-            self.__logger__.exception("[ERROR] Failed during length validation.")
-            msg = "Failed during length validation."
-            raise SylphyRuntimeError(msg) from exc
+            raise DataError(msg)
 
     # ----------------------------
     # IO

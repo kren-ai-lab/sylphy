@@ -90,6 +90,8 @@ dev = [
     "ruff~=0.17.2",
     "scipy-stubs>=1.17.1.5",
     "taskipy~=1.14.1",
+    "types-jsonschema>=4.26.0.20261006",
+    "types-pyyaml>=6.0.12.20261122",
     "types-tqdm>=4.70.0.20260906",
 ]
 

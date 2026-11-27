@@ -63,7 +63,7 @@ _TYPE_DESC = typer.Option(
 _NAME_PROP = typer.Option(
     "ANDN920101", "--name-property", "-n", show_default=True, help="AAIndex key or group_based label."
 )
-_SIZE_KMER = typer.Option(3, "--size-kmer", "-k", show_default=True, help="k for TF-IDF k-mers.")
+_SIZE_KMER = typer.Option(3, "--size-kmer", "-k", min=1, show_default=True, help="k for TF-IDF k-mers.")
 _OUTPUT = typer.Option(
     ...,
     "--output",
@@ -187,6 +187,16 @@ def encode(
     typer.echo(f"[{method}] Saved to: {output}")
 
 
+_USED_BY: dict[str, frozenset[EncodeMethod]] = {
+    "max_length": frozenset(
+        {EncodeMethod.one_hot, EncodeMethod.ordinal, EncodeMethod.physicochemical, EncodeMethod.fft}
+    ),
+    "type_descriptor": frozenset({EncodeMethod.physicochemical, EncodeMethod.fft}),
+    "name_property": frozenset({EncodeMethod.physicochemical, EncodeMethod.fft}),
+    "size_kmer": frozenset({EncodeMethod.kmers}),
+}
+
+
 def _save(
     ctx: typer.Context, ids: pl.Series, features: pl.DataFrame, output: Path, fmt: FileFormat, created_at: str
 ) -> None:
@@ -206,4 +216,5 @@ def _save(
         n_rows=features.height,
         n_cols=features.width,
         packages=("sylphy", "numpy", "polars"),
+        unused=frozenset(k for k, methods in _USED_BY.items() if ctx.params["method"] not in methods),
     )

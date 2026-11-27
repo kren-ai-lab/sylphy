@@ -81,7 +81,7 @@ class Ankh2Embedding(EmbeddingBase):
             self.model = model
 
             model.eval()
-        except (ImportError, ModuleNotFoundError) as e:
+        except ImportError as e:
             wrapped = wrap_optional_dependency_error(
                 e,
                 feature="Ankh2 embeddings",

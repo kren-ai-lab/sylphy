@@ -39,7 +39,7 @@ def __getattr__(name: str) -> object:
     mod_name, attr = spec
     try:
         module = import_module(mod_name, package=__name__)
-    except (ImportError, ModuleNotFoundError) as exc:
+    except ImportError as exc:
         wrapped = wrap_optional_dependency_error(
             exc,
             feature="Embedding features",

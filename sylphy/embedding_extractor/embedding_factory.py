@@ -106,7 +106,7 @@ def create_embedding(
         try:
             module = import_module(".esmc_embedding", package=__package__)
             cls = module.ESMCEmbedding
-        except (ImportError, ModuleNotFoundError) as exc:
+        except ImportError as exc:
             wrapped = wrap_optional_dependency_error(
                 exc,
                 feature="ESM-C embeddings",

@@ -3,6 +3,15 @@
 All notable changes to Sylphy are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+- Input sequences are uppercased and stripped of whitespace. Sequences that still have characters outside the alphabet, are empty, or exceed `--max-length` now fail (exit code 3) naming the first ids, the count and the invalid characters, instead of being dropped silently.
+- `--size-kmer` must be at least 1 (also checked by `validate-config`).
+- Tabular input with duplicated column names is an error (exit code 3).
+- `sylphy embed` warns about sequences truncated by `--max-length` and records their count and first ids in the provenance sidecar (`extensions.truncated`).
+- The `encode` provenance sidecar only lists the parameters the chosen method uses.
+- Logging never crashes when no log directory is writable (e.g. `HOME=/` as an arbitrary uid); it falls back to the console.
+
 ## 1.2.1
 
 - Supports typer 0.28 and later: `--config` and `validate-config` coerced values with an option method that typer 0.28 removed, so they rejected every valid value. The minimum is now typer 0.27.2, the first with `typer.exceptions`, which 1.2.0 already imported.

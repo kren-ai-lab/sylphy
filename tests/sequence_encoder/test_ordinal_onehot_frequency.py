@@ -22,11 +22,11 @@ def test_ordinal_shapes_and_padding(toy_df: pl.DataFrame) -> None:
 
 def test_onehot_shapes_and_sums(toy_df: pl.DataFrame) -> None:
     """Verify one-hot encoding produces binary matrix with expected shape."""
-    enc = OneHotEncoder(dataset=toy_df, max_length=5)
+    enc = OneHotEncoder(dataset=toy_df, max_length=6)
     enc.run_process()
     X = enc.coded_dataset
 
-    assert X.width == 101  # 5 * 20 + sequence column
+    assert X.width == 121  # 6 * 20 + sequence column
     row0 = X.select(cs.exclude("sequence")).row(0, named=False)
     arr = np.array(row0)
     assert arr.sum() == 3

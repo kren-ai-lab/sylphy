@@ -16,7 +16,7 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from sylphy.core.model_registry import ModelSpec, register_model, resolve_model
 from sylphy.exceptions import SylphyRuntimeError
-from sylphy.feature_io import check_ids, write_features
+from sylphy.feature_io import check_ids, describe_rows, write_features
 from sylphy.logging import add_context, get_logger
 from sylphy.types import FileFormat, LayerAggType, PoolType, PrecisionType
 
@@ -74,6 +74,7 @@ class EmbeddingBase:
         self.oom_backoff = oom_backoff
         self.resolved_path: str | None = None  # local model dir, set once the model is resolved
         self.effective_batch_size: int | None = None  # batch size after any OOM backoff
+        self.truncated: pl.Series = pl.Series([], dtype=pl.Boolean)  # rows cut by max_length in run_process
 
         # logger
         backend_name = type(self).__name__
@@ -435,6 +436,15 @@ class EmbeddingBase:
         if not self._is_ready():
             msg = "Model/tokenizer not loaded. Call load_model_tokenizer() before forward."
             raise SylphyRuntimeError(msg)
+
+        # max_length counts special tokens; 2 is the ESM-style <cls>/<eos> overhead
+        self.truncated = self.dataset[self.column_seq].cast(pl.String).str.len_chars() > max_length - 2
+        if self.truncated.any():
+            self.__logger__.warning(
+                "Sequences truncated to max_length=%d tokens: %s.",
+                max_length,
+                describe_rows(self.dataset, self.truncated, "id"),
+            )
 
         try:
             if not self.requires_tokenizer:

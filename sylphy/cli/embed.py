@@ -188,6 +188,10 @@ def embed(
             "device": embedder.device.type,
             "precision": precision.value,
             "batch_size_effective": embedder.effective_batch_size or batch_size,
+            "truncated": {
+                "count": int(embedder.truncated.sum()),
+                "ids": df[id_col].filter(embedder.truncated).head(10).to_list(),
+            },
         },
     )
     typer.echo(f"Embeddings saved to: {output}")

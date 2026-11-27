@@ -3,7 +3,7 @@
 All notable changes to Sylphy are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.2.2
 
 - Input sequences are uppercased and stripped of whitespace. Sequences that still have characters outside the alphabet, are empty, or exceed `--max-length` now fail (exit code 3) naming the first ids, the count and the invalid characters, instead of being dropped silently.
 - `--size-kmer` must be at least 1 (also checked by `validate-config`).

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 # Public core API (re-export)
 from .core import (

@@ -80,7 +80,10 @@ def _resolve_log_file(default_name: str = "sylphy.log", explicit_path: Path | No
 
     if user_log_dir is not None:
         base = Path(user_log_dir("sylphy", "Sylphy"))
-        base.mkdir(parents=True, exist_ok=True)
+        try:
+            base.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            return None  # no writable log dir: stderr/console only
         return base / default_name
 
     return None

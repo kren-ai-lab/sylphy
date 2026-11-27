@@ -10,6 +10,7 @@ import pytest
 from sylphy.logging import (
     add_context,
     get_logger,
+    logging_config,
     reset_logging,
     set_global_level,
     setup_logger,
@@ -264,3 +265,12 @@ def test_set_global_level_affects_pkg_logger() -> None:
 
     set_global_level("ERROR")
     assert lg.level == logging.ERROR or lg.getEffectiveLevel() == logging.ERROR
+
+
+def test_unwritable_log_dir_falls_back_to_no_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    blocker = tmp_path / "file"
+    blocker.write_text("")
+    monkeypatch.delenv("SYLPHY_LOG_FILE", raising=False)
+    monkeypatch.setattr(logging_config, "import_module", lambda _: (_ for _ in ()).throw(ImportError))
+    monkeypatch.setattr(logging_config, "user_log_dir", lambda *_: str(blocker / "logs"))
+    assert logging_config._resolve_log_file() is None  # noqa: SLF001
